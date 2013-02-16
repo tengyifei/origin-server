@@ -1,3 +1,8 @@
+%if 0%{?fedora}%{?rhel} <= 6
+    %global scl ruby193
+    %global scl_prefix ruby193-
+%endif
+
 %global cartridgedir %{_libexecdir}/openshift/cartridges/jenkins-1.4
 
 Summary:   Provides jenkins-1.4 support

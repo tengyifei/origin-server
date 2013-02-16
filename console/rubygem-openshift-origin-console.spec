@@ -1,10 +1,13 @@
 %if 0%{?fedora}%{?rhel} <= 6
     %global scl ruby193
     %global scl_prefix ruby193-
+    %global with_systemd 0
+    %global gemdir /opt/rh/ruby193/root/usr/share/gems/gems
+%else
+    %global with_systemd 1
+    %global gemdir /usr/share/rubygems/gems
 %endif
 %{!?scl:%global pkg_name %{name}}
-%{?scl:%scl_package rubygem-%{gem_name}}
-%global gem_name openshift-origin-console
 %global rubyabi 1.9.1
 
 Summary:        OpenShift Origin Management Console
@@ -36,7 +39,7 @@ Requires:       %{?scl:%scl_prefix}rubygem(test-unit)
 Requires:       %{?scl:%scl_prefix}rubygem(uglifier)
 Requires:       %{?scl:%scl_prefix}rubygem(webmock)
 
-BuildRequires:  ruby193-build
+BuildRequires:  build
 BuildRequires:  scl-utils-build
 BuildRequires:  %{?scl:%scl_prefix}rubygem(rails)
 BuildRequires:  %{?scl:%scl_prefix}rubygem(compass-rails)

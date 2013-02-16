@@ -1,3 +1,7 @@
+%if 0%{?fedora}%{?rhel} <= 6
+    %global scl ruby193
+    %global scl_prefix ruby193-
+%endif
 %global cartridgedir %{_libexecdir}/openshift/cartridges/embedded/switchyard-0.6
 %global frameworkdir %{_libexecdir}/openshift/cartridges/switchyard-0.6
 
@@ -16,8 +20,8 @@ Requires: rubygem(openshift-origin-node)
 Requires: mysql-devel
 Requires: wget
 Requires: java-1.6.0-openjdk
-Requires: rubygems
-Requires: rubygem-json
+Requires: %{?scl:%scl_prefix}rubygems
+Requires: %{?scl:%scl_prefix}rubygem-json
 Requires: switchyard-as7-modules
 
 %description
