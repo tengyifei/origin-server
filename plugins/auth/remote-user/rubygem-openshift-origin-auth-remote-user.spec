@@ -11,12 +11,12 @@
 
 Summary:       OpenShift plugin for remote-user authentication
 Name:          rubygem-%{gem_name}
-Version:       1.5.2
+Version:       1.5.4
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
-Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{gem_name}/rubygem-%{gem_name}-%{version}.tar.gz
+Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
 Requires:      %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 Requires:      %{?scl:%scl_prefix}ruby
 Requires:      %{?scl:%scl_prefix}rubygems
@@ -93,6 +93,12 @@ then
 fi
 
 %changelog
+* Wed Feb 20 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- fix rubygem sources (tdawson@redhat.com)
+
+* Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
+- Fixes for ruby193 (john@ibiblio.org)
+
 * Fri Feb 08 2013 Adam Miller <admiller@redhat.com> 1.5.2-1
 - Merge pull request #1289 from
   smarterclayton/isolate_api_behavior_from_base_controller

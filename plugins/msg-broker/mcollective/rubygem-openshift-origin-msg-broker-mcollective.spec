@@ -9,12 +9,12 @@
 
 Summary:       OpenShift plugin for mcollective service
 Name:          rubygem-%{gem_name}
-Version:       1.5.2
+Version:       1.5.4
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
-Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{gem_name}/rubygem-%{gem_name}-%{version}.tar.gz
+Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
 Requires:      %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 Requires:      %{?scl:%scl_prefix}ruby
 Requires:      %{?scl:%scl_prefix}rubygems
@@ -77,6 +77,22 @@ cp %{buildroot}/%{gem_dir}/gems/%{gem_name}-%{version}/conf/openshift-origin-msg
 %attr(0644,-,-) %ghost /etc/mcollective/client.cfg
 
 %changelog
+* Wed Feb 20 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- fix rubygem sources (tdawson@redhat.com)
+
+* Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
+- stop passing extra app object (dmcphers@redhat.com)
+- Switch from VirtualHosts to mod_rewrite based routing to support high
+  density. (rmillner@redhat.com)
+- Fixes for ruby193 (john@ibiblio.org)
+- Add request id to mco requests (dmcphers@redhat.com)
+- correction in node selection algorithm (dmcphers@redhat.com)
+- remove community pod (dmcphers@redhat.com)
+- minor cleanup (dmcphers@redhat.com)
+- Ignore components for methods destined for carts (ironcladlou@gmail.com)
+- Refactor agent and proxy, move all v1 code to v1 model
+  (ironcladlou@gmail.com)
+
 * Fri Feb 08 2013 Adam Miller <admiller@redhat.com> 1.5.2-1
 - change %%define to %%global (tdawson@redhat.com)
 

@@ -8,20 +8,20 @@
 %global rubyabi 1.9.1
 %global appdir %{_var}/lib/openshift
 %global apprundir %{_var}/run/openshift
-%if 0%{?fedora} <= 18
-    %global httxt2dbm /usr/sbin/httxt2dbm
-%else
+%if 0%{?fedora} >= 18
     %global httxt2dbm /usr/bin/httxt2dbm
+%else
+    %global httxt2dbm /usr/sbin/httxt2dbm
 %endif
 
 Summary:       Cloud Development Node
 Name:          rubygem-%{gem_name}
-Version:       1.5.2
+Version:       1.5.4
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
-Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{gem_name}/rubygem-%{gem_name}-%{version}.tar.gz
+Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
 Requires:      %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 Requires:      %{?scl:%scl_prefix}ruby
 Requires:      %{?scl:%scl_prefix}rubygems
@@ -111,9 +111,8 @@ mv %{buildroot}%{gem_instdir}/misc/bin/* %{buildroot}/usr/bin/
 %if 0%{?fedora} >= 15
 mkdir -p %{buildroot}/etc/tmpfiles.d
 mv %{buildroot}%{gem_instdir}/misc/etc/openshift-run.conf %{buildroot}/etc/tmpfiles.d
-%else
-mkdir -p %{buildroot}%{apprundir}
 %endif
+mkdir -p %{buildroot}%{apprundir}
 
 # place an example file
 mkdir -p %{buildroot}%{_docdir}/%{name}-%{version}/
@@ -121,10 +120,10 @@ mv %{buildroot}%{gem_instdir}/misc/doc/cgconfig.conf %{buildroot}%{_docdir}/%{na
 
 %if 0%{?fedora} >= 18
   #patch for apache 2.4
-  sed -i '' -E 's/include /IncludeOptional /g' httpd/000001_openshift_origin_node.conf
-  sed -i '' -E 's/^RewriteLog/#RewriteLog/g' httpd/openshift_route.include
-  sed -i '' -E 's/^RewriteLogLevel/#RewriteLogLevel/g' httpd/openshift_route.include
-  sed -i '' -E 's/^#LogLevel/LogLevel/g' httpd/openshift_route.include
+  sed -i 's/include /IncludeOptional /g' httpd/000001_openshift_origin_node.conf
+  sed -i 's/^RewriteLog/#RewriteLog/g' httpd/openshift_route.include
+  sed -i 's/^RewriteLogLevel/#RewriteLogLevel/g' httpd/openshift_route.include
+  sed -i 's/^#LogLevel/LogLevel/g' httpd/openshift_route.include
 %endif
 mv httpd/000001_openshift_origin_node.conf %{buildroot}/etc/httpd/conf.d/
 mv httpd/000001_openshift_origin_node_servername.conf %{buildroot}/etc/httpd/conf.d/
@@ -168,10 +167,9 @@ rm -rf %{buildroot}%{gem_instdir}/misc
 
 %if 0%{?fedora} >= 15
 /etc/tmpfiles.d/openshift-run.conf
-%else
+%endif
 # upstart files
 %attr(0755,-,-) %{_var}/run/openshift
-%endif
 
 %post
 echo "/usr/bin/oo-trap-user" >> /etc/shells
@@ -197,14 +195,29 @@ fi
 for map in nodes aliases idler sts
 do
     mapf="/etc/httpd/conf.d/openshift/${map}"
-    touch "${mapf}.txt"
-    %{httxt2dbm} -f DB -i "${mapf}.txt" -o "${mapf}.db"
+    if ! [ -e "${mapf}.txt" ]
+    then
+        touch "${mapf}.txt"
+        chown root:apache "${mapf}.txt"
+        chmod 640 "${mapf}.txt"
+    fi
+    if ! [ -e "${mapf}.db" ]
+    then
+        %{httxt2dbm} -f DB -i "${mapf}.txt" -o "${mapf}.db"
+        chown root:apache "${mapf}.db"
+        chmod 750 "${mapf}.db"
+    fi
 done
 
 for map in containers routes
 do
     mapf="/etc/httpd/conf.d/openshift/${map}"
-    touch "${mapf}.json"
+    if ! [ -e "${mapf}.json" ]
+    then
+        echo '{}' > "${mapf}.json"
+        chown root:apache "${mapf}.json"
+        chmod 640 "${mapf}.json"
+    fi
 done
 
 %preun
@@ -212,6 +225,68 @@ done
 sed -i -e '/pam_cgroup/d' /etc/pam.d/sshd
 
 %changelog
+* Wed Feb 20 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- Merge pull request #1417 from jwhonce/dev/wip_master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 912899 - mcollective changing all numeric mongoid to BigInt
+  (jhonce@redhat.com)
+- Allow for a __default__ target which matches hosts not otherwise matched.
+  (rmillner@redhat.com)
+- Fix permissions for db files. (rmillner@redhat.com)
+- Merge pull request #1409 from tdawson/tdawson/fix_rubygem_sources
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1408 from jwhonce/format_markers
+  (dmcphers+openshiftbot@redhat.com)
+- fix rubygem sources (tdawson@redhat.com)
+- WIP Cartridge Refactor (jhonce@redhat.com)
+- Fixing sed script for F18 config updates (kraman@gmail.com)
+
+* Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
+- Merge pull request #1405 from rmillner/US3143
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1379 from markllama/bugs/cgroup-start
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1376 from markllama/bug/oo-cgroup-read
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1404 from kraman/master
+  (dmcphers+openshiftbot@redhat.com)
+- Fedora 18 moved the httxt2dbm command. (rmillner@redhat.com)
+- Fixing sed expression which transforms 000001_openshift_origin_node.conf for
+  Apache 2.4 Revert "Adding path to resolve useradd"   This reverts commit
+  31d41d77df658b1bb134a9d2cba7cd8ee28cfe64. (kraman@gmail.com)
+- Commands and mcollective calls for each FrontendHttpServer API.
+  (rmillner@redhat.com)
+- Bug 912215: Use oo-ruby for interpreter (ironcladlou@gmail.com)
+- Merge pull request #1391 from rmillner/US3143
+  (dmcphers+openshiftbot@redhat.com)
+- Switch from VirtualHosts to mod_rewrite based routing to support high
+  density. (rmillner@redhat.com)
+- Add existing community carts to v1 cart list (kraman@gmail.com)
+- Adding path to resolve useradd (kraman@gmail.com)
+- add check for systemd based os (markllama@gmail.com)
+- Merge pull request #1387 from jwhonce/dev/threaddump
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 911956 - Fixed miss-spelled method name (jhonce@redhat.com)
+- Bug 906740 - Update error message (jhonce@redhat.com)
+- Fixes to get builds and tests running on RHEL: (kraman@gmail.com)
+- Fixes for ruby193 (john@ibiblio.org)
+- Bug 868427: Fix tidy for v1 carts (ironcladlou@gmail.com)
+- open4 is a rubygem (mlamouri@redhat.com)
+- remove community pod (dmcphers@redhat.com)
+- minor cleanup (dmcphers@redhat.com)
+- Patch node coverage file permissions to work with oo_spawn tests
+  (jhonce@redhat.com)
+- Fix embed.feature (pmorie@gmail.com)
+- Initial write-up of pub/sub hooks (mrunal@me.com)
+- Refactor agent and proxy, move all v1 code to v1 model
+  (ironcladlou@gmail.com)
+- WIP Cartridge Refactor (jhonce@redhat.com)
+- WIP Cartridge Refactor (jhonce@redhat.com)
+- WIP Cartridge Refactor (jhonce@redhat.com)
+- Bug [906687] - Lacking usage info of oo-cgroup-read command
+  (mlamouri@redhat.com)
+- remove use of filesystem cgroup countrol (mlamouri@redhat.com)
+
 * Fri Feb 08 2013 Adam Miller <admiller@redhat.com> 1.5.2-1
 - change %%define to %%global (tdawson@redhat.com)
 
