@@ -2,9 +2,9 @@
 # @!attribute [r] login
 #   @return [String] Login name for the user.
 # @!attribute [r] capabilities
-#   @return [Hash] Hash representing the capabilities of the user. It is updated using the ss-admin-user-ctl scripts or when a plan changes.
+#   @return [Hash] Hash representing the capabilities of the user. It is updated using the oo-admin-user-ctl scripts or when a plan changes.
 # @!attribute [r] parent_user_id
-#   @return [Moped::BSON::ObjectId] ID of the parent user object if this object prepresents a sub-account.
+#   @return [Moped::BSON::ObjectId] ID of the parent user object if this object rrepresents a sub-account.
 # @!attribute [rw] plan_id
 # @!attribute [rw] pending_plan_id
 # @!attribute [rw] pending_plan_uptime
@@ -32,7 +32,7 @@ class CloudUser
   field :pending_plan_uptime, type: Time
   field :usage_account_id, type: String
   field :consumed_gears, type: Integer, default: 0
-  embeds_many :ssh_keys, class_name: SshKey.name
+  embeds_many :ssh_keys, class_name: UserSshKey.name
   embeds_many :pending_ops, class_name: PendingUserOps.name
   has_many :domains, class_name: Domain.name, dependent: :restrict
   
@@ -117,7 +117,7 @@ class CloudUser
     remove_ssh_key(key.name)
     add_ssh_key(key)
   end
-  
+
   # Used to remove an ssh-key from the user. Use this instead of ssh_keys= so that the key removal can be propagated to the
   # domains/application that the user has access to.
   def remove_ssh_key(name)
@@ -130,7 +130,6 @@ class CloudUser
       self.run_jobs      
     else
       key.delete
-      self.ssh_keys.delete_if {|ssh_key| ssh_key.name == name}
     end
   end
 

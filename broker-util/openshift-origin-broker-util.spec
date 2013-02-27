@@ -6,7 +6,7 @@
 
 Summary:        Utility scripts for the OpenShift Origin broker
 Name:           openshift-origin-broker-util
-Version:        1.4.13
+Version:        1.4.16
 Release:        1%{?dist}
 Group:          Network/Daemons
 License:        ASL 2.0
@@ -47,6 +47,7 @@ cp kickstart/openshift-origin-remix.ks %{buildroot}/usr/share/openshift/kickstar
 
 %files
 %attr(0750,-,-) %{_sbindir}/oo-admin-chk
+%attr(0750,-,-) %{_sbindir}/oo-admin-clear-pending-ops
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-app
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-district
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-domain
@@ -75,6 +76,15 @@ cp kickstart/openshift-origin-remix.ks %{buildroot}/usr/share/openshift/kickstar
 %{_mandir}/man8/oo-stats.8.gz
 
 %changelog
+* Tue Feb 26 2013 Dan McPherson <dmcphers@redhat.com> 1.4.16-1
+- Bug 914639 (dmcphers@redhat.com)
+
+* Sat Feb 23 2013 Dan McPherson <dmcphers@redhat.com> 1.4.15-1
+- Bug 914639 (dmcphers@redhat.com)
+
+* Thu Feb 21 2013 Adam Miller <admiller@redhat.com> 1.4.14-1
+- admin script to push clogged pending ops (rchopra@redhat.com)
+
 * Thu Feb 14 2013 Dan McPherson <dmcphers@redhat.com> 1.4.13-1
 - read from primary - bz910610 (rchopra@redhat.com)
 
