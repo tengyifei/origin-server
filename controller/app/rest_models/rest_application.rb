@@ -23,7 +23,8 @@ class RestApplication < OpenShift::Model
     self.gear_profile = app.default_gear_size
     self.scalable = app.scalable
 
-    self.git_url = "ssh://#{app.ssh_uri(domain)}/~/git/#{@name}.git/"
+    #self.git_url = "ssh://#{app.ssh_uri(domain)}/~/git/#{@name}.git/"
+    self.git_url = "ssh://git@git.getupcloud.com/#{@name}-#{@domain_id}.git"
     self.app_url = "http://#{app.fqdn(domain)}/"
     self.ssh_url = "ssh://#{app.ssh_uri(domain)}"
     self.health_check_path = app.health_check_path
