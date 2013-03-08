@@ -16,7 +16,7 @@
 
 Summary:       Cloud Development Node
 Name:          rubygem-%{gem_name}
-Version:       1.5.4
+Version: 1.6.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -40,7 +40,8 @@ Requires:      libcgroup
 Requires:      libcgroup-tools
 %endif
 %if 0%{?fedora} >= 18
-Requires:       httpd-tools
+Requires:      httpd-tools
+BuildRequires: httpd-tools
 %endif
 Requires:      libcgroup-pam
 Requires:      pam_openshift
@@ -49,6 +50,7 @@ Requires:      quota
 %if 0%{?fedora}%{?rhel} <= 6
 BuildRequires: %{?scl:%scl_prefix}build
 BuildRequires: scl-utils-build
+BuildRequires: httpd
 %endif
 BuildRequires: %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 BuildRequires: %{?scl:%scl_prefix}ruby 
@@ -87,13 +89,26 @@ gem install -V \
 mkdir -p %{buildroot}%{gem_dir}
 cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 
-# Move the gem binaries to the standard filesystem location
 mkdir -p %{buildroot}/usr/bin
-cp -a ./%{_bindir}/* %{buildroot}/usr/bin
-
+mkdir -p %{buildroot}/usr/sbin
 mkdir -p %{buildroot}/etc/httpd/conf.d
 mkdir -p %{buildroot}%{appdir}/.httpd.d
 ln -sf %{appdir}/.httpd.d %{buildroot}/etc/httpd/conf.d/openshift
+
+# Create empty route database files
+for map in nodes aliases idler sts
+do
+    mapf="%{buildroot}%{appdir}/.httpd.d/${map}"
+    touch "${mapf}.txt"
+    %{httxt2dbm} -f DB -i "${mapf}.txt" -o "${mapf}.db"
+done
+
+for map in routes
+do
+    mapf="%{buildroot}%{appdir}/.httpd.d/${map}"
+    echo '{}' > "${mapf}.json"
+done
+
 
 # Move the gem configs to the standard filesystem location
 mkdir -p %{buildroot}/etc/openshift
@@ -101,11 +116,12 @@ mv %{buildroot}%{gem_instdir}/conf/* %{buildroot}/etc/openshift
 
 #move pam limit binaries to proper location
 mkdir -p %{buildroot}/usr/libexec/openshift/lib
-mv %{buildroot}%{gem_instdir}/misc/bin/teardown_pam_fs_limits.sh %{buildroot}/usr/libexec/openshift/lib
-mv %{buildroot}%{gem_instdir}/misc/bin/setup_pam_fs_limits.sh %{buildroot}/usr/libexec/openshift/lib
+mv %{buildroot}%{gem_instdir}/misc/lib/teardown_pam_fs_limits.sh %{buildroot}/usr/libexec/openshift/lib
+mv %{buildroot}%{gem_instdir}/misc/lib/setup_pam_fs_limits.sh %{buildroot}/usr/libexec/openshift/lib
 
 #move the shell binaries into proper location
 mv %{buildroot}%{gem_instdir}/misc/bin/* %{buildroot}/usr/bin/
+mv %{buildroot}%{gem_instdir}/misc/sbin/* %{buildroot}/usr/sbin/
 
 # Create run dir for openshift "services"
 %if 0%{?fedora} >= 15
@@ -146,9 +162,9 @@ rm -rf %{buildroot}%{gem_instdir}/misc
 %{gem_instdir}
 %{gem_cache}
 %{gem_spec}
-%attr(0750,-,-) /usr/bin/oo-admin-ctl-cgroups
+%attr(0750,-,-) /usr/sbin/*
+%attr(0755,-,-) /usr/bin/*
 /etc/openshift
-/usr/bin/*
 /usr/libexec/openshift/lib/setup_pam_fs_limits.sh
 /usr/libexec/openshift/lib/teardown_pam_fs_limits.sh
 %config(noreplace) /etc/openshift/node.conf
@@ -158,6 +174,15 @@ rm -rf %{buildroot}%{gem_instdir}/misc
 %config(noreplace) /etc/httpd/conf.d/openshift_route.include
 %attr(0755,-,-) %{appdir}
 %attr(0750,root,apache) %{appdir}/.httpd.d
+%attr(0640,root,apache) %config(noreplace) %{appdir}/.httpd.d/routes.json
+%attr(0640,root,apache) %config(noreplace) %{appdir}/.httpd.d/nodes.txt
+%attr(0640,root,apache) %config(noreplace) %{appdir}/.httpd.d/aliases.txt
+%attr(0640,root,apache) %config(noreplace) %{appdir}/.httpd.d/idler.txt
+%attr(0640,root,apache) %config(noreplace) %{appdir}/.httpd.d/sts.txt
+%attr(0750,root,apache) %config(noreplace) %{appdir}/.httpd.d/nodes.db
+%attr(0750,root,apache) %config(noreplace) %{appdir}/.httpd.d/aliases.db
+%attr(0750,root,apache) %config(noreplace) %{appdir}/.httpd.d/idler.db
+%attr(0750,root,apache) %config(noreplace) %{appdir}/.httpd.d/sts.db
 
 #%if 0%{?fedora}%{?rhel} <= 6
 %attr(0755,-,-)	/etc/rc.d/init.d/openshift-cgroups
@@ -191,40 +216,124 @@ if ! [ -f /etc/openshift/resource_limits.conf ]; then
   cp -f /etc/openshift/resource_limits.template /etc/openshift/resource_limits.conf
 fi
 
-# Create route database files if missing
-for map in nodes aliases idler sts
-do
-    mapf="/etc/httpd/conf.d/openshift/${map}"
-    if ! [ -e "${mapf}.txt" ]
-    then
-        touch "${mapf}.txt"
-        chown root:apache "${mapf}.txt"
-        chmod 640 "${mapf}.txt"
-    fi
-    if ! [ -e "${mapf}.db" ]
-    then
-        %{httxt2dbm} -f DB -i "${mapf}.txt" -o "${mapf}.db"
-        chown root:apache "${mapf}.db"
-        chmod 750 "${mapf}.db"
-    fi
-done
-
-for map in containers routes
-do
-    mapf="/etc/httpd/conf.d/openshift/${map}"
-    if ! [ -e "${mapf}.json" ]
-    then
-        echo '{}' > "${mapf}.json"
-        chown root:apache "${mapf}.json"
-        chmod 640 "${mapf}.json"
-    fi
-done
 
 %preun
 # disable cgroups on sshd logins
 sed -i -e '/pam_cgroup/d' /etc/pam.d/sshd
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.5.15-1
+- Merge pull request #1578 from ironcladlou/endpoint_ex_handling
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 919161: Fix Python 3.3 Endpoint entry (ironcladlou@gmail.com)
+- Bug 918888 - Had the wrong exit status. (rmillner@redhat.com)
+- Merge pull request #1575 from pmorie/dev/uu
+  (dmcphers+openshiftbot@redhat.com)
+- Fix destroyed gear check in UnixUser#destroy (pmorie@gmail.com)
+- Merge pull request #1570 from rmillner/post_stage
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 901866 - Put training wheels on the rm command. (rmillner@redhat.com)
+
+* Wed Mar 06 2013 Adam Miller <admiller@redhat.com> 1.5.14-1
+- BZ873896 - [ORIGIN] 000001_openshift_origin_node.conf not included in
+  gemspec, but is in tar.gz (calfonso@redhat.com)
+- be sure you dont cache an empty list (dmcphers@redhat.com)
+- Bug 918480 (dmcphers@redhat.com)
+- Bug 917990 - Multiple fixes. (rmillner@redhat.com)
+- Merge pull request #1548 from markllama/dev/cgroup_freezethaw
+  (dmcphers+openshiftbot@redhat.com)
+- fixed missing case end and cgset syntax (mlamouri@redhat.com)
+- added cgset freeze|thaw user (markllama@gmail.com)
+
+* Tue Mar 05 2013 Adam Miller <admiller@redhat.com> 1.5.13-1
+- Merge pull request #1545 from pmorie/dev/v2_get_cart (dmcphers@redhat.com)
+- Bug 917163 (dmcphers@redhat.com)
+- Make v2 get_cartridge use instance dir instead of system path
+  (pmorie@gmail.com)
+- Merge pull request #1531 from jwhonce/bug/916958 (dmcphers@redhat.com)
+- Bug 916958, Bug 917513 - V1 Model not honoring Broker contract
+  (jhonce@redhat.com)
+
+* Mon Mar 04 2013 Adam Miller <admiller@redhat.com> 1.5.12-1
+- WIP Cartridge Refactor - improve robustness of oo_spawn (jhonce@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.11-1
+- remove chown/chmod, errors in mock with Operation Not Permitted, %%files
+  section should satisfy this (admiller@redhat.com)
+- fixing BuildRequires (admiller@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.10-1
+- Bug 912215 - Workaround broken SELinux policy. (rmillner@redhat.com)
+- Bug 916839 - The apache user cannot read through /etc/httpd/conf.d on
+  STG/INT/PROD for security reasons. (rmillner@redhat.com)
+- Merge pull request #1506 from pmorie/dev/cartridge_refactor
+  (dmcphers+openshiftbot@redhat.com)
+- Add simple v2 app builds (pmorie@gmail.com)
+- WIP Cartridge Refactor - Add OPENSHIFT_{CartridgeShortName}_DIR
+  (jhonce@redhat.com)
+- Remove parsing version from cartridge-name (pmorie@gmail.com)
+- Bug 916917 - uninitialized constant ApplicationState (jhonce@redhat.com)
+- Merge pull request #1497 from jwhonce/wip/master_unix_user
+  (dmcphers@redhat.com)
+- Strip out malformed entries. (rmillner@redhat.com)
+- Move the blank route files out of %%post. (rmillner@redhat.com)
+- WIP Cartridge Refactor - Remove oo_spawn use from v1 path (jhonce@redhat.com)
+- Use sync IO for the logger file (ironcladlou@gmail.com)
+
+* Thu Feb 28 2013 Adam Miller <admiller@redhat.com> 1.5.9-1
+- Merge pull request #1486 from lnader/revert_pull_request_1
+  (dmcphers@redhat.com)
+- reverted US2448 (lnader@redhat.com)
+- Bug 901424 - Hide the mco command. (rmillner@redhat.com)
+- Bug 901743 - Add the various other commonly used TMP variables.
+  (rmillner@redhat.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 1.5.8-1
+- Merge pull request #1477 from ironcladlou/dev/cartridge_refactor
+  (dmcphers@redhat.com)
+- WIP Cartridge Refactor (pmorie@gmail.com)
+- WIP Cartridge Refactor (pmorie@gmail.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 1.5.7-1
+- US2448 (lnader@redhat.com)
+- Merge pull request #1465 from rmillner/BZ912238
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1462 from rmillner/BZ915471
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1459 from rmillner/US3143
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 912238 - The last rescue was catching exit. (rmillner@redhat.com)
+- Bug 915471 - The set_selinux_context function was being used in the wrong
+  place. (rmillner@redhat.com)
+- WIP Cartridge Refactor - Update cartridge author's guide (jhonce@redhat.com)
+- Use an openshift specific log for last_access. (rmillner@redhat.com)
+- Fix X-Client-IP. (rmillner@redhat.com)
+
+* Tue Feb 26 2013 Adam Miller <admiller@redhat.com> 1.5.6-1
+- Turn route logging off. (rmillner@redhat.com)
+- Fetch returns KeyError. (rmillner@redhat.com)
+- Bug 913351 - Cannot create application successfully when district is added
+  (jhonce@redhat.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.5-2
+- bump Release for fixed build target rebuild (admiller@redhat.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.5-1
+- fix typo (dmcphers@redhat.com)
+- Bug 913423 - Incorrect syntax for ReverseCookiePath, and the way the node
+  table lookup works we do not have the information broken out in a way that
+  supports the correct syntax. (rmillner@redhat.com)
+- Use File.chown/chmod. (rmillner@redhat.com)
+- Merge pull request #1429 from jwhonce/dev/wip_master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1420 from kraman/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 913288 - Numeric login effected additional commands (jhonce@redhat.com)
+- Removing references to cgconfig/all (kraman@gmail.com)
+
 * Wed Feb 20 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
 - Merge pull request #1417 from jwhonce/dev/wip_master
   (dmcphers+openshiftbot@redhat.com)

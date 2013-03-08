@@ -39,7 +39,6 @@ class Application
   include UtilHelper
   APP_NAME_MAX_LENGTH = 32
   MAX_SCALE = -1
-  GEAR_SIZES = ["small", "medium"]
 
   field :name, type: String
   field :canonical_name, type: String
@@ -54,7 +53,7 @@ class Application
   field :component_start_order, type: Array, default: []
   field :component_stop_order, type: Array, default: []
   field :component_configure_order, type: Array, default: []
-  field :default_gear_size, type: String, default: "small"
+  field :default_gear_size, type: String
   field :scalable, type: Boolean, default: false
   field :init_git_url, type: String, default: ""
   embeds_many :connections, class_name: ConnectionInstance.name
@@ -90,8 +89,8 @@ class Application
     notify_observers(:validate_application)
   end
 
-  def self.create_app(application_name, features, domain, default_gear_size = GEAR_SIZES[0], scalable=false, result_io=ResultIO.new, group_overrides=[], init_git_url=nil, user_agent=nil)
-    default_gear_size = GEAR_SIZES[0] unless default_gear_size
+  def self.create_app(application_name, features, domain, default_gear_size = nil, scalable=false, result_io=ResultIO.new, group_overrides=[], init_git_url=nil, user_agent=nil)
+    default_gear_size =  Rails.application.config.openshift[:default_gear_size] if default_gear_size.nil?
     app = Application.new(domain: domain, name: application_name, default_gear_size: default_gear_size, scalable: scalable, app_ssh_keys: [], pending_op_groups: [], init_git_url: init_git_url)
     app.user_agent = user_agent
     features << "web_proxy" if scalable
@@ -328,6 +327,11 @@ class Application
         raise OpenShift::UserException.new("#{feature_name} cannot be embedded in scalable app '#{name}'.", 108)  
       end
 
+      # prevent a proxy from being added to a non-scalable (single-gear) application
+      if cart.is_web_proxy? and !self.scalable
+        raise OpenShift::UserException.new("#{feature_name} cannot be added to existing applications. It is automatically added when you create a scaling application.", 137)
+      end
+      
       # Validate that this feature either does not have the domain_scope category
       # or if it does, then no other application within the domain has this feature already
       if cart.is_domain_scoped?
@@ -538,9 +542,9 @@ class Application
       result_io = ResultIO.new
       op_group = nil
       if feature.nil?
-        op_group = PendingAppOpGroup.new(op_type: :stop_app, user_agent: self.user_agent)
+        op_group = PendingAppOpGroup.new(op_type: :stop_app, args: { "force" => force }, user_agent: self.user_agent)
       else
-        op_group = PendingAppOpGroup.new(op_type: :stop_feature, args: {"feature" => feature}, user_agent: self.user_agent)
+        op_group = PendingAppOpGroup.new(op_type: :stop_feature, args: {"feature" => feature, "force" => force }, user_agent: self.user_agent)
       end
       self.pending_op_groups.push op_group
       self.run_jobs(result_io)
@@ -845,7 +849,7 @@ class Application
       when "ENV_VAR_REMOVE"
         self.domain.env_vars.each {|env_var| domain_env_vars_to_rm << env_var if env_var["key"] == command_item[:args][0]}
       when "BROKER_KEY_ADD"
-        iv, token = OpenShift::AuthService.instance.generate_broker_key(self)
+        iv, token = OpenShift::Auth::BrokerKey.new.generate_broker_key(self)
         pending_op = PendingAppOpGroup.new(op_type: :add_broker_auth_key, args: { "iv" => iv, "token" => token }, user_agent: self.user_agent)
         Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: pending_op.serializable_hash } })
       when "BROKER_KEY_REMOVE"
@@ -1168,8 +1172,9 @@ class Application
       init_gear_op.prereq = [ginst_op_id] unless ginst_op_id.nil?
       reserve_uid_op  = PendingAppOp.new(op_type: :reserve_uid,  args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [init_gear_op._id.to_s])
       create_gear_op    = PendingAppOp.new(op_type: :create_gear,  args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [reserve_uid_op._id.to_s], retry_rollback_op: reserve_uid_op._id.to_s)
-      track_usage_op = PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:begin], 
-          "usage_type" => UsageRecord::USAGE_TYPES[:gear_usage], "gear_size" => gear_size}, prereq: [create_gear_op._id.to_s])
+      track_usage_op = PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id, 
+                       "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:begin], 
+                       "usage_type" => UsageRecord::USAGE_TYPES[:gear_usage], "gear_size" => gear_size}, prereq: [create_gear_op._id.to_s])
       register_dns_op = PendingAppOp.new(op_type: :register_dns, args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [create_gear_op._id.to_s])
       pending_ops.push(init_gear_op)
       pending_ops.push(reserve_uid_op)
@@ -1184,7 +1189,8 @@ class Application
           saved_values: {"additional_filesystem_gb" => 0})
         pending_ops.push(fs_op)
 
-        track_usage_fs_op = PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:begin],
+        track_usage_fs_op = PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+          "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:begin],
           "usage_type" => UsageRecord::USAGE_TYPES[:addtl_fs_gb], "additional_filesystem_gb" => additional_filesystem_gb}, prereq: [fs_op._id.to_s])
         pending_ops.push(track_usage_fs_op)
       end
@@ -1208,13 +1214,15 @@ class Application
       deregister_dns_op = PendingAppOp.new(op_type: :deregister_dns, args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [destroy_gear_op._id.to_s])
       unreserve_uid_op  = PendingAppOp.new(op_type: :unreserve_uid,  args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [deregister_dns_op._id.to_s])
       delete_gear_op    = PendingAppOp.new(op_type: :delete_gear,    args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [unreserve_uid_op._id.to_s])
-      track_usage_op    = PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:end], 
-          "usage_type" => UsageRecord::USAGE_TYPES[:gear_usage]}, prereq: [delete_gear_op._id.to_s])
+      track_usage_op    = PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id, 
+                          "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:end], 
+                          "usage_type" => UsageRecord::USAGE_TYPES[:gear_usage]}, prereq: [delete_gear_op._id.to_s])
       
       ops = [destroy_gear_op, deregister_dns_op, unreserve_uid_op, delete_gear_op, track_usage_op]
       pending_ops.push *ops
       if additional_filesystem_gb != 0
-        track_usage_fs_op = PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:end],
+        track_usage_fs_op = PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+          "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:end],
           "usage_type" => UsageRecord::USAGE_TYPES[:addtl_fs_gb], "additional_filesystem_gb" => additional_filesystem_gb}, prereq: [delete_gear_op._id.to_s])
         pending_ops.push(track_usage_fs_op)
       end
@@ -1223,7 +1231,8 @@ class Application
     comp_specs.each do |comp_spec|
       cartridge = CartridgeCache.find_cartridge(comp_spec["cart"])
       gear_ids.each do |gear_id|
-        pending_ops.push(PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:end], 
+        pending_ops.push(PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+          "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:end], 
           "usage_type" => UsageRecord::USAGE_TYPES[:premium_cart], "cart_name" => comp_spec["cart"]}, prereq: [delete_gear_op._id.to_s]))
       end if cartridge.is_premium?
     end
@@ -1252,7 +1261,8 @@ class Application
           op = PendingAppOp.new(op_type: :add_component, args: {"group_instance_id"=> group_instance_id, "gear_id" => singleton_gear_id, "comp_spec" => comp_spec, "init_git_url"=>init_git_url}, prereq: new_component_op_id + [prereq_id])
           ops.push op
           component_ops[comp_spec][:adds].push op
-          ops.push(PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => singleton_gear_id, "event" => UsageRecord::EVENTS[:begin], 
+          ops.push(PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+            "app_name" => self.name, "gear_ref" => singleton_gear_id, "event" => UsageRecord::EVENTS[:begin], 
             "usage_type" => UsageRecord::USAGE_TYPES[:premium_cart], "cart_name" => comp_spec["cart"]}, prereq: [op._id.to_s])) if cartridge.is_premium?
         end
       else
@@ -1262,7 +1272,8 @@ class Application
           op = PendingAppOp.new(op_type: :add_component, args: {"group_instance_id"=> group_instance_id, "gear_id" => gear_id, "comp_spec" => comp_spec, "init_git_url"=>git_url}, prereq: new_component_op_id + [prereq_id])
           ops.push op
           component_ops[comp_spec][:adds].push op
-          ops.push(PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:begin], 
+          ops.push(PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+            "app_name" => self.name, "gear_ref" => gear_id, "event" => UsageRecord::EVENTS[:begin], 
             "usage_type" => UsageRecord::USAGE_TYPES[:premium_cart], "cart_name" => comp_spec["cart"]}, prereq: [op._id.to_s])) if cartridge.is_premium?
         end
       end
@@ -1346,13 +1357,15 @@ class Application
         if component_instance.is_singleton?
           op = PendingAppOp.new(op_type: :remove_component, args: {"group_instance_id"=> group_instance._id.to_s, "gear_id" => singleton_gear._id.to_s, "comp_spec" => comp_spec})
           ops.push op
-          ops.push(PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => singleton_gear._id.to_s, "event" => UsageRecord::EVENTS[:end], 
+          ops.push(PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+            "app_name" => self.name, "gear_ref" => singleton_gear._id.to_s, "event" => UsageRecord::EVENTS[:end], 
             "usage_type" => UsageRecord::USAGE_TYPES[:premium_cart], "cart_name" => comp_spec["cart"]}, prereq: [op._id.to_s])) if cartridge.is_premium?
         else
           group_instance.gears.each do |gear|
             op = PendingAppOp.new(op_type: :remove_component, args: {"group_instance_id"=> group_instance._id.to_s, "gear_id" => gear._id, "comp_spec" => comp_spec})
             ops.push op
-            ops.push(PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear._id.to_s, "event" => UsageRecord::EVENTS[:end],
+            ops.push(PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+              "app_name" => self.name, "gear_ref" => gear._id.to_s, "event" => UsageRecord::EVENTS[:end],
               "usage_type" => UsageRecord::USAGE_TYPES[:premium_cart], "cart_name" => comp_spec["cart"]}, prereq: [op._id.to_s])) if cartridge.is_premium?
           end
         end
@@ -1461,7 +1474,8 @@ class Application
             usage_ops = []
             if change[:from_scale][:additional_filesystem_gb] != 0
               group_instance.gears.each do |gear|
-                track_usage_old_fs_op = PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear._id.to_s,
+                track_usage_old_fs_op = PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+                  "app_name" => self.name, "gear_ref" => gear._id.to_s,
                   "event" => UsageRecord::EVENTS[:end], "usage_type" => UsageRecord::USAGE_TYPES[:addtl_fs_gb], "additional_filesystem_gb" => change[:from_scale][:additional_filesystem_gb]}, prereq: usage_prereq)
                 usage_ops.push(track_usage_old_fs_op._id.to_s)
                 pending_ops.push(track_usage_old_fs_op)
@@ -1475,8 +1489,9 @@ class Application
               pending_ops.push(fs_op)
 
               if change[:to_scale][:additional_filesystem_gb] != 0
-                track_usage_fs_op = PendingAppOp.new(op_type: :track_usage, args: {"login" => self.domain.owner.login, "app_name" => self.name, "gear_ref" => gear._id.to_s,
-                    "event" => UsageRecord::EVENTS[:begin], "usage_type" => UsageRecord::USAGE_TYPES[:addtl_fs_gb], "additional_filesystem_gb" => change[:to_scale][:additional_filesystem_gb]}, prereq: [fs_op._id.to_s])
+                track_usage_fs_op = PendingAppOp.new(op_type: :track_usage, args: {"user_id" => self.domain.owner._id, "parent_user_id" => self.domain.owner.parent_user_id,
+                  "app_name" => self.name, "gear_ref" => gear._id.to_s, "event" => UsageRecord::EVENTS[:begin],
+                  "usage_type" => UsageRecord::USAGE_TYPES[:addtl_fs_gb], "additional_filesystem_gb" => change[:to_scale][:additional_filesystem_gb]}, prereq: [fs_op._id.to_s])
                 pending_ops.push(track_usage_fs_op)
               end
             end
@@ -1626,7 +1641,7 @@ class Application
       end
       owner.with(consistency: :strong).reload
       owner_capabilities = owner.get_capabilities
-      if owner.consumed_gears + num_gears_added > owner_capabilities["max_gears"]
+      if owner.consumed_gears + num_gears_added > owner_capabilities["max_gears"] and num_gears_added > 0
         raise OpenShift::GearLimitReachedException.new("#{owner.login} is currently using #{owner.consumed_gears} out of #{owner_capabilities["max_gears"]} limit and this application requires #{num_gears_added} additional gears.")
       end
       owner.consumed_gears += num_gears_added
@@ -1741,9 +1756,9 @@ class Application
     return_go["max_gears"] = [fmax,smax].min if first["max_gears"] or second["max_gears"]
     return_go["max_gears"] = -1 if return_go["max_gears"]==10000
 
-    fi = GEAR_SIZES.index(first["gear_size"]) || 0
-    si = GEAR_SIZES.index(second["gear_size"]) || 0
-    return_go["gear_size"] = GEAR_SIZES[[fi,si].max] if first["gear_size"] or second["gear_size"]
+    fi = Rails.application.config.openshift[:gear_sizes].index(first["gear_size"]) || 0
+    si = Rails.application.config.openshift[:gear_sizes].index(second["gear_size"]) || 0
+    return_go["gear_size"] = Rails.application.config.openshift[:gear_sizes][[fi,si].max] if first["gear_size"] or second["gear_size"]
     return_go
   end
 

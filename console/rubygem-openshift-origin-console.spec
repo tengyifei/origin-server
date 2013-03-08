@@ -9,8 +9,8 @@
 
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
-Version:       1.5.5
-Release:       2%{?dist}
+Version: 1.6.1
+Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           https://openshift.redhat.com
@@ -128,6 +128,94 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.5.13-1
+- Bug 918867 (jharris@redhat.com)
+
+* Wed Mar 06 2013 Adam Miller <admiller@redhat.com> 1.5.12-1
+- Merge pull request #1569 from smarterclayton/fix_default_config_url
+  (dmcphers@redhat.com)
+- COMMUNITY_URL should end in slash by default (ccoleman@redhat.com)
+
+* Wed Mar 06 2013 Adam Miller <admiller@redhat.com> 1.5.11-1
+- Move REST API cartridge test to misc1 group (pmorie@gmail.com)
+- Merge pull request #1554 from
+  smarterclayton/bug_902181_should_wrap_domain_element
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1556 from smarterclayton/bug_885954_wrap_links_on_webkit
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1558 from liggitt/alt_text (dmcphers@redhat.com)
+- Bug 885954 - Wrap links on WebKit (needs word-break) (ccoleman@redhat.com)
+- Add alt text to all images (jliggitt@redhat.com)
+- Bug 902181 - Should wrap domain input element where possible
+  (ccoleman@redhat.com)
+
+* Tue Mar 05 2013 Adam Miller <admiller@redhat.com> 1.5.10-1
+- Merge branch 'master' of github.com:openshift/origin-server into icon-changes
+  (sgoodwin@redhat.com)
+- Merge pull request #1539 from jtharris/bugs/BZ902118 (dmcphers@redhat.com)
+- Merge pull request #1534 from
+  liggitt/bug_912010_cartridge_filter_empty_results (dmcphers@redhat.com)
+- Merge pull request #1533 from
+  smarterclayton/bug_916495_relative_urls_in_community_still
+  (dmcphers@redhat.com)
+- Bug 902118 - Removing generated hidden form fields (jharris@redhat.com)
+- - first glyph gets position: relative - other glyph(s) get position: absolute
+  and left:0 (sgoodwin@redhat.com)
+- Move test case into rest_api_test.rb (jliggitt@redhat.com)
+- Bug 916495 - Community still points incorrectly to some incorrect URLs
+  (ccoleman@redhat.com)
+- Bug 912010 - Make the 'cartridge' tag match all cartridges
+  (jliggitt@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.9-1
+- Fix for Bug 912194 - The "the User Guide" link on my account page is broken
+  (sgoodwin@redhat.com)
+- Merge pull request #1479 from sg00dwin/iconfont
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1433 from fotioslindiakos/plan_upgrade
+  (dmcphers+openshiftbot@redhat.com)
+- rename of file (sgoodwin@redhat.com)
+- Added opts to pricing for anchors (fotios@redhat.com)
+- Move fonts from li to openshift-server apply margin to class that controls
+  :before positioned fonts for offset (sgoodwin@redhat.com)
+- remove margin because it needs to only be for icons set using their class
+  name (sgoodwin@redhat.com)
+- Merge branch 'master' of github.com:openshift/origin-server into iconfont
+  (sgoodwin@redhat.com)
+- Replace the following sprite images with icon font - Restart - Search
+  (sgoodwin@redhat.com)
+- Include iconfont in common.css (sgoodwin@redhat.com)
+
+* Thu Feb 28 2013 Adam Miller <admiller@redhat.com> 1.5.8-1
+- Merge pull request #1483 from
+  smarterclayton/bug_915527_session_caps_not_cleared (dmcphers@redhat.com)
+- Bug 915527 - Session capabilities not cleared when domain/app changed
+  (ccoleman@redhat.com)
+- Bug 916311 - Expired tokens should be hidden (ccoleman@redhat.com)
+
+* Tue Feb 26 2013 Adam Miller <admiller@redhat.com> 1.5.7-1
+- Merge pull request #1447 from smarterclayton/community_url_not_available
+  (dmcphers+openshiftbot@redhat.com)
+- Implement authorization support in the broker (ccoleman@redhat.com)
+- The community URL is not available for some operations - use the default
+  config if that is true (ccoleman@redhat.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.6-1
+- Merge pull request #1443 from
+  smarterclayton/bug_913816_work_around_bad_logtailer
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 913816 - Fix log tailer to pick up the correct config
+  (ccoleman@redhat.com)
+- Asset pages need CommunityAware, reorder suites slightly
+  (ccoleman@redhat.com)
+- Integrate Justin's community URL changes with the new site split changes
+  (ccoleman@redhat.com)
+- Merge pull request #1421 from jtharris/community (ccoleman@redhat.com)
+- Adding community url to config. (jharris@redhat.com)
+
 * Wed Feb 20 2013 Adam Miller <admiller@redhat.com> 1.5.5-2
 - bump for chainbuild
 

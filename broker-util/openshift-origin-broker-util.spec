@@ -6,7 +6,7 @@
 
 Summary:       Utility scripts for the OpenShift Origin broker
 Name:          openshift-origin-broker-util
-Version:       1.5.3
+Version: 1.6.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -49,8 +49,10 @@ cp kickstart/openshift-origin-remix.ks %{buildroot}/usr/share/openshift/kickstar
 %attr(0750,-,-) %{_sbindir}/oo-admin-chk
 %attr(0750,-,-) %{_sbindir}/oo-admin-clear-pending-ops
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-app
+%attr(0750,-,-) %{_sbindir}/oo-admin-ctl-authorization
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-district
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-domain
+%attr(0750,-,-) %{_sbindir}/oo-admin-ctl-usage
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-user
 %attr(0750,-,-) %{_sbindir}/oo-admin-move
 %attr(0750,-,-) %{_sbindir}/oo-admin-usage
@@ -67,6 +69,7 @@ cp kickstart/openshift-origin-remix.ks %{buildroot}/usr/share/openshift/kickstar
 %{_mandir}/man8/oo-admin-ctl-app.8.gz
 %{_mandir}/man8/oo-admin-ctl-district.8.gz
 %{_mandir}/man8/oo-admin-ctl-domain.8.gz
+%{_mandir}/man8/oo-admin-ctl-usage.8.gz
 %{_mandir}/man8/oo-admin-ctl-user.8.gz
 %{_mandir}/man8/oo-admin-move.8.gz
 %{_mandir}/man8/oo-admin-usage.8.gz
@@ -78,6 +81,61 @@ cp kickstart/openshift-origin-remix.ks %{buildroot}/usr/share/openshift/kickstar
 %{_mandir}/man8/oo-stats.8.gz
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.5.12-1
+- Fix for bug 919190 - adding a space in the info text (abhgupta@redhat.com)
+- Adding man page for oo-admin-ctl-script (abhgupta@redhat.com)
+
+* Wed Mar 06 2013 Adam Miller <admiller@redhat.com> 1.5.11-1
+- BZ917491 - [ORIGIN]oo-register-dns on broker has duplicate options
+  (calfonso@redhat.com)
+- Merge pull request #1564 from danmcp/master (dmcphers@redhat.com)
+- Bug 918480 (dmcphers@redhat.com)
+- Sync usage fixes (rpenta@redhat.com)
+
+* Tue Mar 05 2013 Adam Miller <admiller@redhat.com> 1.5.10-1
+- Skip Usage capture for sub-account users (rpenta@redhat.com)
+
+* Mon Mar 04 2013 Adam Miller <admiller@redhat.com> 1.5.9-1
+- oo-admin-ctl-usage fixes (rpenta@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.8-1
+- Removing mcollective qpid plugin and adding some more doc
+  (dmcphers@redhat.com)
+- bypass failures; handle nil ops; no_timeout (rchopra@redhat.com)
+
+* Thu Feb 28 2013 Adam Miller <admiller@redhat.com> 1.5.7-1
+- Merge pull request #1441 from pravisankar/dev/ravi/us3409
+  (dmcphers+openshiftbot@redhat.com)
+- fix oo-admin-clear-pending-ops with respect to rollbacks (rchopra@redhat.com)
+- Added index on 'login' for usage_record and usage mongoid models Added
+  separate usage audit log, /var/log/openshift/broker/usage.log instead of
+  syslog. Moved user action log from /var/log/openshift/user_action.log to
+  /var/log/openshift/broker/user_action.log Added Distributed lock used in oo-
+  admin-ctl-usage script Added Billing Service interface Added oo-admin-ctl-
+  usage script to list and sync usage records to billing vendor Added oo-admin-
+  ctl-usage to broker-util spec file Fixed distributed lock test Add billing
+  service to origin-controller Some more bug fixes (rpenta@redhat.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 1.5.6-1
+- Bug 914639 (dmcphers@redhat.com)
+
+* Tue Feb 26 2013 Adam Miller <admiller@redhat.com> 1.5.5-1
+- Implement authorization support in the broker (ccoleman@redhat.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.4-2
+- bump Release for fixed build target rebuild (admiller@redhat.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- bug 915228 - <oo-admin-ctl-user> validate gear size before adding
+  https://bugzilla.redhat.com/show_bug.cgi?id=915228 Adding an invalid gear
+  size shouldn't be successful. Check against configured gear sizes first.
+  (lmeyer@redhat.com)
+- Bug 914639 (dmcphers@redhat.com)
+- admin script to push clogged pending ops (rchopra@redhat.com)
+
 * Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
 - showiing usage duration and cost based on timeframe specified
   (abhgupta@redhat.com)

@@ -1,8 +1,8 @@
-%global cartridgedir %{_libexecdir}/openshift/cartridges/mock
-%global frameworkdir %{_libexecdir}/openshift/cartridges/mock
+%global cartridgedir %{_libexecdir}/openshift/cartridges/v2/mock
+%global frameworkdir %{_libexecdir}/openshift/cartridges/v2/mock
 
 Name: openshift-origin-cartridge-mock
-Version: 0.0.4
+Version: 0.1.1
 Release: 1%{?dist}
 Summary: Mock cartridge for V2 Cartridge SDK
 Group: Development/Languages
@@ -28,9 +28,9 @@ test platform functionality.
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{cartridgedir}
-mkdir -p %{buildroot}/%{_sysconfdir}/openshift/cartridges
+mkdir -p %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2
 cp -r * %{buildroot}%{cartridgedir}/
-ln -s %{cartridgedir}/conf/ %{buildroot}/%{_sysconfdir}/openshift/cartridges/%{name}
+ln -s %{cartridgedir}/conf/ %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2/%{name}
 ln -s %{cartridgedir} %{buildroot}/%{frameworkdir}
 
 
@@ -47,16 +47,34 @@ rm -rf %{buildroot}
 %dir %{cartridgedir}/env
 %dir %{cartridgedir}/metadata
 %dir %{cartridgedir}/opt
-%dir %{cartridgedir}/versions
+%dir %{cartridgedir}/template
 %config(noreplace) %{cartridgedir}/conf/
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{frameworkdir}
-%{_sysconfdir}/openshift/cartridges/%{name}
+%{_sysconfdir}/openshift/cartridges/v2/%{name}
 %{cartridgedir}/metadata/manifest.yml
 %doc %{cartridgedir}/README.md
+%config(noreplace) %{cartridgedir}/mock.conf
 
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 0.1.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 0.0.6-1
+- Add simple v2 app builds (pmorie@gmail.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 0.0.5-2
+- fix version and tag for build (admiller@redhat.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 0.0.5-1
+- WIP Cartridge Refactor (pmorie@gmail.com)
+- WIP Cartridge Refactor (pmorie@gmail.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com>
+- WIP Cartridge Refactor (pmorie@gmail.com)
+- WIP Cartridge Refactor (pmorie@gmail.com)
+
 * Wed Feb 13 2013 Dan McPherson <dmcphers@redhat.com> 0.0.4-1
 - 
 

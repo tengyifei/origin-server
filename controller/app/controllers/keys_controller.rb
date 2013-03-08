@@ -29,7 +29,7 @@ class KeysController < BaseController
     name = params[:name]
     type = params[:type]
     
-    Rails.logger.debug "Creating key name:#{name} type:#{type} for user #{@login}"
+    Rails.logger.debug "Creating key name:#{name} type:#{type} for user #{@cloud_user.login}"
 
     key = UserSshKey.new(name: name, type: type, content: content)
     if key.invalid?
@@ -48,12 +48,11 @@ class KeysController < BaseController
     begin
       @cloud_user.add_ssh_key(key)
       ssh_key = RestKey.new(key, get_url, nolinks)
-      render_success(:created, "key", ssh_key, "ADD_KEY", "Created SSH key #{name}", true)
+      render_success(:created, "key", ssh_key, "ADD_KEY", "Created SSH key #{name}", true, nil, nil, 'IP' => request.remote_ip)
     rescue OpenShift::LockUnavailableException => e
       return render_error(:service_unavailable, e.message, e.code, "ADD_KEY")
     rescue Exception => e
       return render_exception(e, "ADD_KEY")
-    return
     end
   end
 
@@ -63,14 +62,14 @@ class KeysController < BaseController
     content = params[:content]
     type = params[:type]
     
-    # if the id has a dot, rails breaks up the actual intended id into :id and :format 
+    # if the id has a dot, rails breaks up the actual intended id into :id and :format
     unless params[:format].nil? or params[:format].empty? or["xml", "json", "yml", "yaml", "xhtml"].include? params[:format] 
       id += "." + params[:format]
       # set the default format
       request.format = "json" 
     end
      
-    Rails.logger.debug "Updating key name:#{id} type:#{type} for user #{@login}"
+    Rails.logger.debug "Updating key name:#{id} type:#{type} for user #{@cloud_user.login}"
     key = UserSshKey.new(name: id, type: type, content: content)
     if key.invalid?
       messages = get_error_messages(key)
@@ -88,9 +87,9 @@ class KeysController < BaseController
     begin
       @cloud_user.update_ssh_key(key)
       ssh_key = RestKey.new(key, get_url, nolinks)
-      log_action("UPDATE_KEY", true, "Updated SSH key #{id}")
+      log_action("UPDATE_KEY", true, "Updated SSH key #{id}", 'IP' => request.remote_ip)
       @reply = new_rest_reply(:ok, "key", ssh_key)
-      @reply.messages.push(Message.new(:info, "Updated SSH key with name #{id} for user #{@login}"))
+      @reply.messages.push(Message.new(:info, "Updated SSH key with name #{id} for user #{@cloud_user.login}"))
       respond_with @reply, :status => @reply.status
     rescue OpenShift::LockUnavailableException => e
       return render_error(:service_unavailable, e.message, e.code, "UPDATE_KEY")
@@ -100,7 +99,7 @@ class KeysController < BaseController
       Rails.logger.error e.backtrace
       @reply = new_rest_reply(:internal_server_error)
       error_code = e.respond_to?('code') ? e.code : 1
-      @reply.messages.push(Message.new(:error, "Failed to update SSH key #{id} for user #{@login} due to:#{e.message}", error_code) )
+      @reply.messages.push(Message.new(:error, "Failed to update SSH key #{id} for user #{@cloud_user.login} due to:#{e.message}", error_code) )
       respond_with @reply, :status => @reply.status
     end
   end

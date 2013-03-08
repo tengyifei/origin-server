@@ -1,6 +1,6 @@
 # OS independent path locations
-bin_dir  = File.join("bin", "*")
 conf_dir = File.join("conf", "*")
+httpd_dir = File.join(File.join("httpd", "**"), "*")
 lib_dir  = File.join(File.join("lib", "**"), "*")
 misc_dir  = File.join(File.join("misc", "**"), "*")
 test_dir  = File.join(File.join("test", "**"), "*")
@@ -17,9 +17,8 @@ Gem::Specification.new do |s|
   s.description = `rpm -q --define 'rhel 7' --qf "%{description}\n" --specfile #{spec_file}`.split[0]
 
   s.rubyforge_project = "openshift-origin-node"
-  s.files       = Dir[lib_dir] + Dir[bin_dir] + Dir[conf_dir] + Dir[test_dir] + Dir[misc_dir]
+  s.files       = Dir[lib_dir] + Dir[conf_dir] + Dir[test_dir] + Dir[misc_dir] + Dir[httpd_dir]
   s.files       += %w(README.md Rakefile Gemfile rubygem-openshift-origin-node.spec openshift-origin-node.gemspec COPYRIGHT LICENSE)
-  s.executables = Dir[bin_dir].map {|binary| File.basename(binary)}
   s.require_paths = ["lib"]
   s.add_dependency("json")
   s.add_dependency("parseconfig", ">= 0.5.2")

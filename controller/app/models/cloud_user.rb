@@ -2,9 +2,9 @@
 # @!attribute [r] login
 #   @return [String] Login name for the user.
 # @!attribute [r] capabilities
-#   @return [Hash] Hash representing the capabilities of the user. It is updated using the ss-admin-user-ctl scripts or when a plan changes.
+#   @return [Hash] Hash representing the capabilities of the user. It is updated using the oo-admin-user-ctl scripts or when a plan changes.
 # @!attribute [r] parent_user_id
-#   @return [Moped::BSON::ObjectId] ID of the parent user object if this object prepresents a sub-account.
+#   @return [Moped::BSON::ObjectId] ID of the parent user object if this object represents a sub-account.
 # @!attribute [rw] plan_id
 # @!attribute [rw] pending_plan_id
 # @!attribute [rw] pending_plan_uptime
@@ -21,7 +21,7 @@ class CloudUser
   include Mongoid::Timestamps
   include UtilHelper
   alias_method :mongoid_save, :save
-  
+
   DEFAULT_SSH_KEY_NAME = "default"
 
   field :login, type: String
@@ -32,38 +32,53 @@ class CloudUser
   field :pending_plan_uptime, type: Time
   field :usage_account_id, type: String
   field :consumed_gears, type: Integer, default: 0
-  embeds_many :ssh_keys, class_name: SshKey.name
+  embeds_many :ssh_keys, class_name: UserSshKey.name
   embeds_many :pending_ops, class_name: PendingUserOps.name
-  has_many :domains, class_name: Domain.name, dependent: :restrict
-  
+  # embeds_many :identities, class_name: Identity.name, cascade_callbacks: true
+  has_many :domains, class_name: Domain.name, dependent: :restrict, :foreign_key => 'owner_id'
+  has_many :authorizations, class_name: Authorization.name, dependent: :restrict
+
   validates :login, presence: true, login: true
   validates :capabilities, presence: true, capabilities: true
- 
+
   scope :with_plan, any_of({:plan_id.ne => nil}, {:pending_plan_id.ne => nil}) 
   index({:login => 1}, {:unique => true})
+
+  scope :with_identity_id, lambda{ |id| where(login: id) }
+  scope :with_identity, lambda{ |provider, uid| with_identity_id(uid) }
+  # Will become as follows when identities are present
+  #
+  #  index({:'identities._id' => 1}, {:unique => true})
+  #  scope :with_identity_id, lambda{ |id| where(:'identities._id' => id) }
+  #  scope :with_identity, lambda{ |provider, uid| with_identity_id(Identity.id_for(provider, uid)) }
+  #  validate{ errors.add(:base, "CloudUser must have one or more identities") if identities.empty? }
+
   create_indexes
-  
+
   # Returns a map of field to error code for validation failures.
   def self.validation_map
     {login: 107, capabilities: 107}
   end
-  
-  # Auth method can either be :login or :broker_auth. :login represents a normal authentication with user/pass.
-  # :broker_auth is used when the applciation needs to make a request to the broker on behalf of the user (eg: scale-up)
-  def auth_method=(m)
-    @auth_method = m
-  end
-  
-  # @see #auth_method=
-  def auth_method
-    @auth_method
-  end
-  
-  # Convenience method to get/set the max_gears capability
+
+  # Auth method can either be :login or :broker_auth. :login represents a normal 
+  # authentication with user/pass. :broker_auth is used when the applciation needs 
+  # to make a request to the broker on behalf of the user (eg: scale-up)
+  #
+  # This is a transient attribute and is not persisted
+  attr_accessor :auth_method
+
+  # Identity support will add the following:
+  #
+  # # This is a transient attribute and is not persisted
+  # attr_accessor :current_identity
+  # def current_identity!(provider, uid)
+  #  self.current_identity = identities.select{ |i| i.provider == provider && i.uid == uid }.first
+  # end
+
+  # Convenience method to get the max_gears capability
   def max_gears
     get_capabilities["max_gears"]
   end
-
   def max_gears=(m)
     user_capabilities = get_capabilities
     user_capabilities["max_gears"] = m
@@ -92,12 +107,57 @@ class CloudUser
     res
   end
 
+  #
+  # Identity support will introduce a provider attribute that must be
+  # passed to this method. Use the two argument form:
+  #
+  #   find_by_identity(nil, login)
+  #
+  # to locate a user.
+  #
+  def self.find_by_identity(*arguments)
+    if arguments.length == 2
+      with_identity(*arguments)
+    else
+      with_identity_id(arguments[0])
+    end.find_by
+  end
+
+  #
+  # Identity support will introduce a provider attribute that is used to 
+  # identify the source of a particular login.  Until then, users are only 
+  # identified by their login and provider is ignored.
+  #
+  def self.find_or_create_by_identity(provider, login, create_attributes={}, &block)
+    login = login.to_s
+    provider = provider.to_s if provider
+    user = find_by_identity(nil, login)
+    #identity = user.current_identity!(provider, login)
+    yield user, login if block_given?
+    user
+  rescue Mongoid::Errors::DocumentNotFound
+    user = new(create_attributes)
+    #user.current_identity = user.identities.build(provider: provider, uid: login)
+    #user.login = user.current_identity.id
+    user.login = login
+    begin
+      user.with(safe: true).save
+      Lock.create_lock(user)
+      OpenShift::UserActionLog.action("CREATE_USER", true, "Creating user", 'USER' => user.id, 'LOGIN' => login, 'PROVIDER' => provider)
+      user
+    rescue Moped::Errors::OperationFailure
+      user = find_by_identity(nil, login)
+      raise unless user
+      yield user, login if block_given?
+      user
+    end
+  end
+
   # Used to add an ssh-key to the user. Use this instead of ssh_keys= so that the key can be propagated to the
   # domains/application that the user has access to.
   def add_ssh_key(key)
-    domains = self.domains
-    if domains.count > 0
-      pending_op = PendingUserOps.new(op_type: :add_ssh_key, arguments: key.attributes.dup, state: :init, on_domain_ids: domains.map{|d|d._id.to_s}, created_at: Time.new)
+    if self.domains.count > 0
+      pending_op = PendingUserOps.new(op_type: :add_ssh_key, arguments: key.attributes.dup, state: :init, on_domain_ids: self.domains.map{|d|d._id.to_s}, created_at: Time.new)
       CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.serializable_hash , ssh_keys: key.serializable_hash }})
       self.with(consistency: :strong).reload
       self.run_jobs
@@ -117,31 +177,25 @@ class CloudUser
     remove_ssh_key(key.name)
     add_ssh_key(key)
   end
-  
+
   # Used to remove an ssh-key from the user. Use this instead of ssh_keys= so that the key removal can be propagated to the
   # domains/application that the user has access to.
   def remove_ssh_key(name)
     key = self.ssh_keys.find_by(name: name)
-    domains = self.domains
-    if domains.count > 0
-      pending_op = PendingUserOps.new(op_type: :delete_ssh_key, arguments: key.attributes.dup, state: :init, on_domain_ids: domains.map{|d|d._id.to_s}, created_at: Time.new)
+    if self.domains.count > 0
+      pending_op = PendingUserOps.new(op_type: :delete_ssh_key, arguments: key.attributes.dup, state: :init, on_domain_ids: self.domains.map{|d|d._id.to_s}, created_at: Time.new)
       CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.serializable_hash } , "$pull" => { ssh_keys: key.serializable_hash }})
       self.with(consistency: :strong).reload
       self.run_jobs      
     else
       key.delete
-      self.ssh_keys.delete_if {|ssh_key| ssh_key.name == name}
     end
-  end
-
-  def domains
-    (Domain.where(owner: self) + Domain.where(user_ids: self._id)).uniq
   end
 
   def default_capabilities
     {
       "subaccounts" => false,
-      "gear_sizes" => Rails.application.config.openshift[:default_gear_size],
+      "gear_sizes" => Rails.application.config.openshift[:default_gear_capabilities],
       "max_gears" => Rails.application.config.openshift[:default_max_gears],
     }
   end
@@ -166,12 +220,19 @@ class CloudUser
 
   # Delete user and all its artifacts like domains, applications associated with the user 
   def force_delete
-    self.domains.each do |domain|
-      domain.applications.each do |app|
+    # will need to read from the primary to make sure we get the latest data
+    while Domain.with(consistency: :strong).where(owner: self).count > 0
+      domain = Domain.with(consistency: :strong).where(owner: self).first
+      while Application.with(consistency: :strong).where(domain: domain).count > 0
+        app = Application.with(consistency: :strong).where(domain: domain).first
         app.destroy_app
-      end if domain.applications.count > 0
+      end
       domain.delete
-    end if self.domains.count > 0
+    end
+    
+    # will need to reload from primary to ensure that mongoid doesn't validate based on its cache
+    # and prevent us from deleting this user because of the :dependent :restrict clause
+    self.with(consistency: :strong).reload
     self.delete
   end
  

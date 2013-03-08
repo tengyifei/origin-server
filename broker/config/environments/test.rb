@@ -46,8 +46,9 @@ Broker::Application.configure do
   }
 
   config.usage_tracking = {
-    :datastore_enabled => conf.get_bool("ENABLE_USAGE_TRACKING_DATASTORE", "false"),
-    :syslog_enabled => conf.get_bool("ENABLE_USAGE_TRACKING_SYSLOG", "false")
+    :datastore_enabled => conf.get_bool("ENABLE_USAGE_TRACKING_DATASTORE", "true"),
+    :audit_log_enabled => conf.get_bool("ENABLE_USAGE_TRACKING_AUDIT_LOG", "true"),
+    :audit_log_filepath => conf.get_bool("USAGE_TRACKING_AUDIT_LOG_FILE", "/var/log/openshift/broker/usage.log")
   }
 
   config.analytics = {
@@ -56,7 +57,7 @@ Broker::Application.configure do
 
   config.user_action_logging = {
     :logging_enabled => conf.get_bool("ENABLE_USER_ACTION_LOG", "true"),
-    :log_filepath => conf.get("USER_ACTION_LOG_FILE", "/var/log/openshift/user_action.log")
+    :log_filepath => conf.get("USER_ACTION_LOG_FILE", "/var/log/openshift/broker/user_action.log")
   }
 
   config.openshift = {
@@ -65,7 +66,9 @@ Broker::Application.configure do
     :default_gear_size => conf.get("DEFAULT_GEAR_SIZE", "small"),
     :gear_sizes => conf.get("VALID_GEAR_SIZES", "small,medium").split(","),
     :default_gear_capabilities => conf.get("DEFAULT_GEAR_CAPABILITIES", "small").split(","),
-    :community_quickstarts_url => conf.get('COMMUNITY_QUICKSTARTS_URL'),
+    :scopes => ['Scope::Session', 'Scope::Read', 'Scope::Application', 'Scope::Userinfo'],
+    :default_scope => 'userinfo',
+    :scope_expirations => OpenShift::Controller::Configuration.parse_expiration("session=1.days|2.days", 1.month),
   }
 
   config.auth = {

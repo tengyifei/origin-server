@@ -1,7 +1,17 @@
+##
+#@api REST
+# Application CRUD REST API
 class ApplicationsController < BaseController
   include RestModelHelper
 
-  # GET /domains/[domain id]/applications
+  ##
+  # List all applications
+  # 
+  # URL: /domains/:domain_id/applications
+  # @param [String] include Comma seperated list of sub-objects to include in reply. Only "cartridges" is supported at the moment.
+  #
+  # Action: GET
+  # @return [RestReply<Array<RestApplication>>] List of applications within the domain
   def index
     domain_id = params[:domain_id]
     begin
@@ -17,7 +27,13 @@ class ApplicationsController < BaseController
     render_success(:ok, "applications", rest_apps, "LIST_APPLICATIONS", "Found #{rest_apps.length} applications for domain '#{domain_id}'")
   end
   
-  # GET /domains/[domain_id]/applications/<id>
+  ##
+  # Retrieve a specific application
+  # 
+  # URL: /domains/:domain_id/applications/:id
+  #
+  # Action: GET
+  # @return [RestReply<RestApplication>] Application object
   def show
     domain_id = params[:domain_id]
     id = params[:id]
@@ -41,7 +57,19 @@ class ApplicationsController < BaseController
     end
   end
   
-  # POST /domains/[domain_id]/applications
+  ##
+  # Create a new application
+  # 
+  # URL: /domains/:domain_id/applications
+  #
+  # Action: POST
+  # @param [String] name Application name
+  # @param [Array<String>] cartridges List of cartridges to create the application with. There must be one web framework cartridge in the list.
+  # @param [Boolean] scalable Create a scalable application. Defaults to false.
+  # @param [String] init_git_url {http://git-scm.com Git} URI to use as a template when creating the application
+  # @param [String] gear_profile Gear profile to use for gears when creating the application
+  #
+  # @return [RestReply<RestApplication>] Application object
   def create
     domain_id = params[:domain_id]
     app_name = params[:name]
@@ -71,7 +99,7 @@ class ApplicationsController < BaseController
     end
 
     Rails.logger.debug "Checking to see if user limit for number of apps has been reached"
-    return render_error(:unprocessable_entity, "#{@login} has already reached the gear limit of #{@cloud_user.max_gears}",
+    return render_error(:unprocessable_entity, "#{@cloud_user.login} has already reached the gear limit of #{@cloud_user.max_gears}",
                         104, "ADD_APPLICATION") if (@cloud_user.consumed_gears >= @cloud_user.max_gears)
 
     return render_error(:unprocessable_entity, "You must specify a cartridge. Valid values are (#{carts.join(', ')})",
@@ -86,7 +114,10 @@ class ApplicationsController < BaseController
         framework_cartridges.push(cart) unless not framework_carts.include?(cart)
         other_cartridges.push(cart) unless framework_carts.include?(cart)
       end
-      if framework_cartridges.empty?
+      if framework_carts.empty?
+        return render_error(:unprocessable_entity, "Unable to determine list of available cartridges.  If the problem persists please contact Red Hat support",
+                          109, "ADD_APPLICATION", "cartridge")
+      elsif framework_cartridges.empty?
         return render_error(:unprocessable_entity, "Each application must contain one web cartridge.  None of the specified cartridges #{features.to_sentence} is a web cartridge. Please include one of the following cartridges: #{framework_carts.to_sentence}.",
                           109, "ADD_APPLICATION", "cartridge")
       elsif framework_cartridges.length > 1
@@ -125,7 +156,12 @@ class ApplicationsController < BaseController
     render_success(:created, "application", app, "ADD_APPLICATION", log_msg, nil, nil, messages)
   end
   
-  # DELELTE domains/[domain_id]/applications/[id]
+  ##
+  # Create a new application
+  # 
+  # URL: /domains/:domain_id/applications/:id
+  #
+  # Action: DELETE
   def destroy
     domain_id = params[:domain_id]
     id = params[:id]    

@@ -2,7 +2,7 @@
 
 Summary:       Provides python-2.6 support
 Name:          openshift-origin-cartridge-python-2.6
-Version:       1.5.3
+Version: 1.6.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -21,6 +21,7 @@ Requires:      pymongo-gridfs
 Requires:      python-psycopg2
 Requires:      python-virtualenv
 Requires:      python-magic
+Requires:      gstreamer-python
 Requires:      libjpeg
 Requires:      libjpeg-devel
 Requires:      libcurl
@@ -103,6 +104,15 @@ ln -s %{cartridgedir}/../abstract/info/bin/sync_gears.sh %{buildroot}%{cartridge
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.5-1
+- BZ914977: Adding missing gstreamer-python package. (mrunalp@gmail.com)
+
+* Thu Feb 28 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- Bug 913217 (bdecoste@gmail.com)
+
 * Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
 - Switch from VirtualHosts to mod_rewrite based routing to support high
   density. (rmillner@redhat.com)

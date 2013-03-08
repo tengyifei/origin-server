@@ -7,7 +7,7 @@
 
 Summary:       Routing proxy for OpenShift Origin Node
 Name:          openshift-origin-node-proxy
-Version:       0.6.3
+Version: 0.7.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -125,6 +125,18 @@ fi
 %doc README
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 0.7.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Tue Mar 05 2013 Adam Miller <admiller@redhat.com> 0.6.6-1
+- BZ 905647: Push down cookies to ws lib. (mrunalp@gmail.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 0.6.5-1
+- BZ914838: Fix uri parsing. (mrunalp@gmail.com)
+
+* Tue Feb 26 2013 Adam Miller <admiller@redhat.com> 0.6.4-1
+- Skip migrated directories when finding the new routes. (rmillner@redhat.com)
+
 * Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 0.6.3-1
 - Switch from VirtualHosts to mod_rewrite based routing to support high
   density. (rmillner@redhat.com)

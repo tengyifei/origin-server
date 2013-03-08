@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossEWS1.0 support
 Name:          openshift-origin-cartridge-jbossews-1.0
-Version:       1.5.3
+Version: 1.6.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -49,6 +49,7 @@ mkdir -p %{buildroot}/%{_sysconfdir}/openshift/cartridges
 cp LICENSE %{buildroot}%{cartridgedir}/
 cp COPYRIGHT %{buildroot}%{cartridgedir}/
 cp README %{buildroot}%{cartridgedir}/
+cp jbossews1.0.md %{buildroot}%{cartridgedir}/
 cp -r info %{buildroot}%{cartridgedir}/
 cp -r template %{buildroot}%{cartridgedir}/
 ln -s %{cartridgedir}/info/configuration/ %{buildroot}/%{_sysconfdir}/openshift/cartridges/%{name}
@@ -63,7 +64,6 @@ ln -s %{cartridgedir}/../abstract/info/hooks/update-namespace %{buildroot}%{cart
 ln -s %{cartridgedir}/../abstract/info/hooks/deploy-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/deploy-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/remove-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/remove-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/status %{buildroot}%{cartridgedir}/info/hooks/status
-ln -s %{cartridgedir}/../abstract/info/hooks/tidy %{buildroot}%{cartridgedir}/info/hooks/tidy
 ln -s %{cartridgedir}/../abstract/info/hooks/move %{buildroot}%{cartridgedir}/info/hooks/move
 ln -s %{cartridgedir}/../abstract/info/hooks/system-messages %{buildroot}%{cartridgedir}/info/hooks/system-messages
 ln -s %{cartridgedir}/../abstract/info/connection-hooks/publish-gear-endpoint %{buildroot}%{cartridgedir}/info/connection-hooks/publish-gear-endpoint
@@ -119,10 +119,28 @@ alternatives --set jbossews-1.0 /usr/share/tomcat6
 %{cartridgedir}/README
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
+%doc %{cartridgedir}/jbossews1.0.md
 %config(noreplace) %{cartridgedir}/info/configuration/
 
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Tue Mar 05 2013 Adam Miller <admiller@redhat.com> 1.5.7-1
+- JBoss cartridge documentation for OSE 1.1 (calfonso@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.6-1
+- Bug 916388: Fix JBoss tidy scripts (ironcladlou@gmail.com)
+
+* Thu Feb 28 2013 Adam Miller <admiller@redhat.com> 1.5.5-1
+- Merge pull request #1474 from bdecoste/master (dmcphers@redhat.com)
+- Bug 913217 (bdecoste@gmail.com)
+- Bug 913217 (bdecoste@gmail.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- Bug 895507 (bdecoste@gmail.com)
+
 * Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
 - Switch from VirtualHosts to mod_rewrite based routing to support high
   density. (rmillner@redhat.com)

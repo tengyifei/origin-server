@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Controller
 Name:          rubygem-%{gem_name}
-Version:       1.5.5
+Version: 1.6.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -78,6 +78,156 @@ mkdir -p %{buildroot}/etc/openshift/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Wed Mar 06 2013 Adam Miller <admiller@redhat.com> 1.5.14-1
+- Merge pull request #1566 from lnader/master (dmcphers@redhat.com)
+- be sure you dont cache an empty list (dmcphers@redhat.com)
+- Bug 918501 (lnader@redhat.com)
+- Merge pull request #1559 from pravisankar/dev/ravi/usage-fixes
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1562 from kraman/default_gear_sizes_2
+  (dmcphers@redhat.com)
+- Fixed a regression where DEFAULT_GEAR_CAPABILITIES was not being used to
+  populate cloud user default capabilities. (kraman@gmail.com)
+- Bug 911322 (lnader@redhat.com)
+- Sync usage fixes (rpenta@redhat.com)
+- Merge pull request #1555 from danmcp/master (dmcphers@redhat.com)
+- Bug 917973 Addind a retry and better messaging when you dont get a response
+  from the find one (dmcphers@redhat.com)
+
+* Tue Mar 05 2013 Adam Miller <admiller@redhat.com> 1.5.13-1
+- Adding input redirect for ssh-keygen so it does not prompt for a question and
+  wait indefinitely (kraman@gmail.com)
+- Merge pull request #1488 from kraman/fix_parallel_test_run
+  (dmcphers+openshiftbot@redhat.com)
+- Update setup helper to create test ssh key in exclusive lock. Othrwise was
+  facing race condition where multiple test runs were completing to create the
+  key files. (kraman@gmail.com)
+- Skip Usage capture for sub-account users (rpenta@redhat.com)
+- Merge pull request #1512 from rajatchopra/master (dmcphers@redhat.com)
+- force stop - fix bug#915587 (rchopra@redhat.com)
+- Bug 916559 - Existing broker keys broken after stage upgrade
+  (ccoleman@redhat.com)
+
+* Mon Mar 04 2013 Adam Miller <admiller@redhat.com> 1.5.12-1
+- Bug 916941 - Keep created time in sync when creating UsageRecord and Usage
+  mongo record (rpenta@redhat.com)
+- Merge pull request #1519 from abhgupta/abhgupta-ssh-keys
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1518 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1516 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Fix for issue identified by lnader where force_delete fails for a user with
+  domains (abhgupta@redhat.com)
+- adding coverage (dmcphers@redhat.com)
+- Fix for bug 915638   We are not logging the user credentials in the log file
+  (abhgupta@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.11-1
+- Add test for v2 tidy (pmorie@gmail.com)
+- Add simple v2 app builds (pmorie@gmail.com)
+- Updated feature test. (mrunalp@gmail.com)
+- Updated tests. (mrunalp@gmail.com)
+- Remove parsing version from cartridge-name (pmorie@gmail.com)
+- Merge pull request #1500 from rajatchopra/master (dmcphers@redhat.com)
+- Merge pull request #1495 from abhgupta/abhgupta-dev (dmcphers@redhat.com)
+- scale down should not get affected with consumed_gears/actual_gears mismatch
+  (rchopra@redhat.com)
+- gear name is the whole uuid now (rchopra@redhat.com)
+- Reloading the domain from primary to make sure pending_ops is loaded
+  (abhgupta@redhat.com)
+
+* Thu Feb 28 2013 Adam Miller <admiller@redhat.com> 1.5.10-1
+- Merge pull request #1441 from pravisankar/dev/ravi/us3409
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1487 from bdecoste/master (dmcphers@redhat.com)
+- Merge pull request #1486 from lnader/revert_pull_request_1
+  (dmcphers@redhat.com)
+- fix jenkins test to allow 302 redirect (bdecoste@gmail.com)
+- Merge pull request #1481 from abhgupta/abhgupta-ssh-keys
+  (dmcphers+openshiftbot@redhat.com)
+- reverted US2448 (lnader@redhat.com)
+- Merge pull request #1480 from
+  smarterclayton/bug_916311_expired_tokens_should_be_hidden
+  (dmcphers+openshiftbot@redhat.com)
+- Added index on 'login' for usage_record and usage mongoid models Added
+  separate usage audit log, /var/log/openshift/broker/usage.log instead of
+  syslog. Moved user action log from /var/log/openshift/user_action.log to
+  /var/log/openshift/broker/user_action.log Added Distributed lock used in oo-
+  admin-ctl-usage script Added Billing Service interface Added oo-admin-ctl-
+  usage script to list and sync usage records to billing vendor Added oo-admin-
+  ctl-usage to broker-util spec file Fixed distributed lock test Add billing
+  service to origin-controller Some more bug fixes (rpenta@redhat.com)
+- Fix for bug 916323 -  making sure that we delete all applications and re-
+  verify  before force-deleting a domain (abhgupta@redhat.com)
+- Merge pull request #1474 from bdecoste/master (dmcphers@redhat.com)
+- Merge pull request #1473 from danmcp/master (dmcphers@redhat.com)
+- Merge pull request #1478 from abhgupta/abhgupta-dev (dmcphers@redhat.com)
+- Bug 916311 - Expired tokens should be hidden (ccoleman@redhat.com)
+- Use update rather than find_and_modify (dmcphers@redhat.com)
+- Fix for bug 916268 - adding properties for embedded carts in application rest
+  response Note: this was opened as a regression for bug 812046
+  (abhgupta@redhat.com)
+- Bug 913217 (bdecoste@gmail.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 1.5.9-1
+- Merge pull request #1477 from ironcladlou/dev/cartridge_refactor
+  (dmcphers@redhat.com)
+- WIP Cartridge Refactor (pmorie@gmail.com)
+- WIP Cartridge Refactor (pmorie@gmail.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 1.5.8-1
+- Merge pull request #1475 from abhgupta/abhgupta-ssh-keys
+  (dmcphers+openshiftbot@redhat.com)
+- Added certificate_added_at to alias (lnader@redhat.com)
+- Added validation for SSL certificate and private key (lnader@redhat.com)
+- Added unit tests for alias and domain (lnader@redhat.com)
+- US2448 (lnader@redhat.com)
+- fix comment (dmcphers@redhat.com)
+- send domain creates and updates to nuture (dmcphers@redhat.com)
+- Bug 914639 (dmcphers@redhat.com)
+- Should be using uuid for gear name (dmcphers@redhat.com)
+- Merge pull request #1453 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- fix for bug 915571 - blocking haproxy from being added to app
+  (abhgupta@redhat.com)
+- Merge pull request #1445 from kraman/gen_docs
+  (dmcphers+openshiftbot@redhat.com)
+- avoiding unnecessary mongo queries and fixing routes constraints
+  (abhgupta@redhat.com)
+- Documentation (kraman@gmail.com)
+- Bug 914639 (dmcphers@redhat.com)
+- Merge pull request #1451 from pmorie/bugs/915502
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 915502 (pmorie@gmail.com)
+
+* Tue Feb 26 2013 Adam Miller <admiller@redhat.com> 1.5.7-1
+- Implement authorization support in the broker (ccoleman@redhat.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.6-2
+- bump Release for fixed build target rebuild (admiller@redhat.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.6-1
+- avoiding unnecessary mongoid calls (abhgupta@redhat.com)
+- Merge pull request #1438 from
+  smarterclayton/bug_912286_cleanup_robots_misc_for_split
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 914639 (dmcphers@redhat.com)
+- handling pending_ops correctly in run_jobs in case of multiple processes
+  running simultaneously (abhgupta@redhat.com)
+- Bug 912286 - Allow quickstart link to be server relative
+  (ccoleman@redhat.com)
+- Merge pull request #1428 from pravisankar/dev/ravi/bug912208
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 912208 - Fix app creation for medium gears (rpenta@redhat.com)
+- Merge pull request #1426 from fotioslindiakos/find_application
+  (dmcphers+openshiftbot@redhat.com)
+- Fixed rhc_ctl_destroy helper to look for correct exit code and run faster
+  (fotios@redhat.com)
+
 * Wed Feb 20 2013 Adam Miller <admiller@redhat.com> 1.5.5-1
 - Tests for node web proxy. (mrunalp@gmail.com)
 - Relaxing restrictions on ssh key names (abhgupta@redhat.com)

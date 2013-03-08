@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Common
 Name:          rubygem-%{gem_name}
-Version:       1.4.4
+Version: 1.5.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -89,6 +89,15 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %doc %{gem_docdir}
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.5.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Thu Feb 28 2013 Adam Miller <admiller@redhat.com> 1.4.6-1
+- reverted US2448 (lnader@redhat.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 1.4.5-1
+- Added validation for SSL certificate and private key (lnader@redhat.com)
+
 * Wed Feb 20 2013 Adam Miller <admiller@redhat.com> 1.4.4-1
 - fix rubygem sources (tdawson@redhat.com)
 

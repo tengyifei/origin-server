@@ -90,19 +90,9 @@ module OpenShift
       #
       def self.find_available_impl(node_profile=nil, district_uuid=nil, non_ha_server_identities=nil)
         district = nil
-        require_specific_district = !district_uuid.nil?
-        if Rails.configuration.msg_broker[:districts][:enabled] && (!district_uuid || district_uuid == 'NONE')
-          district = District.find_available(node_profile)
-          if district
-            district_uuid = district.uuid
-            Rails.logger.debug "DEBUG: find_available_impl: district_uuid: #{district_uuid}"
-          elsif Rails.configuration.msg_broker[:districts][:require_for_app_create]
-            raise OpenShift::NodeException.new("No district nodes available.", 140)
-          end
-        end
-        current_server, current_capacity, preferred_district = rpc_find_available(node_profile, district_uuid, require_specific_district, non_ha_server_identities)
+        current_server, current_capacity, preferred_district = rpc_find_available(node_profile, district_uuid, non_ha_server_identities)
         if !current_server
-          current_server, current_capacity, preferred_district = rpc_find_available(node_profile, district_uuid, require_specific_district, non_ha_server_identities, true)
+          current_server, current_capacity, preferred_district = rpc_find_available(node_profile, district_uuid, non_ha_server_identities, true)
         end
         district = preferred_district if preferred_district
         raise OpenShift::NodeException.new("No nodes available.", 140) unless current_server
@@ -126,7 +116,8 @@ module OpenShift
       
       def self.find_one_impl(node_profile=nil)
         current_server = rpc_find_one(node_profile)
-        Rails.logger.debug "CURRENT SERVER: #{current_server}"
+        current_server, capacity, district = rpc_find_available(node_profile) unless current_server 
+        
         raise OpenShift::NodeException.new("No nodes found.", 140) unless current_server
         Rails.logger.debug "DEBUG: find_one_impl: current_server: #{current_server}"
 
@@ -389,7 +380,7 @@ module OpenShift
       # * quota_files: Integer - max files count
       # 
       # RETURNS:
-      # * Mcollective "result", stdout and exit code
+      # * MCollective "result", stdout and exit code
       #
       # NOTES:
       # * uses execute_direct
@@ -458,7 +449,7 @@ module OpenShift
       # * server_alias: String - the name of the server which will offer this key
       # * passphrase: String - the private key passphrase or '' if its unencrypted.
       # 
-      # RETURNS: a parsed Mcollective result
+      # RETURNS: a parsed MCollective result
       #
       # NOTES:
       # * calls node script oo-ssl-cert-add
@@ -480,7 +471,7 @@ module OpenShift
       # * gear: a Gear object
       # * server_alias: String - the name of the server which will offer this key
       # 
-      # RETURNS: a parsed Mcollective result
+      # RETURNS: a parsed MCollective result
       #
       # NOTES:
       # * calls node script oo-ssl-cert-remove
@@ -503,7 +494,7 @@ module OpenShift
       # * comment: String - identify the key
       #
       # RETURNS:
-      # * Mcollective result string: STDOUT from a command.
+      # * MCollective result string: STDOUT from a command.
       #
       # NOTES:
       # * uses execute_direct
@@ -528,7 +519,7 @@ module OpenShift
       # * comment: String - identify the key
       #
       # RETURNS:
-      # * Mcollective result string: STDOUT from a command.
+      # * MCollective result string: STDOUT from a command.
       #
       # NOTES:
       # * uses execute_direct
@@ -553,7 +544,7 @@ module OpenShift
       # * value: String - environment variable value
       #
       # RETURNS:
-      # * Mcollective result string: STDOUT from a command.
+      # * MCollective result string: STDOUT from a command.
       #
       # NOTES:
       # * uses execute_direct
@@ -576,7 +567,7 @@ module OpenShift
       # * key: String - environment variable name
       #
       # RETURNS:
-      # * Mcollective result string: STDOUT from a command.
+      # * MCollective result string: STDOUT from a command.
       #
       # NOTES:
       # * uses execute_direct
@@ -696,7 +687,10 @@ module OpenShift
         
         args = build_base_gear_args(gear)
         args['--cart-name'] = cart
-        args['--with-template-git-url'] = template_git_url
+        
+        if !template_git_url.nil?  && !template_git_url.empty?
+          args['--with-template-git-url'] = template_git_url
+        end
 
         if framework_carts.include? cart
           result_io = run_cartridge_command(cart, gear, "configure", args)
@@ -1326,7 +1320,7 @@ module OpenShift
       #
       #
       def frontend_restore(backup)
-        result = execute_direct(@@C_CONTROLLER, 'frontend-backup', {'--with-backup' => backup})
+        result = execute_direct(@@C_CONTROLLER, 'frontend-restore', {'--with-backup' => backup})
         parse_result(result)
       end
 
@@ -1754,14 +1748,7 @@ module OpenShift
               cart = cinst.cartridge_name
               idle, leave_stopped = state_map[cart]
 
-              if keep_uid
-                if framework_carts.include?(cart)
-                  log_debug "DEBUG: Restarting httpd proxy for '#{cart}' on #{destination_container.id}"
-                  args = build_base_gear_args(gear)
-                  args['--cart-name'] = cart
-                  reply.append destination_container.send(:run_cartridge_command, cart, gear, "restart-httpd-proxy", args, false)
-                end
-              else
+              if not keep_uid
                 if embedded_carts.include?(cart)
                   if app.scalable and CartridgeCache.find_cartridge(cart).categories.include? "web_proxy"
                     log_debug "DEBUG: Performing cartridge level move for '#{cart}' on #{destination_container.id}"
@@ -1880,7 +1867,7 @@ module OpenShift
 
         move_gear_destroy_old(gear, keep_uid, orig_uid, source_container, destination_container)
 
-        log_debug "Successfully moved '#{app.name}' with gear uuid '#{gear.uuid}' from '#{source_container.id}' to '#{destination_container.id}'"
+        log_debug "Successfully moved gear with uuid '#{gear.uuid}' of app '#{app.name}' from '#{source_container.id}' to '#{destination_container.id}'"
         reply
       end
 
@@ -2010,7 +1997,7 @@ module OpenShift
 
         if keep_uid
           log_debug "DEBUG: Moving system components for app '#{app.name}', gear '#{gear.name}' to #{destination_container.id}"
-          log_debug `eval \`ssh-agent\`; ssh-add #{rsync_keyfile}; ssh -o StrictHostKeyChecking=no -A root@#{source_container.get_ip_address} "rsync -aAX -e 'ssh -o StrictHostKeyChecking=no' --include '.httpd.d/' --include '.httpd.d/#{gear.uuid}_***' --include '#{app.name}-#{app.domain.namespace}' --include '.last_access/' --include '.last_access/#{gear.uuid}' --exclude '*' /var/lib/openshift/ root@#{destination_container.get_ip_address}:/var/lib/openshift/"; exit_code=$?; ssh-agent -k; exit $exit_code`
+          log_debug `eval \`ssh-agent\`; ssh-add #{rsync_keyfile}; ssh -o StrictHostKeyChecking=no -A root@#{source_container.get_ip_address} "rsync -aAX -e 'ssh -o StrictHostKeyChecking=no' --include '.httpd.d/' --include '.httpd.d/#{gear.uuid}_***' --include '#{gear.name}-#{app.domain.namespace}' --include '.last_access/' --include '.last_access/#{gear.uuid}' --exclude '*' /var/lib/openshift/ root@#{destination_container.get_ip_address}:/var/lib/openshift/"; exit_code=$?; ssh-agent -k; exit $exit_code`
           if $?.exitstatus != 0
             raise OpenShift::NodeException.new("Error moving system components for app '#{app.name}', gear '#{gear.name}' from #{source_container.id} to #{destination_container.id}", 143)
           end
@@ -2472,27 +2459,29 @@ module OpenShift
       # * the real switches are the cartridge and action arguments
       #
       def execute_direct(cartridge, action, args, log_debug_output=true)
-          if not args.has_key?('--cart-name')
-            args['--cart-name'] = cartridge
-          end
+        if not args.has_key?('--cart-name')
+          args['--cart-name'] = cartridge
+        end
 
-          mc_args = { :cartridge => cartridge,
-                      :action => action,
-                      :args => args }
-                      
-          rpc_client = rpc_exec_direct('openshift')
-          result = nil
-          begin
-            Rails.logger.debug "DEBUG: rpc_client.custom_request('cartridge_do', #{mc_args.inspect}, #{@id}, {'identity' => #{@id}})"
-            result = rpc_client.custom_request('cartridge_do', mc_args, @id, {'identity' => @id})
-            Rails.logger.debug "DEBUG: #{result.inspect}" if log_debug_output
-          rescue => e
-            Rails.logger.error("Error processing custom_request for action #{action}")
-            Rails.logger.error(e.backtrace)
-          ensure
-            rpc_client.disconnect
-          end
-          result
+        mc_args = { :cartridge => cartridge,
+                    :action => action,
+                    :args => args }
+
+        start_time = Time.now
+        rpc_client = rpc_exec_direct('openshift')
+        result = nil
+        begin
+          Rails.logger.debug "DEBUG: rpc_client.custom_request('cartridge_do', #{mc_args.inspect}, #{@id}, {'identity' => #{@id}}) (Request ID: #{Thread.current[:user_action_log_uuid]})"
+          result = rpc_client.custom_request('cartridge_do', mc_args, @id, {'identity' => @id})
+          Rails.logger.debug "DEBUG: #{result.inspect} (Request ID: #{Thread.current[:user_action_log_uuid]})" if log_debug_output
+        rescue => e
+          Rails.logger.error("Error processing custom_request for action #{action}")
+          Rails.logger.error(e.backtrace)
+        ensure
+          rpc_client.disconnect
+        end
+        Rails.logger.debug "DEBUG: MCollective Response Time (execute_direct: #{action}): #{Time.new - start_time}s  (Request ID: #{Thread.current[:user_action_log_uuid]})" if log_debug_output
+        result
       end
 
       #
@@ -2764,7 +2753,6 @@ module OpenShift
       # INPUTS:
       # * node_profile: ???
       # * district_uuid: String
-      # * require_specific_district: Boolean
       # * force_rediscovery: Boolean
       #
       # RETURNS:
@@ -2775,101 +2763,109 @@ module OpenShift
       #
       # 
       #
-      def self.rpc_find_available(node_profile=nil, district_uuid=nil, require_specific_district=false, non_ha_server_identities=nil, force_rediscovery=false)
+      def self.rpc_find_available(node_profile=nil, district_uuid=nil, non_ha_server_identities=nil, force_rediscovery=false)
+        
+        district_uuid = nil if district_uuid == 'NONE'
+        
+        require_specific_district = !district_uuid.nil?
+        require_district = require_specific_district
+        prefer_district = require_specific_district
+        unless require_specific_district
+          if Rails.configuration.msg_broker[:districts][:enabled] && (!district_uuid || district_uuid == 'NONE')
+            prefer_district = true
+            if Rails.configuration.msg_broker[:districts][:require_for_app_create]
+              require_district = true
+            end
+          end
+        end
+
         current_server, current_capacity = nil, nil
+        server_infos = []
+
+        # First find the most available nodes and match 
+        # to their districts.  Take out the almost full nodes if possible and return one of 
+        # the nodes within a district with a lot of space. 
         additional_filters = [{:fact => "active_capacity",
                                :value => '100',
                                :operator => "<"}]
-
-        district_uuid = nil if district_uuid == 'NONE'
-
-        if Rails.configuration.msg_broker[:node_profile_enabled]
-          if node_profile
-            additional_filters.push({:fact => "node_profile",
-                                     :value => node_profile,
-                                     :operator => "=="})
-          end
-        end
-
-        if district_uuid
-          additional_filters.push({:fact => "district_uuid",
-                                   :value => district_uuid,
-                                   :operator => "=="})
+        
+        if require_specific_district || require_district
           additional_filters.push({:fact => "district_active",
                                    :value => true.to_s,
                                    :operator => "=="})
-        else
-          #TODO how do you filter on a fact not being set
+        end
+                               
+        if require_specific_district
+          additional_filters.push({:fact => "district_uuid",
+                                   :value => district_uuid,
+                                   :operator => "=="})                         
+        elsif require_district
+          additional_filters.push({:fact => "district_uuid",
+                                   :value => "NONE",
+                                   :operator => "!="})
+        elsif !prefer_district
           additional_filters.push({:fact => "district_uuid",
                                    :value => "NONE",
                                    :operator => "=="})
-
-        end
-        
-        rpc_opts = nil
-        server_infos = []
-        rpc_get_fact('active_capacity', nil, force_rediscovery, additional_filters, rpc_opts) do |server, capacity|
-          #Rails.logger.debug "Next server: #{server} active capacity: #{capacity}"
-          server_infos << [server, capacity.to_f]
         end
 
-        # Do everything possible to not pick a non ha compatible node
-        server_infos.delete_if { |server_info| (server_infos.length > 1 || (district_uuid && !require_specific_district)) && non_ha_server_identities.include?(server_info[0]) } if non_ha_server_identities
-        if !server_infos.empty?
-          # Pick a random node amongst the best choices available
-          # If any server is < 80 then only pick from servers with < 80
-          server_infos.delete_if { |server_info| server_infos.length > 1 && server_info[1] >= 80 }
-          server_infos = server_infos.sort_by { |server_info| server_info[1] }
-          max_index = [server_infos.length, 4].min - 1
-          server_infos = server_infos.first(max_index + 1)
-          # Weight the servers with the most active_capacity the highest 
-          (0..max_index).each do |i|
-            (max_index - i).times do
-              server_infos << server_infos[i]
-            end
-          end
-        elsif district_uuid && !require_specific_district
-          # Well that didn't go too well.  They wanted a district.  Probably the most available one.  
-          # But it has no available nodes.  Falling back to a best available algorithm.  First
-          # Find the most available nodes and match to their districts.  Take out the almost
-          # full nodes if possible and return one of the nodes within a district with a lot of space. 
-          additional_filters = [{:fact => "active_capacity",
-                                 :value => '100',
-                                 :operator => "<"},
-                                {:fact => "district_active",
-                                 :value => true.to_s,
-                                 :operator => "=="},
-                                {:fact => "district_uuid",
-                                 :value => "NONE",
-                                 :operator => "!="}]
+        if node_profile && Rails.configuration.msg_broker[:node_profile_enabled]
+          additional_filters.push({:fact => "node_profile",
+                                   :value => node_profile,
+                                   :operator => "=="})
+        end
 
-          if Rails.configuration.msg_broker[:node_profile_enabled]
-            if node_profile
-              additional_filters.push({:fact => "node_profile",
-                                       :value => node_profile,
-                                       :operator => "=="})
-            end
-          end
+        # Get the districts
+        districts = prefer_district ? District.find_all : [] # candidate for caching
           
-          rpc_opts = nil
-          districts = District.find_all # candidate for caching
-          rpc_get_fact('active_capacity', nil, force_rediscovery, additional_filters, rpc_opts) do |server, capacity|
-            districts.each do |district|
-              if district.server_identities_hash.has_key?(server)
+        # Get the active % on the nodes
+        rpc_opts = nil
+        rpc_get_fact('active_capacity', nil, force_rediscovery, additional_filters, rpc_opts) do |server, capacity|
+          found_district = false
+          districts.each do |district|
+            if district.server_identities_hash.has_key?(server)
+              if district.available_capacity > 0 && district.server_identities_hash[server]["active"] 
                 server_infos << [server, capacity.to_f, district]
+              end
+              found_district = true
+              break
+            end
+          end
+          if !found_district && !require_district # Districts aren't required in this case
+            server_infos << [server, capacity.to_f]
+          end
+        end
+        if require_district && server_infos.empty?
+          raise OpenShift::NodeException.new("No district nodes available.", 140)
+        end
+        unless server_infos.empty?
+          # Use an HA option if available
+          server_infos.delete_if { |server_info| server_infos.length > 1 && non_ha_server_identities.include?(server_info[0]) } if non_ha_server_identities
+
+          # Remove any non districted nodes if you prefer districts
+          if prefer_district && !require_district && !districts.empty?
+            has_districted_node = false
+            server_infos.each do |server_info|
+              if server_info[2]
+                has_districted_node = true
                 break
               end
             end
+            server_infos.delete_if { |server_info| !server_info[2] } if has_districted_node
           end
-          unless server_infos.empty?
-            server_infos.delete_if { |server_info| server_infos.length > 1 && non_ha_server_identities.include?(server_info[0]) } if non_ha_server_identities
-            server_infos.delete_if { |server_info| server_infos.length > 1 && server_info[1] >= 80 }
-            server_infos = server_infos.sort_by { |server_info| server_info[2].available_capacity }
-            server_infos = server_infos.last(8)
-          end
+
+          # Sort by node available capacity and take the best half
+          server_infos = server_infos.sort_by { |server_info| server_info[1] }
+          server_infos = server_infos.first([4, (server_infos.length / 2).to_i].max) # consider the top half and no less than min(4, the actual number of available)
+
+          # Sort by district available capacity and take the best half
+          server_infos = server_infos.sort_by { |server_info| (server_info[2] && server_info[2].available_capacity) ? server_info[2].available_capacity : 1 }
+          server_infos = server_infos.last([4, (server_infos.length / 2).to_i].max) # consider the top half and no less than min(4, the actual number of available)
         end
+
         current_district = nil
         unless server_infos.empty?
+          # Randomly pick one of the best options
           server_info = server_infos[rand(server_infos.length)]
           current_server = server_info[0]
           current_capacity = server_info[1]
@@ -3157,6 +3153,7 @@ module OpenShift
       #
       def self.execute_parallel_jobs_impl(handle)
         if handle && !handle.empty?
+          start_time = Time.new
           begin
             options = MCollectiveApplicationContainerProxy.rpc_options
             rpc_client = rpcclient('openshift', :options => options)
@@ -3167,7 +3164,7 @@ module OpenShift
                 output = mcoll_reply.results[:data][:output]
                 exitcode = mcoll_reply.results[:data][:exitcode]
                 sender = mcoll_reply.results[:sender]
-                Rails.logger.debug("DEBUG: Output of parallel execute: #{output}, exitcode: #{exitcode}, from: #{sender}")
+                Rails.logger.debug("DEBUG: Output of parallel execute: #{output}, exitcode: #{exitcode}, from: #{sender}  (Request ID: #{Thread.current[:user_action_log_uuid]})")
                 
                 handle[sender] = output if exitcode == 0
               end
@@ -3175,6 +3172,7 @@ module OpenShift
           ensure
             rpc_client.disconnect
           end
+          Rails.logger.debug "DEBUG: MCollective Response Time (execute_parallel): #{Time.new - start_time}s  (Request ID: #{Thread.current[:user_action_log_uuid]})"
         end
       end
     end

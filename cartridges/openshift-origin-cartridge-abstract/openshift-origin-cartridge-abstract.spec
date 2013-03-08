@@ -7,7 +7,7 @@
 
 Summary:       OpenShift common cartridge components
 Name:          openshift-origin-cartridge-abstract
-Version:       1.5.3
+Version: 1.6.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -78,6 +78,8 @@ rm -f %{buildroot}%{cartdir}/abstract-jboss/info/data/mysql.tar
 %attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/bin/
 %attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/lib/
 %attr(0750,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/connection-hooks/
+%dir %attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/configuration/
+%attr(0644,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/configuration/health.html
 
 %files jboss
 %doc COPYRIGHT LICENSE
@@ -87,8 +89,42 @@ rm -f %{buildroot}%{cartdir}/abstract-jboss/info/data/mysql.tar
 %attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract-jboss/info/bin/
 %attr(0750,-,-) %{_libexecdir}/openshift/cartridges/abstract-jboss/info/connection-hooks/
 %attr(0750,-,-) %{_libexecdir}/openshift/cartridges/abstract-jboss/info/data/
+%doc %{_libexecdir}/openshift/cartridges/abstract-jboss/README.md
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Wed Mar 06 2013 Adam Miller <admiller@redhat.com> 1.5.9-1
+- Merge pull request #1557 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- Enable management console (bdecoste@gmail.com)
+
+* Tue Mar 05 2013 Adam Miller <admiller@redhat.com> 1.5.8-1
+- JBoss cartridge documentation for OSE 1.1 (calfonso@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.7-1
+- BZ916791: Fix invalid args passed to ps. (mrunalp@gmail.com)
+- Merge pull request #1503 from rmillner/US3143
+  (dmcphers+openshiftbot@redhat.com)
+- Was using the wrong call. (rmillner@redhat.com)
+- Bug 916829 - add health url. (rmillner@redhat.com)
+
+* Thu Feb 28 2013 Adam Miller <admiller@redhat.com> 1.5.6-1
+- Merge pull request #1474 from bdecoste/master (dmcphers@redhat.com)
+- Bug 913217 (bdecoste@gmail.com)
+
+* Wed Feb 27 2013 Adam Miller <admiller@redhat.com> 1.5.5-1
+- Merge pull request #1454 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 895507 (bdecoste@gmail.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.4-2
+- bump Release for fixed build target rebuild (admiller@redhat.com)
+
+* Mon Feb 25 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- Bug 913288 - Numeric login effected additional commands (jhonce@redhat.com)
+
 * Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
 - Audit of remaining front-end Apache touch points. (rmillner@redhat.com)
 - Switch from VirtualHosts to mod_rewrite based routing to support high

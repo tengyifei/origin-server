@@ -7,7 +7,7 @@
 
 Summary:       Provides embedded haproxy-1.4 support
 Name:          openshift-origin-cartridge-haproxy-1.4
-Version:       1.5.3
+Version: 1.6.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -85,6 +85,24 @@ ln -s %{cartridgedir}/../../abstract/info/hooks/system-messages %{buildroot}%{ca
 
 
 %changelog
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 25 (admiller@redhat.com)
+
+* Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.5.7-1
+- The old maxconn settings were unreasonably high and caused haproxy to
+  complain about not having enough file descriptors. (rmillner@redhat.com)
+
+* Mon Mar 04 2013 Adam Miller <admiller@redhat.com> 1.5.6-1
+- Some ruby cleanup (dmcphers@redhat.com)
+
+* Fri Mar 01 2013 Adam Miller <admiller@redhat.com> 1.5.5-1
+- Bug 910929 - Use a lockfile on sections which may exec in parallel.
+  (rmillner@redhat.com)
+
+* Tue Feb 26 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- The deploy-httpd-proxy hook was not setting up proper paths.
+  (rmillner@redhat.com)
+
 * Tue Feb 19 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
 - Switch from VirtualHosts to mod_rewrite based routing to support high
   density. (rmillner@redhat.com)
