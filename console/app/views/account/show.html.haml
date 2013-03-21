@@ -16,3 +16,16 @@
 
     %section
       = render :partial => @keys.present? ? 'keys' : 'add_key', :locals => {:keys => @keys}
+
+- content_for :javascripts do
+  :javascript
+    $(document).ready(function(){
+      $(".fancybox").fancybox({
+        'height'        : '50%',
+        'width'         : '50%',
+        'autoScale'     : true,
+        'transitionIn'  : 'none',
+        'transitionOut' : 'none',
+        'type'          : 'iframe'
+      });
+    });

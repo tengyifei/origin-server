@@ -1,5 +1,7 @@
 = div_for user do
-  %h2 Personal Information
+	%h2 Personal Information
+	
+	%p
+	You are authenticated to the server <strong>#{broker_host}</strong> with the login <strong>#{current_user_id}</strong>.
+	= link_to "Change your Password", password_change_url , :class => 'fancybox'
 
-  %p
-    You are authenticated to the server <strong>#{broker_host}</strong> with the login <strong>#{current_user_id}</strong>.

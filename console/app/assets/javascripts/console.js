@@ -10,4 +10,5 @@
 //= require bootstrap-tab
 //= require bootstrap-tooltip
 //= require bootstrap-popover
+//= require fancybox
 //= require_tree .

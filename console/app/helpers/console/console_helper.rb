@@ -23,4 +23,7 @@ module Console::ConsoleHelper
   def product_title
     'OpenShift Origin'
   end
+  def password_change_url
+    'https://broker.getupcloud.com/getup/accounts/password_change/'
+  end
 end
