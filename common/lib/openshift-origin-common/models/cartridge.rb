@@ -90,15 +90,16 @@ module OpenShift
     end
 
     def usage_rates
+      []
       #TODO: retrieve this from db
-      if is_embeddable?
-        brl = 0
-        usd = 0
-      else
-        brl = 0.178
-        usd = brl * 0.50201
-      end
-      { :duration => :hour, :usd => usd, :brl => brl }
+      #if is_embeddable?
+      #  brl = 0
+      #  usd = 0
+      #else
+      #  brl = 0.178
+      #  usd = brl * 0.50201
+      #end
+      #{ :duration => :hour, :usd => usd, :brl => brl }
     end
  
     def from_descriptor(spec_hash={})
