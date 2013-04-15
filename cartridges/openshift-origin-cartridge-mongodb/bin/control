@@ -1,0 +1,285 @@
+#!/bin/bash -e
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+source $OPENSHIFT_MONGODB_DIR/env/*
+export STOPTIMEOUT=20
+
+if whoami | grep -q root
+then
+    client_result "Please don't run script as root, try:"
+    client_result "runuser --shell /bin/sh $OPENSHIFT_GEAR_UUID ${OPENSHIFT_MONGODB_DIR}/bin/control"
+    exit 15
+fi
+
+function isrunning() {
+    if [ -f $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid ]; then
+        mongodb_pid=`cat $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid 2> /dev/null`
+        myid=`id -u`
+        if `ps --pid $mongodb_pid 2>&1 | grep mongod > /dev/null 2>&1` || `pgrep -x mongod -u $myid > /dev/null 2>&1`
+        then
+            return 0
+        fi
+     fi
+     return 1
+}
+
+function _wait_for_mongod_to_startup() {
+    i=0
+    while ( (! echo "exit" | mongo $IP > /dev/null 2>&1) ||  \
+            [ ! -f ${OPENSHIFT_MONGODB_DIR}/pid/mongodb.pid ]) && [ $i -lt 20 ]; do
+        sleep 1
+        i=$(($i + 1))
+    done
+}
+
+function _repair_mongod() {
+    authopts=$1
+    if ! isrunning ; then
+        client_result "Attempting to repair MongoDB ..."
+        tmp_config="/tmp/mongodb.repair.conf"
+        grep -ve "fork\s*=\s*true" $OPENSHIFT_MONGODB_DIR/conf/mongodb.conf > $tmp_config
+        /usr/bin/mongod $authopts --nojournal --smallfiles -f $tmp_config  \
+                                  --repair
+        client_result "MongoDB repair status = $?"
+        rm -f $tmp_config
+    else
+        client_result "MongoDB already running - not running repair"
+    fi
+}
+
+function _start_mongod() {
+    authopts=${1:-"--auth"}
+    /usr/bin/mongod $authopts --nojournal --smallfiles --quiet  \
+                    -f $OPENSHIFT_MONGODB_DIR/conf/mongodb.conf run >/dev/null 2>&1 &
+    _wait_for_mongod_to_startup
+    if ! isrunning; then
+       _repair_mongod "$authopts"
+       /usr/bin/mongod $authopts --nojournal --smallfiles --quiet  \
+                       -f $OPENSHIFT_MONGODB_DIR/conf/mongodb.conf run >/dev/null 2>&1 &
+       _wait_for_mongod_to_startup
+    fi
+}
+
+function start() {
+    if ! isrunning
+    then
+        _start_mongod  "$1"
+    else
+        client_result "MongoDB already running"
+    fi
+}
+
+function stop() {
+    if [ -f $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid ]; then
+        pid=$( /bin/cat $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid )
+    fi
+
+    if [ -n "$pid" ]; then
+        /bin/kill $pid
+        ret=$?
+        if [ $ret -eq 0 ]; then
+            TIMEOUT="$STOPTIMEOUT"
+            while [ $TIMEOUT -gt 0 ] && [ -f "$OPENSHIFT_MONGODB_DIR/pid/mongodb.pid" ]; do
+                /bin/kill -0 "$pid" >/dev/null 2>&1 || break
+                sleep 1
+                let TIMEOUT=${TIMEOUT}-1
+            done
+            /bin/rm -f $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid
+        fi
+    else
+        if `pgrep -x mongod > /dev/null 2>&1`
+        then
+                client_result "Warning: MongoDB process exists without a pid file.  Use force-stop to kill."
+        else
+            client_result "MongoDB already stopped"
+        fi
+     fi
+}
+
+function handle_setup_marker {
+  setup_marker_file=$OPENSHIFT_TMP_DIR/.setup_mongodb_invocation_marker
+
+  if [ -f $setup_marker_file ]; then
+    prepare_database
+    rm -f $setup_marker_file
+  fi
+}
+
+function prepare_database {
+  password=$OPENSHIFT_MONGODB_DB_PASSWORD
+  echo "use admin
+        db.addUser(\"admin\", \"${password}\")
+        db.auth(\"admin\", \"${password}\")
+        db.system.users.find()
+        use $OPENSHIFT_APP_NAME
+        db.openshift.save({application: \"$OPENSHIFT_APP_NAME\", dbhost: \"$OPENSHIFT_MONGODB_DB_HOST\" })
+        db.addUser(\"admin\", \"${password}\")
+        exit
+       "  | mongo $OPENSHIFT_MONGODB_DB_HOST
+  rm -f /tmp/.dbshell
+
+  cart_props "connection_url=mongodb://admin:${password}@$OPENSHIFT_MONGODB_DB_HOST:$OPENSHIFT_MONGODB_DB_PORT/"
+  cart_props "username=admin"
+  cart_props "password=${password}"
+  cart_props "database_name=$OPENSHIFT_APP_NAME"
+
+  set_app_info "Connection URL: mongodb://admin:${password}@$OPENSHIFT_MONGODB_DB_HOST:$OPENSHIFT_MONGODB_DB_PORT/"
+}
+
+function die() {
+   exitcode=${1:-0}
+   tag=${2:-"WARNING"}
+   msg=${3:-"Mongo control snapshot/restore operation failed..."}
+
+   client_result "!$tag! $msg"
+
+   exit $exitcode
+
+}  #  End of function  die.
+
+function pre_snapshot {
+   start
+   _wait_for_mongod_to_startup
+   #  Work in a temporary directory (create and cd to it).
+   umask 077
+   dumpdir=$(mktemp -d /tmp/mongodumpXXXXXXXX)
+   [ $? -eq 0 ] || die 0 "ERROR" "Failed to create working directory."
+   pushd $dumpdir > /dev/null
+
+   #  Take a "dump".
+   creds="-u $OPENSHIFT_MONGODB_DB_USERNAME -p \"$OPENSHIFT_MONGODB_DB_PASSWORD\" --port $OPENSHIFT_MONGODB_DB_PORT"
+   if mongodump -h $OPENSHIFT_MONGODB_DB_HOST $creds --directoryperdb > /dev/null 2>&1; then
+      #  Dump ok - now create a gzipped tarball.
+      if tar -zcf $OPENSHIFT_DATA_DIR/mongodb_dump_snapshot.tar.gz . ; then
+         #  Created dump snapshot - restore previous dir and remove temp dir.
+         popd > /dev/null
+         /bin/rm -rf $dumpdir
+         return 0
+      else
+         err_details="- snapshot failed"
+      fi
+   else
+      err_details="- mongodump failed"
+   fi
+
+   #  Failed to dump/gzip - log error and exit.
+   popd > /dev/null
+   /bin/rm -rf $dumpdir
+   /bin/rm -f  $OPENSHIFT_DATA_DIR/mongodb_dump_snapshot.tar.gz
+   die 0 "WARNING" "Could not dump MongoDB databases ${err_details}!"
+   stop
+}
+
+function post_snapshot {
+   true
+}
+
+function pre_restore {
+   cleanup_dump
+}
+
+function cleanup_dump {
+   /bin/rm -f $OPENSHIFT_DATA_DIR/mongodb_dump_snapshot.tar.gz
+   /bin/rm -f /tmp/mongodumpXXXXXXXX
+}
+
+function print_mongo_jira_warnings() {
+   client_result "
+============================================================================
+WARNING: You may have possibly encountered the mongorestore bugs related to
+         MongoDB JIRA issues 7181, 7262 and 7104. We tried working around
+         some these issues. You will need to manually workaround the
+         remaining problems prior to proceeding. For more details, see: 
+             https://jira.mongodb.org/browse/SERVER-7181
+             https://jira.mongodb.org/browse/SERVER-7262
+             https://jira.mongodb.org/browse/SERVER-7104
+============================================================================
+"
+
+}  #  End of function  print_mongo_jira_warnings.
+
+function restore_from_mongodb_snapshot {
+   #  Work in a temporary directory (create and cd to it).
+   umask 077
+   dumpdir=$(mktemp -d /tmp/mongodumpXXXXXXXX)
+   [ $? -eq 0 ] || die 0 "ERROR" "Failed to create working directory."
+   pushd $dumpdir > /dev/null
+
+   #  Extract dump from the snapshot.
+   if ! tar -zxf $OPENSHIFT_DATA_DIR/mongodb_dump_snapshot.tar.gz ; then
+      popd > /dev/null
+      /bin/rm -rf $dumpdir
+      die 0 "WARNING" "Could not restore MongoDB databases - extract failed!"
+   fi
+
+   #  Restore from the "dump".
+   creds="-u $OPENSHIFT_MONGODB_DB_USERNAME         \
+          -p \"$OPENSHIFT_MONGODB_DB_PASSWORD\" "
+
+   #  FIXME: Temporarily commented out auth due to mongo issue w/ restore.
+   #        See  https://jira.mongodb.org/browse/SERVER-7262 for details.
+   #[ -z "$HAVE_MONGODB_221_RC1" ]  &&  creds=""
+
+   if ! mongorestore -h $OPENSHIFT_MONGODB_DB_HOST              \
+                     --port $OPENSHIFT_MONGODB_DB_PORT $creds   \
+                     --directoryperdb --drop  1>&2; then
+       print_mongo_jira_warnings
+       popd > /dev/null
+       /bin/rm -rf $dumpdir
+       die 0 "WARNING" "Could not restore MongoDB databases - mongorestore failed!"
+   fi
+
+
+   #  Restore previous dir and clean up temporary dir.
+   popd > /dev/null
+   /bin/rm -rf $dumpdir
+   return 0
+}
+
+function post_restore {
+    start
+    _wait_for_mongod_to_startup
+    if [ ! -f $OPENSHIFT_DATA_DIR/mongodb_dump_snapshot.tar.gz ]; then
+        client_result "MongoDB restore attempted but no dump was found!"
+        die 0 "ERROR" "$OPENSHIFT_DATA_DIR/mongodb_dump_snapshot.tar.gz does not exist"
+    else
+        restore_from_mongodb_snapshot
+    fi
+}
+
+case "$1" in
+    start)
+        start
+        handle_setup_marker
+    ;;
+    start-noauth)
+        start --noauth
+    ;;
+    stop)
+        stop
+    ;;
+    restart)
+        stop
+        start
+    ;;
+    status)
+        if isrunning
+        then
+            client_result "MongoDB is running"
+        else
+            client_result "MongoDB is stopped"
+        fi
+        exit 0
+    ;;
+    pre-snapshot)
+        pre_snapshot
+    ;;
+    post-snapshot)
+        post_snapshot
+    ;;
+    pre-restore)
+        pre_restore
+    ;;
+    post-restore)
+        post_restore
+    ;;
+esac

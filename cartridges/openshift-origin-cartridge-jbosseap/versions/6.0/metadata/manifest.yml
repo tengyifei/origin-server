@@ -1,18 +1,19 @@
 Name: jbosseap
-Namespace: JBOSSEAP
+Cartridge-Short-Name: JBOSSEAP
 Display-Name: JBoss Enterprise Application Platform
 Description: "Market-leading open source enterprise platform for next-generation, highly transactional enterprise Java applications. Build and deploy enterprise Java in the cloud."
-Version: 6.0.1
+Version: '6.0'
 License: LGPL
 License-Url: http://www.gnu.org/copyleft/lesser.txt
 Vendor: Red Hat
+Cartridge-Version: 0.0.1
+Cartridge-Vendor: redhat
 Categories:
   - service
   - web_framework
   - java
   - jboss
   - jee_full_profile
-  - premium
 Website: http://www.redhat.com/products/jbossenterprisemiddleware/application-platform/
 Help-Topics:
   "Developer Center": https://openshift.redhat.com/community/developers
@@ -50,22 +51,14 @@ Cart-Data:
 Provides:
   - jbosseap-6.0
   - "jbosseap"
-  - "jbosseap(version) = 6.0.0"
+  - "jbosseap(version) = 6.0"
   - "jbosseap(version) >= 6.0"
   - "jboss-eap6.0"
-  - "jboss-eap6.0.0"
   - jbosseap-standalone
   - jboss-eap6.0-standalone
-  - jboss-eap6.0.0-standalone
 Publishes:
-  get-internal-uri:
-    Type: "NET_TCP:http"
   publish-http-url:
     Type: "NET_TCP:httpd-proxy-info"
-  publish_jboss_cluster:
-    Type: "NET_TCP:jbosseap-cluster-info"
-  publish_jboss_remoting:
-    Type: "NET_TCP:jbosseap-remoting-info"
   publish-gear-endpoint:
     Type: "NET_TCP:gear-endpoint-info"
 Subscribes:
@@ -75,19 +68,28 @@ Subscribes:
   set-nosql-db-connection-info:
     Type: "NET_TCP:nosqldb:connection-info"
     Required: false
-  set-jdbc-info:
-    Type: "NET_TCP:jdbc"
-  set_jboss_cluster:
-    Type: "NET_TCP:jbosseap-cluster-info"
-  set_jboss_remoting:
-    Type: "NET_TCP:jbosseap-remoting-info"
+  set-mysql-connection-info:
+    Type: "NET_TCP:db:mysql"
+    Required : false
+  set-postgres-connection-info:
+    Type: "NET_TCP:db:postgres"
+    Required : false
+  set-doc-url:
+    Type: "STRING:urlpath"
+    Required : false
+Scaling:
+  Min: 1
+  Max: -1
 Group-Overrides:
   - components:
-    - jbosseap-6.0
+    - jbosseap
     - web_proxy
 Endpoints:
-  - "IP:PORT(8080):PROXY_PORT"
-  - "IP:CLUSTER_PORT(7600):CLUSTER_PROXY_PORT"
-  - "IP:MESSAGING_PORT(5445):MESSAGING_PROXY_PORT"
-  - "IP:MESSAGING_THROUGHPUT_PORT(5455):MESSAGING_THROUGHPUT_PROXY_PORT"
-  - "IP:REMOTING_PORT(4447):REMOTING_PROXY_PORT"
+  - Private-IP-Name:   IP
+    Private-Port-Name: HTTP_PORT
+    Private-Port:      8080
+    Public-Port-Name:  HTTP_PROXY_PORT
+    Mappings:
+      - Frontend:      ""
+        Backend:       ""
+        Options:       { "websocket": 1}

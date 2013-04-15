@@ -25,12 +25,16 @@ class Quickstart < RestApi::Base
     super.to_i rescue 0
   end
 
+  def provider
+    (attributes[:provider] || :community).to_sym
+  end
+
   def learn_more_url
     URI.join(self.class.site, href).to_s if href
   end
 
   def tags
-    @tags ||= ApplicationType.user_tags(tags_from(attributes[:tags])) + admin_tags + (3.days.ago < updated ? [:new] : [])
+    @tags ||= ApplicationType.user_tags(tags_from(attributes[:tags])) + admin_tags
   end
 
   def updated
@@ -82,7 +86,7 @@ class Quickstart < RestApi::Base
     end
 
     def site
-      api_links[:site] or Console.config.community_url 
+      api_links[:site] or RestApi::Info.site
     end
     def prefix_parameters
       {}

@@ -3,24 +3,28 @@
 
 // Base alert styles
 .alert {
-  padding: 9px 35px 10px 21px;
+  padding: 15px;
   margin: 15px 0;
   //text-shadow: 0 1px 0 rgba(255,255,255,.5);
   background-color: $warningBackground;
   //border: 1px solid $warningBorder;
   @include border-radius(4px);
+  > p:last-child {
+    margin-bottom: 0;
+  }
 }
 .alert,
 .alert-heading {
-  color: $warningText;
+  color: $warningText !important;
 }
 
-.alert a, .alert a:hover, alert a:active {
+.alert a:link, .alert a:visited, .alert a:hover, alert a:active {
   text-decoration:underline;
+  color: $linkColorBlue;
   }
-.alert-error a, .alert-error a:hover, alert-error a:active,
-.alert-danger a, .alert-danger a:hover, alert-danger a:active {
-  color:#fff;
+.alert.alert-error a, .alert.alert-error a:hover, .alert.alert-error a:active,
+.alert.alert-danger a, .alert.alert-danger a:hover, .alert.alert-danger a:active {
+  color:$errorText;
 }
 
 // Adjust close link position
@@ -40,7 +44,7 @@
 }
 .alert-success,
 .alert-success .alert-heading {
-  color: $successText;
+  color: $successText !important;
 }
 .alert-danger,
 .alert-error {
@@ -51,7 +55,7 @@
 .alert-error,
 .alert-danger .alert-heading,
 .alert-error .alert-heading {
-  color: $errorText;
+  color: $errorText !important;
 }
 .alert-info {
   background-color: $infoBackground;
@@ -65,7 +69,7 @@
 }
 .alert-info,
 .alert-info .alert-heading {
-  color: $infoText;
+  color: $infoText !important;
 }
 
 

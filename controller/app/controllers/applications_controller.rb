@@ -14,6 +14,12 @@ class ApplicationsController < BaseController
   # @return [RestReply<Array<RestApplication>>] List of applications within the domain
   def index
     domain_id = params[:domain_id]
+
+    # validate the domain name using regex to avoid a mongo call, if it is malformed
+    if domain_id !~ Domain::DOMAIN_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Domain '#{domain_id}' not found", 127, "LIST_APPLICATIONS")
+    end
+
     begin
       domain = Domain.find_by(owner: @cloud_user, canonical_namespace: domain_id.downcase)
       @domain_name = domain.namespace
@@ -38,6 +44,16 @@ class ApplicationsController < BaseController
     domain_id = params[:domain_id]
     id = params[:id]
     
+    # validate the domain name using regex to avoid a mongo call, if it is malformed
+    if domain_id !~ Domain::DOMAIN_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Domain '#{domain_id}' not found", 127, "SHOW_APPLICATION")
+    end
+
+    # validate the application name using regex to avoid a mongo call, if it is malformed
+    if id !~ Application::APP_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Application '#{id}' not found", 101, "SHOW_APPLICATION")
+    end
+
     begin
       domain = Domain.find_by(owner: @cloud_user, canonical_namespace: domain_id.downcase)
       @domain_name = domain.namespace
@@ -74,10 +90,14 @@ class ApplicationsController < BaseController
     domain_id = params[:domain_id]
     app_name = params[:name]
     features = Array(params[:cartridges] || params[:cartridge]).map{ |c| c.is_a?(Hash) ? c[:name] : c }
-    scalable = get_bool(params[:scale])
     init_git_url = params[:initial_git_url]
     default_gear_size = params[:gear_profile]
     default_gear_size.downcase! if default_gear_size
+
+    # validate the domain name using regex to avoid a mongo call, if it is malformed
+    if domain_id !~ Domain::DOMAIN_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Domain '#{domain_id}' not found", 127, "ADD_APPLICATION")
+    end
 
     begin
       # Use strong consistency to avoid race condition creating domain and app in succession
@@ -125,6 +145,7 @@ class ApplicationsController < BaseController
                           109, "ADD_APPLICATION", "cartridge")
       end
       app_creation_result = ResultIO.new
+      scalable = get_bool(params[:scale])
       application = Application.create_app(app_name, features, domain, default_gear_size, scalable, app_creation_result, [], init_git_url, request.headers['User-Agent'])
 
       @application_name = application.name
@@ -137,7 +158,7 @@ class ApplicationsController < BaseController
     rescue OpenShift::UserException => e
       return render_error(:unprocessable_entity, e.message, 109, "ADD_APPLICATION", "cartridge")
     rescue Exception => e
-      return render_error(:unprocessable_entity, e.message, 109, "ADD_APPLICATION", "cartridge")      
+      return render_exception(e, "ADD_APPLICATION")
     end
     application.user_agent= request.headers['User-Agent']
     
@@ -166,6 +187,16 @@ class ApplicationsController < BaseController
     domain_id = params[:domain_id]
     id = params[:id]    
     
+    # validate the domain name using regex to avoid a mongo call, if it is malformed
+    if domain_id !~ Domain::DOMAIN_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Domain '#{domain_id}' not found", 127, "DELETE_APPLICATION")
+    end
+
+    # validate the application name using regex to avoid a mongo call, if it is malformed
+    if id !~ Application::APP_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Application '#{id}' not found", 101,"DELETE_APPLICATION")
+    end
+
     begin
       domain = Domain.find_by(owner: @cloud_user, canonical_namespace: domain_id.downcase)
       @domain_name = domain.namespace
@@ -179,7 +210,7 @@ class ApplicationsController < BaseController
       @application_name = application.name
       @application_uuid = application.uuid
     rescue Mongoid::Errors::DocumentNotFound
-      return render_error(:not_found, "Application #{id} not found.", 101,"DELETE_APPLICATION")
+      return render_error(:not_found, "Application #{id} not found", 101,"DELETE_APPLICATION")
     end
     
     # create tasks to delete gear groups

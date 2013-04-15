@@ -3,22 +3,28 @@
 
 Summary:       OpenShift plugin for DNS update service using Avahi
 Name:          rubygem-%{gem_name}
-Version:       0.0.1
+Version:       0.0.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
-Requires:      ruby(abi) = %{rubyabi}
-Requires:      ruby
+%if 0%{?fedora} >= 19
+Requires:      ruby(release)
+%else
+Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 Requires:      rubygems
 Requires:      rubygem(json)
 Requires:      rubygem(openshift-origin-common)
 Requires:      openshift-origin-broker
 Requires:      selinux-policy-targeted
 Requires:      policycoreutils-python
-BuildRequires: ruby(abi) = %{rubyabi}
-BuildRequires: ruby 
+%if 0%{?fedora} >= 19
+BuildRequires: ruby(release)
+%else
+BuildRequires: %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 BuildRequires: rubygems
 BuildRequires: rubygems-devel
 BuildArch:     noarch
@@ -70,6 +76,10 @@ cp %{buildroot}/%{gem_dir}/gems/%{gem_name}-%{version}/conf/openshift-origin-dns
 
 
 %changelog
+* Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 0.0.2-1
+- Updating rest-client and rake gem versions to match F18 (kraman@gmail.com)
+- Make packages build/install on F19+ (tdawson@redhat.com)
+
 * Sat Mar 09 2013 Krishna Raman <kraman@gmail.com> 0.0.1-1
 - new package built with tito
 

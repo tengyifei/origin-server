@@ -8,7 +8,7 @@ class AppEventsController < BaseController
   # URL: /domains/:domain_id/applications/:application_id/events
   #
   # Action: POST
-  # @param [String] event Appliction event to create. Supported types include
+  # @param [String] event Application event to create. Supported types include
   #   * start: Start all application cartridges
   #   * stop: Stop all application cartridges
   #   * force-stop: For all application cartridges to stop
@@ -24,14 +24,14 @@ class AppEventsController < BaseController
   # 
   # @return [RestReply<RestApplication>] Application object on which the event operates and messages returned for the event.
   def create
-    domain_id = params[:domain_id]
-    id = params[:application_id]
+    domain_id = params[:domain_id].downcase if params[:domain_id]
+    id = params[:application_id].downcase if params[:application_id]
 
     event = params[:event]
     server_alias = params[:alias]
 
     begin
-      domain = Domain.find_by(owner: @cloud_user, canonical_namespace: domain_id.downcase)
+      domain = Domain.find_by(owner: @cloud_user, canonical_namespace: domain_id)
       @domain_name = domain.namespace
     rescue Mongoid::Errors::DocumentNotFound
       return render_error(:not_found, "Domain #{domain_id} not found", 127,
@@ -39,7 +39,7 @@ class AppEventsController < BaseController
     end
 
     begin
-      application = Application.find_by(domain: domain, canonical_name: id.downcase)
+      application = Application.find_by(domain: domain, canonical_name: id)
       @application_name = application.name
       @application_uuid = application.uuid
     rescue Mongoid::Errors::DocumentNotFound
@@ -73,7 +73,11 @@ class AppEventsController < BaseController
           msg = "Application #{id} has added alias"
           # msg += ": #{r.resultIO.string.chomp}" if !r.resultIO.string.empty?
         when "remove-alias"
-          r = application.remove_alias(server_alias)
+          begin
+            r = application.remove_alias(server_alias)
+          rescue Mongoid::Errors::DocumentNotFound
+            return render_error(:not_found, "Alias #{server_alias} not found for application #{application.name}", 173, "#{event.sub('-', '_').upcase}_APPLICATION")
+          end
           msg = "Application #{id} has removed alias"
           # msg += ": #{r.resultIO.string.chomp}" if !r.resultIO.string.empty?
         when "scale-up"
@@ -119,7 +123,7 @@ class AppEventsController < BaseController
       return render_exception(e, "#{event.sub('-', '_').upcase}_APPLICATION")
     end
 
-    application = Application.find_by(domain: domain, canonical_name: id.downcase)
+    application = Application.find_by(domain: domain, canonical_name: id)
     app = if requested_api_version == 1.0
         RestApplication10.new(application, domain, get_url, nolinks)
       else

@@ -9,14 +9,17 @@
 
 Summary:       OpenShift plugin for AWS Route53 service
 Name:          rubygem-%{gem_name}
-Version:       1.5.1
+Version:       1.5.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{gem_name}/rubygem-%{gem_name}-%{version}.tar.gz
-Requires:      %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
-Requires:      %{?scl:%scl_prefix}ruby
+%if 0%{?fedora} >= 19
+Requires:      ruby(release)
+%else
+Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      rubygem(openshift-origin-common)
 Requires:      openshift-origin-broker
@@ -25,8 +28,11 @@ Requires:      %{?scl:%scl_prefix}rubygem-aws-sdk >= 1.8.0
 BuildRequires: ruby193-build
 BuildRequires: scl-utils-build
 %endif
-BuildRequires: %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
-BuildRequires: %{?scl:%scl_prefix}ruby 
+%if 0%{?fedora} >= 19
+BuildRequires: ruby(release)
+%else
+BuildRequires: %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 BuildRequires: %{?scl:%scl_prefix}rubygems
 BuildRequires: %{?scl:%scl_prefix}rubygems-devel
 BuildArch:     noarch
@@ -79,6 +85,10 @@ cp %{buildroot}/%{gem_dir}/gems/%{gem_name}-%{version}/conf/openshift-origin-dns
 
 
 %changelog
+* Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 1.5.2-1
+- Updating rest-client and rake gem versions to match F18 (kraman@gmail.com)
+- Make packages build/install on F19+ (tdawson@redhat.com)
+
 * Tue Mar 12 2013 Troy Dawson <tdawson@redhat.com> 1.5.1-1
 - Add yard documentation markup to DNS plugins (mlamouri@redhat.com)
 

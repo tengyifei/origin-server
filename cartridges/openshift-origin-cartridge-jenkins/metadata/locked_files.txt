@@ -1,5 +1,4 @@
-jenkins/
-jenkins/configuration/
-jenkins/metadata/
-jenkins/bin/*
-jenkins/template/
+~/.jenkins_password
+metadata/
+env/
+template/

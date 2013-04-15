@@ -29,6 +29,17 @@ module OpenShift
              File.join(gear_dir, '*', 'env'))
       end
 
+      # Load the combined cartridge environments for a gear
+      # @param [String] gear_dir       Home directory of the gear
+      # @param [Array[String]] dirs    Ordered List of cartridge_dirs for overrides
+      # @return [Hash<String,String>]  hash[Environment Variable] = Value
+      def self.for_gear_ordered(gear_dir, *dirs)
+        env = load("/etc/openshift/env",
+                   File.join(gear_dir, '.env'),
+                   File.join(gear_dir, '*', 'env'))
+        dirs.each_with_object(env) { |d, e| e.merge(load(File.join(d, 'env'))) }
+      end
+
       # @param [String] cartridge_dir       Home directory of the gear
       # @return [Hash<String,String>]  hash[Environment Variable] = Value
       def self.for_cartridge(cartridge_dir)
@@ -50,20 +61,35 @@ module OpenShift
             next if file.end_with? '.erb'
             next unless File.file? file
 
-            contents = nil
-            File.open(file) do |input|
-              begin
+            begin
+              contents = nil
+              File.open(file) do |input|
                 contents = input.read.chomp
                 next if contents.empty?
 
-                index    = contents.index('=')
-                contents = contents[(index + 1)..-1]
-                contents.gsub!(/\A["']|["']\Z/, '')
-              rescue Exception => e
-                NodeLogger.logger.info { "Failed to process: #{file} [#{input}]: #{e.message}" }
+                index           = contents.index('=')
+                parsed_contents = contents[(index + 1)..-1]
+                parsed_contents.gsub!(/\A["']|["']\Z/, '')
+                env[File.basename(file)] = parsed_contents
               end
+            rescue => e
+              msg = "Failed to process: #{file}"
+              unless contents.nil?
+                msg << " [#{contents}]"
+              end
+              msg << ": "
+              msg << (
+              case e
+                when SystemCallError
+                  # This catches filesystem level errors
+                  # We split the message because it contains the filename
+                  e.message.split(' - ').first
+                else
+                  e.message
+              end
+              )
+              NodeLogger.logger.info(msg)
             end
-            env[File.basename(file)] = contents
           end
         end
       end

@@ -89,7 +89,10 @@ class RestApplication < OpenShift::Model
     self.name = app.name
     self.creation_time = app.created_at
     self.uuid = app.uuid
-    self.aliases = app.aliases
+    self.aliases = []
+    app.aliases.each do |a|
+      self.aliases << RestAlias.new(app, domain, a, url, true)
+    end
     self.gear_count = app.num_gears
     self.domain_id = domain.namespace
 
@@ -122,7 +125,8 @@ class RestApplication < OpenShift::Model
           self.embedded[cart.name] = component_instance.component_properties
           
           # if the component has a connection_url property, add it as "info" for backward compatibility
-          if component_instance.component_properties.has_key?("connection_url")
+          # make sure it is a hash, because copy-pasting the app document in mongo (using rockmongo UI) can convert hashes into arrays 
+          if component_instance.component_properties.is_a?(Hash) and component_instance.component_properties.has_key?("connection_url")
             self.embedded[cart.name]["info"] = "Connection URL: #{component_instance.component_properties['connection_url']}"
           end
         end
@@ -166,14 +170,6 @@ class RestApplication < OpenShift::Model
         "FORCE_STOP" => Link.new("Force stop application", "POST", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/events"), [
           Param.new("event", "string", "event", "force-stop")
         ]),
-        "ADD_ALIAS" => Link.new("Add application alias", "POST", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/events"), [
-          Param.new("event", "string", "event", "add-alias"),
-          Param.new("alias", "string", "The server alias for the application")
-        ]),
-        "REMOVE_ALIAS" => Link.new("Remove application alias", "POST", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/events"), [
-          Param.new("event", "string", "event", "remove-alias"),
-          Param.new("alias", "string", "The application alias to be removed", @aliases)
-        ]),
         "SCALE_UP" => Link.new("Scale up application", "POST", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/events"), [
           Param.new("event", "string", "event", "scale-up")
         ]),
@@ -194,13 +190,19 @@ class RestApplication < OpenShift::Model
             Param.new("name", "string", "framework-type, e.g.: mongodb-2.0", carts)
           ],[
             OptionalParam.new("colocate_with", "string", "The component to colocate with", app.component_instances.map{|c| c.cartridge_name}),
-            OptionalParam.new("scales_from", "integer", "Minumimum number of gears to run the component on."),
+            OptionalParam.new("scales_from", "integer", "Minimum number of gears to run the component on."),
             OptionalParam.new("scales_to", "integer", "Maximum number of gears to run the component on."),
             OptionalParam.new("additional_storage", "integer", "Additional GB of space to request on all gears running this component."),
           ]
         ),
         "LIST_CARTRIDGES" => Link.new("List embedded cartridges", "GET", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/cartridges")),
-        "DNS_RESOLVABLE" => Link.new("Resolve DNS", "GET", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/dns_resolvable"))
+        "DNS_RESOLVABLE" => Link.new("Resolve DNS", "GET", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/dns_resolvable")),
+        "ADD_ALIAS" => Link.new("Create new alias", "POST", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/aliases"), 
+          [Param.new("id", "string", "Alias for application")], 
+          [OptionalParam.new("ssl_certificate", "string", "Content of SSL Certificate"), 
+            OptionalParam.new("private_key", "string", "Private key for the certificate.  Required if adding a certificate"), 
+            OptionalParam.new("pass_phrase", "string", "Optional passphrase for the private key")]),
+        "LIST_ALIASES" => Link.new("List applications", "GET", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/aliases")),
       }
     end
   end

@@ -36,6 +36,7 @@ module Console
     config_accessor :include_helpers
 
     config_accessor :community_url
+    config_accessor :cache_store
 
     #
     # A class that represents the capabilities object
@@ -122,6 +123,13 @@ module Console
         freeze_api(api_config_from(config), file)
 
         self.community_url = config[:COMMUNITY_URL]
+        if self.community_url && !self.community_url.end_with?('/')
+          raise InvalidConfiguration, "COMMUNITY_URL must end in '/'"
+        end
+
+        if cache_store = config[:CACHE_STORE]
+          Rails.configuration.send(:cache_store=, eval("[#{cache_store}]"))
+        end
 
         case config[:CONSOLE_SECURITY]
         when 'basic'

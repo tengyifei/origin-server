@@ -85,7 +85,12 @@ class HAProxyUtils
         if repaired
             @@log.info("GEAR_INFO - validate: Configuration was modified, reloading haproxy")
             ENV["CARTRIDGE_TYPE"] = "haproxy-1.4"
-            exec "app_ctl.sh reload"
+            cpid = fork do
+              exec "app_ctl.sh reload"
+            end
+            Process.waitpid cpid
+            # Expect restart to terminate this process during the wait.
+            # But reap zombies if not.
         end
     end
 end
@@ -329,8 +334,22 @@ Notes:
 1. To start/stop auto scaling in daemon mode run:
     haproxy_watcher (start|stop|restart|run|)
 USAGE
-    exit 255
+    exit! 255
 end
+
+def help_marker
+  unless File.exists?(File.join(ENV['OPENSHIFT_REPO_DIR'], '.openshift', 'markers', 'disable_auto_scaling'))
+    puts <<HELPTEXT
+NOTICE: Automatic scaling may still take effect.
+
+To disable automatic scaling, create the disable_auto_scaling marker
+in your git checkout.  Refer to .openshift/markers/README in your git
+checkout for more information.
+
+HELPTEXT
+  end
+end
+
 
 begin
     opts = GetoptLong.new(
@@ -359,9 +378,11 @@ begin
   ha=Haproxy.new("#{HAPROXY_RUN_DIR}/stats")
   if opt['up']
     ha.add_gear(true)
+    help_marker
     exit 0
   elsif opt['down']
     ha.remove_gear(true)
+    help_marker
     exit 0
   end
 rescue Haproxy::ShouldRetry => e

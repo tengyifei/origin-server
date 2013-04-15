@@ -7,15 +7,18 @@
 
 Summary:       OpenShift common cartridge components
 Name:          openshift-origin-cartridge-abstract
-Version: 1.6.1
+Version: 1.7.5
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
+Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      facter
 Requires:      git
 Requires:      make
+Requires:      tar
 Requires:      mod_ssl
 # abstract/info/connection-hooks/publish-http-url
 Requires:      python
@@ -32,7 +35,6 @@ Requires:      rsync
 # abstract/info/lib/network
 Requires:      lsof
 BuildArch:     noarch
-Obsoletes:     stickshift-abstract
 
 %description
 This contains the common function used while building cartridges.
@@ -54,12 +56,9 @@ openshift jboss cartridges.
 
 %install
 mkdir -p %{buildroot}%{cartdir}
-cp -rv abstract %{buildroot}%{cartdir}/
-cp -rv abstract-httpd %{buildroot}%{cartdir}/
-cp -rv abstract-jboss %{buildroot}%{cartdir}/
-
-# Remove bundled library
-rm -f %{buildroot}%{cartdir}/abstract-jboss/info/data/mysql.tar
+cp -rv -p abstract %{buildroot}%{cartdir}/
+cp -rv -p abstract-httpd %{buildroot}%{cartdir}/
+cp -rv -p abstract-jboss %{buildroot}%{cartdir}/
 
 %files
 %doc COPYRIGHT LICENSE
@@ -71,7 +70,7 @@ rm -f %{buildroot}%{cartdir}/abstract-jboss/info/data/mysql.tar
 %attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract-httpd/info/bin/
 %dir %attr(0755,root,root) %{_libexecdir}/openshift/cartridges/abstract/
 %dir %attr(0755,root,root) %{_libexecdir}/openshift/cartridges/abstract/info/
-%attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/hooks
+%dir %attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/hooks
 %attr(0750,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/hooks/*
 # tidy is now a cartridge hook and should be accessible to gear users
 %attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract/info/hooks/tidy
@@ -88,10 +87,72 @@ rm -f %{buildroot}%{cartdir}/abstract-jboss/info/data/mysql.tar
 %attr(0750,-,-) %{_libexecdir}/openshift/cartridges/abstract-jboss/info/hooks/
 %attr(0755,-,-) %{_libexecdir}/openshift/cartridges/abstract-jboss/info/bin/
 %attr(0750,-,-) %{_libexecdir}/openshift/cartridges/abstract-jboss/info/connection-hooks/
-%attr(0750,-,-) %{_libexecdir}/openshift/cartridges/abstract-jboss/info/data/
 %doc %{_libexecdir}/openshift/cartridges/abstract-jboss/README.md
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.5-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.7.4-1
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- delete all calls to remove_ssh_key, and remove_domain_env_vars
+  (rchopra@redhat.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Merge pull request #1908 from bdecoste/master (dmcphers@redhat.com)
+- update rsync (bdecoste@gmail.com)
+- abstract requires tar but that is no longer in @base (markllama@gmail.com)
+- Bug 947016 (bdecoste@gmail.com)
+- Merge pull request #1842 from bdecoste/master (dmcphers@redhat.com)
+- rsync deployments (bdecoste@gmail.com)
+- rsync deployments (bdecoste@gmail.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Wed Mar 27 2013 Adam Miller <admiller@redhat.com> 1.6.7-1
+- Merge pull request #1825 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- clean deployments (bdecoste@gmail.com)
+- Bug 928142 (bdecoste@gmail.com)
+- Merge pull request #1822 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 928142 (bdecoste@gmail.com)
+
+* Tue Mar 26 2013 Adam Miller <admiller@redhat.com> 1.6.6-1
+- Merge pull request #1800 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 927192 (bdecoste@gmail.com)
+- Merge pull request #1786 from rmillner/BZ927346
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 927346 - Run cartridge actions with CWD as the gear home directory.
+  (rmillner@redhat.com)
+
+* Mon Mar 25 2013 Adam Miller <admiller@redhat.com> 1.6.5-1
+- Bug 923369 (bdecoste@gmail.com)
+
+* Fri Mar 22 2013 Adam Miller <admiller@redhat.com> 1.6.4-1
+- Bug 920375 (bdecoste@gmail.com)
+
+* Mon Mar 18 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- Bug 922650: Fix default ROOT.war for JBoss carts (ironcladlou@gmail.com)
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Merge pull request #1625 from tdawson/tdawson/remove-obsoletes
+  (dmcphers+openshiftbot@redhat.com)
+- minor cleanup of some cartridge spec files (tdawson@redhat.com)
+- remove old obsoletes (tdawson@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

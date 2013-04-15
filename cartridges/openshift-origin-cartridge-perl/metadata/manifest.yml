@@ -1,11 +1,13 @@
-Name: perl-2.10
-Namespace: PERL
-Display-Name: Perl 2.10
+Name: perl
+Cartridge-Short-Name: PERL
+Display-Name: Perl 5.10
 Description: "Perl is a general-purpose server-side scripting language originally designed for Web development to produce dynamic Web pages. Popular development frameworks include: CakePerl, Zend, Symfony, and Code Igniter."
-Version: 2.10
+Version: '5.10'
 License: "GPL v2"
 License-Url: http://dev.perl.org/licenses/
 Vendor: perl.org
+Cartridge-Version: 0.0.1
+Cartridge-Vendor: redhat
 Categories:
   - service
   - perl
@@ -42,9 +44,9 @@ Cart-Data:
     Type: environment
     Description: "Unique ID which identified the gear. This value changes between gears."
 Provides:
-  - perl-2.10
+  - perl-5.10
   - "perl"
-  - "perl(version) = 2.10"
+  - "perl(version) = 5.10"
 Publishes:
   publish-http-url:
     Type: "NET_TCP:httpd-proxy-info"
@@ -54,14 +56,14 @@ Subscribes:
   set-db-connection-info:
     Type: "NET_TCP:db:connection-info"
     Required: false
-  set-nosql-db-connection-info:
-    Type: "NET_TCP:nosqldb:connection-info"
-    Required: false
   set-mysql-connection-info:
     Type: "NET_TCP:db:mysql"
     Required : false
   set-postgres-connection-info:
     Type: "NET_TCP:db:postgres"
+    Required : false
+  set-mongodb-connection-info:
+    Type: "NET_TCP:mongodb:connection-info"
     Required : false
   set-doc-url:
     Type: "STRING:urlpath"
@@ -71,8 +73,14 @@ Scaling:
   Max: -1
 Group-Overrides:
   - components:
-    - perl-2.10
+    - perl-5.10
     - web_proxy
-
 Endpoints:
-  - "IP:PORT(8080):PROXY_PORT"
+  - Private-IP-Name:   IP
+    Private-Port-Name: PORT
+    Private-Port:      8080
+    Public-Port-Name:  PROXY_PORT
+    Mappings:
+      - Frontend:      ""
+        Backend:       ""
+        Options:       { websocket: true }

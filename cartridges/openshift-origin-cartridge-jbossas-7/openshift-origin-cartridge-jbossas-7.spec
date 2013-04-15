@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossAS7 support
 Name:          openshift-origin-cartridge-jbossas-7
-Version: 1.6.1
+Version: 1.7.5
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -12,22 +12,23 @@ URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract-jboss
 Requires:      rubygem(openshift-origin-node)
-Requires:      jboss-as7 >= %{jbossver}
-Requires:      jboss-as7-modules >= %{jbossver}
+Requires:      openshift-origin-node-util
 Requires:      lsof
 Requires:      java-1.7.0-openjdk
 Requires:      java-1.7.0-openjdk-devel
+Requires:      jboss-as7-modules >= %{jbossver}
 %if 0%{?rhel}
+Requires:      jboss-as7 >= %{jbossver}
 Requires:      maven3
 %endif
 %if 0%{?fedora}
+Requires:      jboss-as
+Requires:      bc
 Requires:      maven
 %endif
 BuildRequires: git
-BuildRequires: java-devel >= 1:1.6.0
 BuildRequires: jpackage-utils
 BuildArch:     noarch
-Obsoletes:     cartridge-jbossas-7
 
 %description
 Provides JBossAS7 support to OpenShift
@@ -38,11 +39,6 @@ Provides JBossAS7 support to OpenShift
 
 
 %build
-mkdir -p info/data
-pushd template/src/main/webapp > /dev/null
-/usr/bin/jar -cvf ../../../../info/data/ROOT.war -C . .
-popd
-
 
 %install
 mkdir -p %{buildroot}%{cartridgedir}
@@ -66,7 +62,6 @@ ln -s %{cartridgedir}/../abstract/info/hooks/update-namespace %{buildroot}%{cart
 ln -s %{cartridgedir}/../abstract/info/hooks/deploy-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/deploy-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/remove-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/remove-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/status %{buildroot}%{cartridgedir}/info/hooks/status
-ln -s %{cartridgedir}/../abstract/info/hooks/move %{buildroot}%{cartridgedir}/info/hooks/move
 ln -s %{cartridgedir}/../abstract/info/hooks/system-messages %{buildroot}%{cartridgedir}/info/hooks/system-messages
 ln -s %{cartridgedir}/../abstract/info/connection-hooks/publish-gear-endpoint %{buildroot}%{cartridgedir}/info/connection-hooks/publish-gear-endpoint
 ln -s %{cartridgedir}/../abstract/info/connection-hooks/publish-http-url %{buildroot}%{cartridgedir}/info/connection-hooks/publish-http-url
@@ -84,8 +79,6 @@ ln -s %{cartridgedir}/../abstract-jboss/info/connection-hooks/publish_jboss_clus
 ln -s %{cartridgedir}/../abstract-jboss/info/connection-hooks/publish_jboss_remoting %{buildroot}%{cartridgedir}/info/connection-hooks/publish_jboss_remoting
 ln -s %{cartridgedir}/../abstract-jboss/info/connection-hooks/set_jboss_cluster %{buildroot}%{cartridgedir}/info/connection-hooks/set_jboss_cluster
 ln -s %{cartridgedir}/../abstract-jboss/info/connection-hooks/set_jboss_remoting %{buildroot}%{cartridgedir}/info/connection-hooks/set_jboss_remoting
-
-ln -s %{cartridgedir}/../abstract-jboss/info/data/mysql.tar %{buildroot}%{cartridgedir}/info/data/mysql.tar
 
 ln -s %{cartridgedir}/../abstract-jboss/info/hooks/deconfigure %{buildroot}%{cartridgedir}/info/hooks/deconfigure
 ln -s %{cartridgedir}/../abstract-jboss/info/hooks/threaddump %{buildroot}%{cartridgedir}/info/hooks/threaddump
@@ -131,7 +124,6 @@ cp -p %{cartridgedir}/info/configuration/postgresql_module.xml /etc/alternatives
 %attr(0755,-,-) %{cartridgedir}/info/hooks
 %attr(0750,-,-) %{cartridgedir}/info/hooks/*
 %attr(0755,-,-) %{cartridgedir}/info/hooks/tidy
-%attr(0640,-,-) %{cartridgedir}/info/data/
 %attr(0755,-,-) %{cartridgedir}/info/bin/
 %attr(0755,-,-) %{cartridgedir}/info/connection-hooks/
 %{cartridgedir}/template/
@@ -146,6 +138,65 @@ cp -p %{cartridgedir}/info/configuration/postgresql_module.xml /etc/alternatives
 %config %{cartridgedir}/info/bin/standalone.conf
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.5-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.7.4-1
+- Merge pull request #1981 from bdecoste/master (dmcphers@redhat.com)
+- Update standalone.xml (bdecoste@gmail.com)
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- Merge pull request #1934 from lnader/card-534 (dmcphers@redhat.com)
+- Added Additional-Control-Actions to jbosseap-6.0 and jbossas-7
+  (lnader@redhat.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- minor fixes (bdecoste@gmail.com)
+- update rsync (bdecoste@gmail.com)
+- Bug 947016 (bdecoste@gmail.com)
+- Merge pull request #1842 from bdecoste/master (dmcphers@redhat.com)
+- rsync deployments (bdecoste@gmail.com)
+- rsync deployments (bdecoste@gmail.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Wed Mar 27 2013 Adam Miller <admiller@redhat.com> 1.6.7-1
+- Merge pull request #1825 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- clean deployments (bdecoste@gmail.com)
+- Merge pull request #1822 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 928142 (bdecoste@gmail.com)
+
+* Tue Mar 26 2013 Adam Miller <admiller@redhat.com> 1.6.6-1
+- Merge pull request #1800 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 927192 (bdecoste@gmail.com)
+
+* Mon Mar 25 2013 Adam Miller <admiller@redhat.com> 1.6.5-1
+- updated Fedora Requires (bdecoste@gmail.com)
+- updated Fedora Requires (bdecoste@gmail.com)
+
+* Fri Mar 22 2013 Adam Miller <admiller@redhat.com> 1.6.4-1
+- Bug 920375 (bdecoste@gmail.com)
+- Bug 920375 (bdecoste@gmail.com)
+
+* Mon Mar 18 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+- remove old obsoletes (tdawson@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

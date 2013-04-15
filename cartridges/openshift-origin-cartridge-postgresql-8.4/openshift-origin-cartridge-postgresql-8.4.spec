@@ -8,7 +8,7 @@
 
 Summary:       Provides embedded PostgreSQL support
 Name:          openshift-origin-cartridge-postgresql-8.4
-Version: 1.6.1
+Version: 1.7.3
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -16,6 +16,7 @@ URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      postgresql < 9
 Requires:      postgresql-server
 Requires:      postgresql-libs
@@ -40,7 +41,6 @@ Requires:      rhdb-utils
 Requires:      uuid-pgsql
 BuildRequires: git
 BuildArch:     noarch
-Obsoletes:     cartridge-postgresql-8.4
 
 %description
 Provides PostgreSQL cartridge support to OpenShift
@@ -97,6 +97,21 @@ ln -s %{cartridgedir}/../../abstract/info/hooks/update-namespace %{buildroot}%{c
 
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+- remove old obsoletes (tdawson@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

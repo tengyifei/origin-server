@@ -7,19 +7,20 @@
 
 Summary:       Provides embedded haproxy-1.4 support
 Name:          openshift-origin-cartridge-haproxy-1.4
-Version: 1.6.1
+Version: 1.7.6
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
+Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      haproxy
 Requires:      %{?scl:%scl_prefix}rubygem-daemons
 Requires:      %{?scl:%scl_prefix}rubygem-rest-client
 BuildRequires: git
 BuildArch:     noarch
-Obsoletes:     cartridge-haproxy-1.4
 
 %description
 Provides haproxy balancer support to OpenShift
@@ -85,6 +86,50 @@ ln -s %{cartridgedir}/../../abstract/info/hooks/system-messages %{buildroot}%{ca
 
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.6-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Thu Apr 11 2013 Adam Miller <admiller@redhat.com> 1.7.5-1
+- <haproxy_ctld> Bug 920990 - fix p_usage showing usage message twice
+  (jolamb@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.7.4-1
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- delete all calls to remove_ssh_key, and remove_domain_env_vars
+  (rchopra@redhat.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Typo fixes (bleanhar@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Tue Mar 26 2013 Adam Miller <admiller@redhat.com> 1.6.4-1
+- Merge pull request #1793 from rmillner/BZ923611 (dmcphers@redhat.com)
+- Bug 923611 - wsgiref based python servers react poorly to the session closing
+  in the middle of sending headers. (rmillner@redhat.com)
+
+* Mon Mar 25 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- Report if auto_scaling needs to be disabled. (rmillner@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+- Merge pull request #1625 from tdawson/tdawson/remove-obsoletes
+  (dmcphers+openshiftbot@redhat.com)
+- Have haproxy_ctld wait for app_ctl to either kill it or reap the zombie.
+  (rmillner@redhat.com)
+- Moved the call of exec "app_ctl.sh reload" into a forked child process
+  because the call to reload was killing haproxy_ctld and not able to restart
+  it. (andy.goldstein@redhat.com)
+- remove old obsoletes (tdawson@redhat.com)
+- Merge pull request #1620 from bdecoste/master (dmcphers@redhat.com)
+- Bug 920745 (bdecoste@gmail.com)
+- Speed up haproxy interaction (dmcphers@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

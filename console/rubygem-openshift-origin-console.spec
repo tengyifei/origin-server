@@ -9,14 +9,17 @@
 
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
-Version: 1.6.1
+Version: 1.7.6
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           https://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
-Requires:      %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
-Requires:      %{?scl:%scl_prefix}ruby
+%if 0%{?fedora} >= 19
+Requires:      ruby(release)
+%else
+Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 Requires:      %{?scl:%scl_prefix}rubygems
 %if 0%{?fedora}%{?rhel} <= 6
 Requires:      %{?scl:%scl_prefix}rubygem(rails)
@@ -52,8 +55,11 @@ BuildRequires: %{?scl:%scl_prefix}rubygem(haml)
 BuildRequires: %{?scl:%scl_prefix}rubygem(therubyracer)
 %endif
 BuildRequires: %{?scl:%scl_prefix}rubygems-devel
-BuildRequires: %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
-BuildRequires: %{?scl:%scl_prefix}ruby 
+%if 0%{?fedora} >= 19
+BuildRequires: ruby(release)
+%else
+BuildRequires: %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 BuildRequires: %{?scl:%scl_prefix}rubygems
 BuildArch:     noarch
 Provides:      rubygem(%{gem_name}) = %version
@@ -128,6 +134,215 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.6-1
+- Bug 951367 (ffranz@redhat.com)
+- Merge pull request #2025 from smarterclayton/origin_ui_37_error_page
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2014 from liggitt/accessibility
+  (dmcphers+openshiftbot@redhat.com)
+- Add a few base URLs and helpers for fetching assets during static page
+  compilation (ccoleman@redhat.com)
+- Merge pull request #1996 from
+  smarterclayton/bug_950367_use_default_for_bad_expires_in
+  (dmcphers+openshiftbot@redhat.com)
+- Add form labels (jliggitt@redhat.com)
+- Bug 950367 - Handle non-integer values for expires_in (ccoleman@redhat.com)
+
+* Thu Apr 11 2013 Adam Miller <admiller@redhat.com> 1.7.5-1
+- Merge pull request #1995 from smarterclayton/tweaks_to_quickstarts
+  (dmcphers@redhat.com)
+- Add social sharing links (ccoleman@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.7.4-1
+- Merge pull request #1992 from smarterclayton/fix_account_settings_breadcrumb
+  (dmcphers+openshiftbot@redhat.com)
+- Fix account settings breadcrumb to point to the correct URL
+  (ccoleman@redhat.com)
+- Merge pull request #1969 from liggitt/currency_display (dmcphers@redhat.com)
+- Separate currency symbol into helper method (jliggitt@redhat.com)
+
+* Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- Merge pull request #1944 from sg00dwin/408dev (dmcphers@redhat.com)
+- Changes for: (sgoodwin@redhat.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Changes to apply the correct the default input.btn:focus background color in
+  the console. (sgoodwin@redhat.com)
+- Bug 917492 - The error message overlapped with the original content in
+  scaling page of jbosseap apps on Iphone4S (sgoodwin@redhat.com)
+- Changes: (sgoodwin@redhat.com)
+- Bug 947098 fix - add margin to h3 so icon doesn't overlap at narrow
+  resolutions (sgoodwin@redhat.com)
+- Moving openshift-icon to a partial and including in common so that mixin can
+  be applied Created a mixin for text-overflow .truncate and used with aliases
+  list Created markup for header button usage of add/create function Switched
+  individual application page from using sprite images to icon font Swiched
+  application list to use right arrow icon instead of sprite Removed bottom
+  positioning of icons with h1,h2 b/c when used with truncate the
+  overflow:hidden cut the tops off. A couple of variables added for colors
+  (sgoodwin@redhat.com)
+- Merge pull request #1843 from smarterclayton/bug_928669_load_error_in_async
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1845 from sg00dwin/0325dev
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 928669 - Async errors in development mode (ccoleman@redhat.com)
+- Merge branch 'master' of github.com:openshift/origin-server into 0325dev
+  (sgoodwin@redhat.com)
+- Merge branch 'master' of github.com:openshift/origin-server into 0325dev
+  (sgoodwin@redhat.com)
+- Merge branch 'master' of github.com:openshift/origin-server into 0325dev
+  (sgoodwin@redhat.com)
+- Fix for Bug 927208 Multiple edits needed because of the issues involved with
+  the problem of styling input[type="file"] that are also disabled. In a
+  nutshell, it's nearly impossible to present input type=file in a consistant
+  manner across browsers platforms. Further complicated by the way Firefox
+  handles those inputs when disabled - text and background-color are given
+  opacity and inherit the parent background color which caused the text to be
+  unreadable on our dark background. So created the .platform class, which is
+  inverse of well. (sgoodwin@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Wed Mar 27 2013 Adam Miller <admiller@redhat.com> 1.6.7-1
+- Minor wording and styling bug fixes, improved tests for SSL certificates
+  (ffranz@redhat.com)
+- Minor visual tweaks on the web console, alias list (ffranz@redhat.com)
+- Merge pull request #1813 from fotioslindiakos/BZ922689 (dmcphers@redhat.com)
+- Merge pull request #1812 from liggitt/invoice_styles (dmcphers@redhat.com)
+- Fix for not showing proper cartridge errors (fotios@redhat.com)
+- Add placeholder styles for usage graph types (jliggitt@redhat.com)
+- Bug 923746 - Tax exempt link should point to public page
+  (ccoleman@redhat.com)
+
+* Tue Mar 26 2013 Adam Miller <admiller@redhat.com> 1.6.6-1
+- Merge pull request #1785 from sg00dwin/0325dev
+  (dmcphers+openshiftbot@redhat.com)
+- switch to existing variable (sgoodwin@redhat.com)
+- Bug 921453 fix - webkit rendering of multi gylph icons needs top:0
+  (sgoodwin@redhat.com)
+- Make console alert link color $linkColorBlue since it's on a lighter
+  background, with exception for alert-error. (sgoodwin@redhat.com)
+
+* Mon Mar 25 2013 Adam Miller <admiller@redhat.com> 1.6.5-1
+- Review comments - missed search page, needed to reintroduce link to
+  quickstart page (ccoleman@redhat.com)
+- Clean up premium cart indicators (ccoleman@redhat.com)
+- Add provider data to the UI that is exposed by the server
+  (ccoleman@redhat.com)
+- Add icon to app config page (sgoodwin@redhat.com)
+- Addition of icon denotion for cartridge or quickstart on application creation
+  step (sgoodwin@redhat.com)
+- add usage rules for alert headings w/ icons (sgoodwin@redhat.com)
+- Merge pull request #1762 from fabianofranz/dev/ffranz/ssl
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1763 from smarterclayton/aria_dashboard
+  (dmcphers+openshiftbot@redhat.com)
+- Web console now using api v. 1.4 (ffranz@redhat.com)
+- Card #239: Added support to alias creation and deletion and SSL certificate
+  upload to the web console (ffranz@redhat.com)
+- Fix test failures (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into aria_dashboard
+  (ccoleman@redhat.com)
+- Merge branch 'aria_dashboard' of github.com:smarterclayton/origin-server into
+  aria_dashboard (ccoleman@redhat.com)
+- Reformat resource_not_found checking (jliggitt@redhat.com)
+- Don't assume exceptions have a model (jliggitt@redhat.com)
+- Add billing_date_no_year (jliggitt@redhat.com)
+- Tweak graph line height, style table captions (jliggitt@redhat.com)
+- Remove extraneous pry (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into aria_dashboard
+  (ccoleman@redhat.com)
+- Update tests (ccoleman@redhat.com)
+- Support cache config (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into aria_dashboard
+  (ccoleman@redhat.com)
+- Fixing test cases (ccoleman@redhat.com)
+- Support redirection back to the settings page (ccoleman@redhat.com)
+- Use credit card format closer to card value (ccoleman@redhat.com)
+- Cache that the user has no keys (ccoleman@redhat.com)
+- Creating an authorization should take the user to the show page for the token
+  (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into aria_dashboard
+  (ccoleman@redhat.com)
+- Merge with master, _account moved to origin-server (ccoleman@redhat.com)
+- Add a stack overflow link helper (ccoleman@redhat.com)
+- Updated date helpers (ccoleman@redhat.com)
+- Initial work (ccoleman@redhat.com)
+
+* Thu Mar 21 2013 Adam Miller <admiller@redhat.com> 1.6.4-1
+- Merge pull request #1678 from smarterclayton/minor_object_cleanup
+  (dmcphers+openshiftbot@redhat.com)
+- Small cleanups in prep for future refactors (remove eigenclasses, no
+  require_dependency) (ccoleman@redhat.com)
+
+* Mon Mar 18 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- Pry console won't start in console app (ccoleman@redhat.com)
+- Merge pull request #1668 from smarterclayton/wrong_quickstart_default
+  (dmcphers+openshiftbot@redhat.com)
+- Site should not default to community URL for quickstarts if not specified
+  (ccoleman@redhat.com)
+- Support cache config (ccoleman@redhat.com)
+- Merge pull request #1650 from sg00dwin/various-work
+  (dmcphers+openshiftbot@redhat.com)
+- Replace search and caret with icon-font (sgoodwin@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Merge pull request #1636 from tdawson/tdawson/fix-f19-builds
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1590 from jtharris/features/US2627
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1634 from smarterclayton/add_pry_console
+  (dmcphers+openshiftbot@redhat.com)
+- Make packages build/install on F19+ (tdawson@redhat.com)
+- Add Pry as a console option - use 'PRY=1 rails c' (ccoleman@redhat.com)
+- Merge branch 'master' of github.com:openshift/origin-server into misc-dev
+  (sgoodwin@redhat.com)
+- adding empty mixin account_background in
+  console/app/assets/stylesheets/console/_mixins.scss (sgoodwin@redhat.com)
+- COMMUNITY_URL must end with '/' (jharris@redhat.com)
+- No default proxy setting for quickstarts. (jharris@redhat.com)
+- moved from li to console for inclusion in origin.css (sgoodwin@redhat.com)
+- usage_rates? unit tests (jharris@redhat.com)
+- Default to empty array for usage_rates (jharris@redhat.com)
+- include .wrap rule which was lost previously (sgoodwin@redhat.com)
+- heading color rules needed again since _type is shared (sgoodwin@redhat.com)
+- Revert to one _type partial for site and console Regen updated icon-font
+  files (sgoodwin@redhat.com)
+- Bug 918339 - Remove unnecessary lambda and conditionalize at_exit
+  registration. (hripps@redhat.com)
+- need font-url instead of url (sgoodwin@redhat.com)
+- add license that missing (sgoodwin@redhat.com)
+- Additional icons included to font (sgoodwin@redhat.com)
+- Merge branch 'master' of github.com:openshift/origin-server into misc-dev
+  (sgoodwin@redhat.com)
+- Put focus on advanced field when shown (jliggitt@redhat.com)
+- Merge pull request #1589 from liggitt/bug/919520
+  (dmcphers+openshiftbot@redhat.com)
+- Fixing alert heading color. (jharris@redhat.com)
+- Pulling out app/cart titles and notifications. (jharris@redhat.com)
+- Merge pull request #1544 from fotioslindiakos/BZ909060
+  (dmcphers+openshiftbot@redhat.com)
+- remove heading style b/c it was overriding .alert-header rule
+  (sgoodwin@redhat.com)
+- remove adjacent h2 + p rule and will handle one offs independently
+  (sgoodwin@redhat.com)
+- Fix Bug 919520 Changing application creation page to advanced view with
+  errors shown returns to main applications page (jliggitt@redhat.com)
+- Merge pull request #1580 from liggitt/aria_landmarks
+  (dmcphers+openshiftbot@redhat.com)
+- Merge branch 'master' of github.com:openshift/origin-server into misc-dev
+  (sgoodwin@redhat.com)
+- Bug 909060 - Corrected forms to use proper semantic_errors
+  https://bugzilla.redhat.com/show_bug.cgi?id=909060 (fotios@redhat.com)
+- Merge branch 'master' of github.com:openshift/origin-server into misc-dev
+  (sgoodwin@redhat.com)
+- Move to separate _type partials for console and site for better control of
+  headers and typography  - fine tune for console Modify add cartidge heading
+  to fix small spacing issue Add _account to origin.css (sgoodwin@redhat.com)
+- Scope table cell and row headers, add role=main landmarks, add 'Skip to
+  content' links (jliggitt@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

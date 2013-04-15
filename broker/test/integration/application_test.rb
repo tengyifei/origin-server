@@ -1,3 +1,4 @@
+ENV["TEST_NAME"] = "integration_application_test"
 require 'test_helper'
 
 class ApplicationTest < ActiveSupport::TestCase
@@ -25,7 +26,7 @@ class ApplicationTest < ActiveSupport::TestCase
     assert_equal(app.name, orig_app.name)
     assert_equal(app.domain.namespace, orig_app.domain.namespace)
 
-    app.push(:aliases, "app.foo.bar")
+    app.aliases.push(Alias.new(fqdn: "app.foo.bar"))
 
     updated_app = Application.find_by(canonical_name: app_name.downcase)
     assert_equal(app.name, orig_app.name)

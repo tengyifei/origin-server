@@ -17,27 +17,36 @@
 #
 # Test the OpenShift application_container model
 #
-module OpenShift; end
+module OpenShift
+  ;
+end
 
 require 'test_helper'
 require 'openshift-origin-node/model/v2_cart_model'
+require 'openshift-origin-node/model/unix_user'
 require 'openshift-origin-node/model/cartridge'
+require 'openshift-origin-node/model/cartridge_repository'
 require 'openshift-origin-node/utils/environ'
 require 'openshift-origin-common'
+require 'ostruct'
 require 'test/unit'
 require 'fileutils'
 require 'mocha'
 
 class V2CartModelTest < Test::Unit::TestCase
 
+  GEAR_BASE_DIR = '/var/lib/openshift'
+
   def setup
     # Set up the config
     @config = mock('OpenShift::Config')
-    @config.stubs(:get).with("GEAR_BASE_DIR").returns("/tmp")
+
+    @config.stubs(:get).returns(nil)
+    @config.stubs(:get).with("GEAR_BASE_DIR").returns(GEAR_BASE_DIR)
 
     OpenShift::Utils::Sdk.stubs(:new_sdk_app?).returns(true)
 
-    script_dir = File.expand_path(File.dirname(__FILE__))
+    script_dir     = File.expand_path(File.dirname(__FILE__))
     cart_base_path = File.join(script_dir, '..', '..', '..', 'cartridges')
 
     raise "Couldn't find cart base path at #{cart_base_path}" unless File.exists?(cart_base_path)
@@ -47,25 +56,35 @@ class V2CartModelTest < Test::Unit::TestCase
     OpenShift::Config.stubs(:new).returns(@config)
 
     # Set up the container
-    @gear_uuid = "501"
-    @user_uid = "501"
-    @app_name = 'UnixUserTestCase'
+    @gear_uuid = "5501"
+    @user_uid  = "5501"
+    @app_name  = 'UnixUserTestCase'
     @gear_name = @app_name
     @namespace = 'jwh201204301647'
-    @gear_ip = "127.0.0.1"
+    @gear_ip   = "127.0.0.1"
+    @homedir   = "#{GEAR_BASE_DIR}/#{@gear_uuid}"
 
-    @user = mock()
-    @user.stubs(:uuid).returns(@user_uuid)
-    @user.stubs(:uid).returns(@user_uid)
-    
-    @model = OpenShift::V2CartridgeModel.new(@config, @user)
+
+    @user = OpenStruct.new(
+        uuid:           @gear_uuid,
+        uid:            @user_uid,
+        container_uuid: @user_uuid,
+        container_name: @gear_name,
+        namespace:      @namespace,
+        homedir:        "#{GEAR_BASE_DIR}/#{@gear_uuid}"
+
+    )
+
+    @model = OpenShift::V2CartridgeModel.new(@config, @user, mock())
 
     @mock_manifest = %q{#
         Name: mock
-        Namespace: MOCK
+        Cartridge-Short-Name: MOCK
+        Cartridge-Version: 1.0
+        Cartridge-Vendor: Unit Test
         Display-Name: Mock
         Description: "A mock cartridge for development use only."
-        Version: 0.1
+        Version: '0.1'
         License: "None"
         Vendor: Red Hat
         Categories:
@@ -79,66 +98,65 @@ class V2CartModelTest < Test::Unit::TestCase
         - components:
         - mock
         Endpoints:
-        - "EXAMPLE_IP1:EXAMPLE_PORT1(8080):EXAMPLE_PUBLIC_PORT1"
-        - "EXAMPLE_IP1:EXAMPLE_PORT2(8081):EXAMPLE_PUBLIC_PORT2"
-        - "EXAMPLE_IP1:EXAMPLE_PORT3(8082):EXAMPLE_PUBLIC_PORT3"
-        - "EXAMPLE_IP2:EXAMPLE_PORT4(9090):EXAMPLE_PUBLIC_PORT4"
-        - "EXAMPLE_IP2:EXAMPLE_PORT5(9091)"
+          - Private-IP-Name:   EXAMPLE_IP1
+            Private-Port-Name: EXAMPLE_PORT1
+            Private-Port:      8080
+            Public-Port-Name:  EXAMPLE_PUBLIC_PORT1
+            Mappings:
+              - Frontend:      "/front1a"
+                Backend:       "/back1a"
+                Options:       { websocket: true, tohttps: true }
+              - Frontend:      "/front1b"
+                Backend:       "/back1b"
+                Options:       { noproxy: true }
+          
+          - Private-IP-Name:   EXAMPLE_IP1
+            Private-Port-Name: EXAMPLE_PORT2
+            Private-Port:      8081
+            Public-Port-Name:  EXAMPLE_PUBLIC_PORT2
+            Mappings:
+              - Frontend:      "/front2"
+                Backend:       "/back2"
+                Options:       { file: true }
+          
+          - Private-IP-Name:   EXAMPLE_IP1
+            Private-Port-Name: EXAMPLE_PORT3
+            Private-Port:      8082
+            Public-Port-Name:  EXAMPLE_PUBLIC_PORT3
+            Mappings:
+              - Frontend:      "/front3"
+                Backend:       "/back3"
+          
+          - Private-IP-Name:   EXAMPLE_IP2
+            Private-Port-Name: EXAMPLE_PORT4
+            Private-Port:      9090
+            Public-Port-Name:  EXAMPLE_PUBLIC_PORT4
+            Mappings:
+              - Frontend:      "/front4"
+                Backend:       "/back4"
+  
+          - Private-IP-Name:   EXAMPLE_IP2
+            Private-Port-Name: EXAMPLE_PORT5
+            Private-Port:      9091
     }
 
-    @mock_cartridge = OpenShift::Runtime::Cartridge.new(YAML.load(@mock_manifest))
-    @model.stubs(:get_cartridge).with("mock").returns(@mock_cartridge)
+    manifest = "/tmp/manifest-#{Process.pid}"
+    IO.write(manifest, @mock_manifest, 0)
+    @mock_cartridge = OpenShift::Runtime::Cartridge.new(manifest, nil, '/tmp')
+    @model.stubs(:get_cartridge).with('mock-0.1').returns(@mock_cartridge)
   end
 
-  def test_get_cartridge_valid_manifest
-    local_model = OpenShift::V2CartridgeModel.new(@config, @user)
-
-    @user.expects(:homedir).returns('/foo')
-
-    YAML.stubs(:load_file).with('/foo/mock/metadata/manifest.yml').returns(YAML.load(@mock_manifest))
-    cart = local_model.get_cartridge("mock")
-
-    assert_equal "mock", cart.name
-    assert_equal "MOCK", cart.namespace
-    assert_equal 5, cart.endpoints.length
-
-    # Exercise caching
-    cart = local_model.get_cartridge("mock")
-
-    assert_equal "mock", cart.name
-    assert_equal "MOCK", cart.namespace
-    assert_equal 5, cart.endpoints.length
+  def teardown
+    @user.unstub(:homedir)
   end
 
   def test_get_cartridge_error_loading
-    local_model = OpenShift::V2CartridgeModel.new(@config, @user)
+    local_model = OpenShift::V2CartridgeModel.new(@config, @user, mock())
 
-    @user.expects(:homedir).returns('/foo')
-    YAML.stubs(:load_file).with('/foo/mock/metadata/manifest.yml').raises(ArgumentError.new('bla'))
-    
-    assert_raise(RuntimeError, 'Failed to load cart manifest from /foo/mock/metadata/manifest.yml for cart mock in gear : bla') do
-      local_model.get_cartridge("mock")
-    end
-  end
+    YAML.stubs(:load_file).with("#{@homedir}/redhat-CRTest/metadata/manifest.yml").raises(ArgumentError.new('bla'))
 
-
-  def test_get_system_cartridge_path
-    scenarios = { 
-      'mock' => '/path/v2/mock',
-      'mock-0.0' => '/path/v2/mock-0.0',
-      'mock-plugin' => '/path/v2/mock-plugin',
-      'mock-plugin-0.0' => '/path/v2/mock-plugin-0.0',
-      'mock-' => '/path/v2/mock-',
-      'mock--' => '/path/v2/mock--',
-      'mock--0.0' => '/path/v2/mock--0.0',
-      'mock-0.0-' => '/path/v2/mock-0.0-'
-    }
-
-    @config.stubs(:get).with("CARTRIDGE_BASE_PATH").returns('/path')
-
-    scenarios.each do |cart_name, expected_path|
-      res = @model.get_system_cartridge_path(cart_name)
-      assert_equal expected_path, res
+    assert_raise(RuntimeError, "Failed to load cart manifest from #{@homedir}/redhat-CRTest/metadata/manifest.yml for cart mock in gear : bla") do
+      local_model.get_cartridge("mock-0.1")
     end
   end
 
@@ -159,7 +177,7 @@ class V2CartModelTest < Test::Unit::TestCase
     @user.expects(:add_env_var).with("OPENSHIFT_MOCK_EXAMPLE_PORT4", 9090)
     @user.expects(:add_env_var).with("OPENSHIFT_MOCK_EXAMPLE_PORT5", 9091)
 
-    @model.create_private_endpoints("mock")
+    @model.create_private_endpoints(@mock_cartridge)
   end
 
   def test_private_endpoint_delete
@@ -174,7 +192,7 @@ class V2CartModelTest < Test::Unit::TestCase
     @user.expects(:remove_env_var).with("OPENSHIFT_MOCK_EXAMPLE_IP2")
     @user.expects(:remove_env_var).with("OPENSHIFT_MOCK_EXAMPLE_PORT5")
 
-    @model.delete_private_endpoints("mock")
+    @model.delete_private_endpoints(@mock_cartridge)
   end
 
   # Verifies that an IP can be allocated for a simple port binding request
@@ -183,17 +201,17 @@ class V2CartModelTest < Test::Unit::TestCase
     @model.expects(:get_allocated_private_ips).returns([])
     @model.expects(:address_bound?).returns(false)
 
-    assert_equal @model.find_open_ip(8080), "127.0.250.129"
+    assert_equal "127.10.190.129", @model.find_open_ip(8080)
   end
 
   # Ensures that a previously allocated IP within the gear won't be recycled
   # when a new allocation request is made.
   def test_find_open_ip_already_allocated
-    @model.expects(:get_allocated_private_ips).returns(["127.0.250.129"])
+    @model.expects(:get_allocated_private_ips).returns(["127.10.190.129"])
 
     @model.expects(:address_bound?).returns(false)
 
-    assert_equal @model.find_open_ip(8080), "127.0.250.130"
+    assert_equal "127.10.190.130", @model.find_open_ip(8080)
   end
 
   # Verifies that nil is returned from find_open_ip when all requested ports are
@@ -231,6 +249,9 @@ class V2CartModelTest < Test::Unit::TestCase
                                                         %w(/var/lib/openshift/0001000100010001/cartridge2))
     @model.expects(:cartridge_teardown).with('cartridge1').returns("")
     @model.expects(:cartridge_teardown).with('cartridge2').returns("")
+    
+    Dir.stubs(:chdir).with(GEAR_BASE_DIR).yields
+
     @user.expects(:destroy)
 
     @model.destroy
@@ -244,6 +265,9 @@ class V2CartModelTest < Test::Unit::TestCase
                                                         %w(/var/lib/openshift/0001000100010001/cartridge2))
     @model.expects(:cartridge_teardown).with('cartridge1').raises(OpenShift::Utils::ShellExecutionException.new('error'))
     @model.expects(:cartridge_teardown).with('cartridge2').returns("")
+    
+    Dir.stubs(:chdir).with(GEAR_BASE_DIR).yields
+
     @user.expects(:destroy)
 
     @model.destroy
@@ -274,5 +298,23 @@ class V2CartModelTest < Test::Unit::TestCase
     assert_raise OpenShift::Utils::ShellExecutionException do
       @model.unlock_gear('mock-0.1') { raise OpenShift::Utils::ShellExecutionException.new('error') }
     end
+  end
+
+  def test_frontend_connect_success
+    OpenShift::Utils::Environ.stubs(:for_gear).returns({
+        "OPENSHIFT_MOCK_EXAMPLE_IP1" => "127.0.0.1",
+        "OPENSHIFT_MOCK_EXAMPLE_IP2" => "127.0.0.2"
+    })
+
+    frontend = mock('OpenShift::FrontendHttpServer')
+    OpenShift::FrontendHttpServer.stubs(:new).returns(frontend)
+
+    frontend.expects(:connect).with("/front1a", "127.0.0.1:8080/back1a", { "websocket" => true, "tohttps" => true })
+    frontend.expects(:connect).with("/front1b", "127.0.0.1:8080/back1b", { "noproxy" => true })
+    frontend.expects(:connect).with("/front2", "127.0.0.1:8081/back2", { "file" => true })
+    frontend.expects(:connect).with("/front3", "127.0.0.1:8082/back3", {})
+    frontend.expects(:connect).with("/front4", "127.0.0.2:9090/back4", {})
+
+    @model.connect_frontend(@mock_cartridge)
   end
 end

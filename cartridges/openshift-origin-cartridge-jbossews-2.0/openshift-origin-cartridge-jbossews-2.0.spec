@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossEWS2.0 support
 Name:          openshift-origin-cartridge-jbossews-2.0
-Version: 1.3.1
+Version: 1.4.4
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -12,6 +12,7 @@ URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract-jboss
 Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      tomcat7
 Requires:      lsof
 Requires:      java-1.7.0-openjdk
@@ -23,7 +24,6 @@ Requires:      maven3
 Requires:      maven
 %endif
 BuildRequires: git
-BuildRequires: java-devel >= 1:1.6.0
 BuildRequires: jpackage-utils
 BuildArch:     noarch
 
@@ -36,10 +36,6 @@ Provides JBossEWS2.0 support to OpenShift
 
 
 %build
-mkdir -p info/data
-pushd template/src/main/webapp > /dev/null
-/usr/bin/jar -cvf ../../../../info/data/ROOT.war -C . .
-popd
 
 
 %install
@@ -64,7 +60,6 @@ ln -s %{cartridgedir}/../abstract/info/hooks/update-namespace %{buildroot}%{cart
 ln -s %{cartridgedir}/../abstract/info/hooks/deploy-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/deploy-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/remove-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/remove-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/status %{buildroot}%{cartridgedir}/info/hooks/status
-ln -s %{cartridgedir}/../abstract/info/hooks/move %{buildroot}%{cartridgedir}/info/hooks/move
 ln -s %{cartridgedir}/../abstract/info/hooks/system-messages %{buildroot}%{cartridgedir}/info/hooks/system-messages
 ln -s %{cartridgedir}/../abstract/info/connection-hooks/publish-gear-endpoint %{buildroot}%{cartridgedir}/info/connection-hooks/publish-gear-endpoint
 ln -s %{cartridgedir}/../abstract/info/connection-hooks/publish-http-url %{buildroot}%{cartridgedir}/info/connection-hooks/publish-http-url
@@ -108,7 +103,6 @@ alternatives --set jbossews-2.0 /usr/share/tomcat7
 %attr(0755,-,-) %{cartridgedir}/info/hooks
 %attr(0750,-,-) %{cartridgedir}/info/hooks/*
 %attr(0755,-,-) %{cartridgedir}/info/hooks/tidy
-%attr(0640,-,-) %{cartridgedir}/info/data/
 %attr(0755,-,-) %{cartridgedir}/info/bin/
 %attr(0755,-,-) %{cartridgedir}/info/connection-hooks/
 %{cartridgedir}/template/
@@ -123,6 +117,32 @@ alternatives --set jbossews-2.0 /usr/share/tomcat7
 
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.4.4-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.4.3-1
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 1.4.2-1
+- Card 534 (lnader@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.4.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Mon Mar 18 2013 Adam Miller <admiller@redhat.com> 1.3.3-1
+- Bug 922650: Fix default ROOT.war for JBoss carts (ironcladlou@gmail.com)
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+- remove java-devel BuildRequires, move ROOT.war jar to configure
+  (bdecoste@gmail.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.3.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.3.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

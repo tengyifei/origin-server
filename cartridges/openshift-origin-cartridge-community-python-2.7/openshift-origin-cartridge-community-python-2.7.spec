@@ -2,7 +2,7 @@
 
 Summary:       Provides support for using community Python 2.7 cartridge
 Name:          openshift-origin-cartridge-community-python-2.7
-Version: 0.3.1
+Version: 0.4.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -10,10 +10,12 @@ URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      httpd
+Requires:	   python-virtualenv
+Requires:      redhat-lsb-core
 BuildRequires: git
 BuildArch:     noarch
-Obsoletes:     cartridge-community-python-2.7
 
 %description
 Provides support for using a community python 2.7 cartridge on OpenShift
@@ -46,7 +48,6 @@ ln -s %{cartridgedir}/../abstract/info/hooks/update-namespace %{buildroot}%{cart
 ln -s %{cartridgedir}/../abstract/info/hooks/deploy-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/deploy-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/remove-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/remove-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/tidy %{buildroot}%{cartridgedir}/info/hooks/tidy
-ln -s %{cartridgedir}/../abstract/info/hooks/move %{buildroot}%{cartridgedir}/info/hooks/move
 ln -s %{cartridgedir}/../abstract/info/hooks/threaddump %{buildroot}%{cartridgedir}/info/hooks/threaddump
 ln -s %{cartridgedir}/../abstract/info/hooks/system-messages %{buildroot}%{cartridgedir}/info/hooks/system-messages
 ln -s %{cartridgedir}/../abstract/info/connection-hooks/publish-gear-endpoint %{buildroot}%{cartridgedir}/info/connection-hooks/publish-gear-endpoint
@@ -77,6 +78,22 @@ ln -s %{cartridgedir}/../abstract/info/bin/sync_gears.sh %{buildroot}%{cartridge
 
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 0.4.3-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 0.4.2-1
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 0.4.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+- add Requires for F18 (bdecoste@gmail.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 0.3.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+- remove old obsoletes (tdawson@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 0.3.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

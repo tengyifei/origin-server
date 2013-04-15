@@ -6,39 +6,73 @@ class Matrix
   end
 end
 
+##
+# @api model
 # Class to represent an OpenShift Application
 # @!attribute [r] name
-#   @return [String] The name of the application
+#   @return [String] The name of the application. The name of the application is user provided and can be mixed case
+# @!attribute [r] canonical_name
+#   @return [String] The down-cased name of the application
+# @!attribute [r] uuid
+#   @return [String] UUID that represents this application. This is usually the same as the MongoID ID field.
+#     For applications that existed before the transition to MongoID, this field represents the original UUID and will differ 
+#     from the MongoID ID field.
 # @!attribute [rw] domain_requires
-#   @return [Array[String]] Array of IDs of the applications that this application is dependent on.
-#     If the parent application is destroyed, this application also needs to be destroyed.
+#   @return [Array<String>] Array of IDs of the applications that this application is dependent on
+#     If the parent application is destroyed, this application also needs to be destroyed
 # @!attribute [rw] group_overrides
-#   @return [Array[Array[String]]] Array of Array of components that need to be co-located
+#   @return [Array<Array<String>>] Array of Array of components that need to be co-located
+# @!attribute [rw] pending_op_groups
+#   @return [Array<PendingAppOpGroup>] List of pending operations to be performed on this application
 # @!attribute [r] domain
 #   @return [Domain] Domain that this application is part of.
 # @!attribute [r] user_ids
-#   @return [Array[Moped::BSON::ObjectId]] Array of IDs of users that have access to this application.
-# @!attribute [r] aliases
-#   @return [Array[String]] Array of DNS aliases registered with this application.
-#     @see {Application#add_alias} and {Application#remove_alias}
+#   @return [Array<Moped::BSON::ObjectId>] Array of IDs of users that have access to this application.
 # @!attribute [rw] component_start_order
-#   @return [Array[String]] Normally start order computed based on order specified by each component's manifest. This attribute is used to overrides the start order.
+#   @return [Array<String>] Normally start order computed based on order specified by each component's manifest. 
+#     This attribute is used to overrides the start order
 # @!attribute [rw] component_stop_order
-#   @return [Array[String]] Normally stop order computed based on order specified by each component's manifest. This attribute is used to overrides the stop order.
+#   @return [Array<String>] Normally stop order computed based on order specified by each component's manifest. 
+#     This attribute is used to overrides the stop order
+# @!attribute [rw] component_stop_order
+#   @return [Array<String>] Normally configure order computed based on order specified by each component's manifest. 
+#     This attribute is used to overrides the configure order
+# @!attribute [r] default_gear_size
+#   @return [String] The default gear size to use when creating a new {GroupInstance}. This value can be overridden 
+#     using group overrides or in the cartridge manifest
+# @!attribute [r] scalable
+#   @return [Boolean] This value is true if the application is scalable
+# @!attribute [r] init_git_url
+#   @return [String] Stores the URL to the GIT url specified during application creation
+# @!attribute [r] analytics
+#   @return [Hash] Location to store analytics data relevant to the application
 # @!attribute [r] connections
-#   @return [Array[ConnectionInstance]] Array of connections between components of this application
+#   @return [Array<ConnectionInstance>] Array of connections between components of this application
 # @!attribute [r] component_instances
-#   @return [Array[ComponentInstance]] Array of components in this application
+#   @return [Array<ComponentInstance>] Array of components in this application
 # @!attribute [r] group_instances
-#   @return [Array[GroupInstance]] Array of gear groups in the application
+#   @return [Array<GroupInstance>] Array of gear groups in the application
 # @!attribute [r] app_ssh_keys
-#   @return [Array[ApplicationSshKey]] Array of auto-generated SSH keys used by components of the application to connect to other gears
+#   @return [Array<ApplicationSshKey>] Array of auto-generated SSH keys used by components of the application to connect to other gears
+# @!attribute [r] aliases
+#   @return [Array<String>] Array of DNS aliases registered with this application.
+#     @see {Application#add_alias} and {Application#remove_alias}
 class Application
   include Mongoid::Document
   include Mongoid::Timestamps
   include UtilHelper
+  
+  # Maximum length of  a valid application name
   APP_NAME_MAX_LENGTH = 32
+  
+  # Numeric representation for unlimited scaling
   MAX_SCALE = -1
+
+  # This is the current regex for validations for new applications
+  APP_NAME_REGEX = /\A[A-Za-z0-9]+\z/
+  
+  # This is the regex that ensures backward compatibility for fetches
+  APP_NAME_COMPATIBILITY_REGEX = APP_NAME_REGEX
 
   field :name, type: String
   field :canonical_name, type: String
@@ -49,36 +83,40 @@ class Application
 
   belongs_to :domain
   field :user_ids, type: Array, default: []
-  field :aliases, type: Array, default: []
   field :component_start_order, type: Array, default: []
   field :component_stop_order, type: Array, default: []
   field :component_configure_order, type: Array, default: []
   field :default_gear_size, type: String
   field :scalable, type: Boolean, default: false
   field :init_git_url, type: String, default: ""
+  field :analytics, type: Hash, default: {}
   embeds_many :connections, class_name: ConnectionInstance.name
   embeds_many :component_instances, class_name: ComponentInstance.name
   embeds_many :group_instances, class_name: GroupInstance.name
   embeds_many :app_ssh_keys, class_name: ApplicationSshKey.name
+  embeds_many :aliases, class_name: Alias.name
   
   index({'group_instances.gears.uuid' => 1}, {:unique => true, :sparse => true})
   index({'domain_id' => 1})
   create_indexes
 
+  # non-presisted field used to store user agent of current request
   attr_accessor :user_agent
 
   validates :name,
     presence: {message: "Application name is required and cannot be blank."},
-    format:   {with: /\A[A-Za-z0-9]+\z/, message: "Invalid application name. Name must only contain alphanumeric characters."},
+    format:   {with: APP_NAME_REGEX, message: "Invalid application name. Name must only contain alphanumeric characters."},
     length:   {maximum: APP_NAME_MAX_LENGTH, minimum: 1, message: "Application name must be a minimum of 1 and maximum of #{APP_NAME_MAX_LENGTH} characters."},
     blacklisted: {message: "Application name is not allowed.  Please choose another."}
   validate :extended_validator
 
-  # Returns a map of field to error code for validation failures.
+  # Returns a map of field to error code for validation failures
+  # * 105: Invalid application name
   def self.validation_map
     {name: 105}
   end
 
+  # Hook to prevent accidental deletion of MongoID model before all related {Gear}s are removed
   before_destroy do |app|
     raise "Please call destroy_app to delete all gears before deleting this application" if num_gears > 0
   end
@@ -89,17 +127,36 @@ class Application
     notify_observers(:validate_application)
   end
 
+  ##
+  # Factory method to create the {Application}
+  #
+  # @param application_name [String] Name of the application
+  # @param features [Array<String>] List of cartridges or features to add to the application
+  # @param domain [Domain] The domain namespace under which this application is created
+  # @param default_gear_size [String] The default gear size to use when creating a new {Gear} for the application
+  # @param scalable [Boolean] Indicates if the application should be scalable or host all cartridges on a single gear.
+  #    If set to true, a "web_proxy" cartridge is automatically added to perform load-balancing for the web tier
+  # @param result_io [ResultIO, #output] Object to log all messages and cartridge output
+  # @param group_overrides [Array] List of overrides to specify gear sizes, scaling limits, component colocation etc.
+  # @param init_git_url [String] URL to git repository to retrieve application code
+  # @param user_agent [String] user agent string of browser used for this rest API request
+  # @return [Application] Application object
+  # @raise [OpenShift::ApplicationValidationException] Exception to indicate a validation error
   def self.create_app(application_name, features, domain, default_gear_size = nil, scalable=false, result_io=ResultIO.new, group_overrides=[], init_git_url=nil, user_agent=nil)
     default_gear_size =  Rails.application.config.openshift[:default_gear_size] if default_gear_size.nil?
     app = Application.new(domain: domain, name: application_name, default_gear_size: default_gear_size, scalable: scalable, app_ssh_keys: [], pending_op_groups: [], init_git_url: init_git_url)
     app.user_agent = user_agent
+    app.analytics['user_agent'] = user_agent
+    app.save
     features << "web_proxy" if scalable
     if app.valid?
       begin
         add_feature_result = app.add_features(features, group_overrides, init_git_url)
         result_io.append add_feature_result
       rescue Exception => e
-        app.delete
+        if (app.group_instances.nil? or app.group_instances.empty?) and (app.component_instances.nil? or app.component_instances.empty?)
+          app.delete
+        end
         raise e
       end
       app
@@ -110,11 +167,20 @@ class Application
     app
   end
 
+  ##
+  # Helper method to find an application using the application name
+  # @param user [CloudUser] The owner of the application
+  # @param app_name [String] The application name
+  # @return [Application, nil] The application object or nil if no application matches
   def self.find(user, app_name)
     user.domains.each { |d| d.applications.each { |a| return a if a.canonical_name == app_name.downcase } }
     return nil 
   end
 
+  ##
+  # Helper method to find an application that runs on a particular gear
+  # @param gear_uuid [String] The UUID of the gear
+  # @return [[Application,Gear]] The application and gear objects or nil array if no application matches
   def self.find_by_gear_uuid(gear_uuid)
     # obj_id = Moped::BSON::ObjectId(gear_uuid)
     obj_id = gear_uuid.to_s
@@ -124,42 +190,32 @@ class Application
     return [app, gear]
   end
 
-  # Initializes the application
-  #
-  # == Parameters:
-  # features::
-  #   List of runtime feature requirements. Each entry in the list can be a cartridge name or a feature supported by one of the profiles within the cartridge.
-  #
-  # domain::
-  #   The Domain that this application is part of.
-  #
-  # name::
-  #   The name of this application.
+  ##
+  # Constructor. Should not be used directly. Use {Application#create_app} instead.
+  # @note side-effect: Saves application object in mongo
   def initialize(attrs = nil, options = nil)
     super
     self.uuid = self._id.to_s if self.uuid=="" or self.uuid.nil?
     self.app_ssh_keys = []
     self.pending_op_groups = []
+    self.analytics = {} if self.analytics.nil?
     self.save
   end
 
-  # Setter for application name - sets the name and the canonical_name
+  ##
+  # Setter for application name. Sets both the name and the canonical_name for the application
+  # @param app_name [String] The application name
   def name=(app_name)
     self.canonical_name = app_name.downcase
     super
   end
 
-  # Adds an additional namespace to the application. This function supports the first step of the update namespace workflow.
-  #
-  # == Parameters:
-  # new_namespace::
-  #   The new namespace to add to the application
-  #
-  # parent_op::
-  #   The pending domain operation that this update is part of.
-  #
-  # == Returns:
-  # {PendingAppOps} object which tracks the progress of the operation.
+  ##
+  # Updates all Application and {Gear} DNS entries to reflect the new namespace. This function is the first step of the update namespace workflow.
+  # @param old_namespace [String] The old namespace of the [Domain] of this application. This field is used for rollback if namespace update fails
+  # @param new_namespace [String] The new namespace of the [Domain] of this application
+  # @param parent_op [PendingDomainOps] The pending domain operation that this update is part of
+  # @return [ResultIO] Output from cartridges during update namespace operation
   def update_namespace(old_namespace, new_namespace, parent_op=nil)
     Application.run_in_application_lock(self) do
       result_io = ResultIO.new
@@ -170,6 +226,12 @@ class Application
     end
   end
 
+  ##
+  # Updates all {ComponentInstance}s porperties to reflect the new namespace. This function is the second step of the update namespace workflow.
+  # @param old_namespace [String] The old namespace of the [Domain] of this application. This field is used for rollback if namespace update fails
+  # @param new_namespace [String] The new namespace of the [Domain] of this application
+  # @param parent_op [PendingDomainOps] The pending domain operation that this update is part of
+  # @return [ResultIO] Output from cartridges during update namespace operation
   def complete_update_namespace(old_namespace, new_namespace, parent_op=nil)
     Application.run_in_application_lock(self) do
       result_io = ResultIO.new
@@ -181,44 +243,17 @@ class Application
     end
   end
 
-  # Removes an existing namespace to the application. This function supports the second step of the update namespace workflow.
-  #
-  # == Parameters:
-  # old_namespace::
-  #   The old namespace to remove from the application
-  #
-  # parent_op::
-  #   The pending domain operation that this update is part of.
-  #
-  # == Returns:
-  # {PendingAppOps} object which tracks the progress of the operation.
-  def remove_namespace(old_namespace, parent_op=nil)
-    Application.run_in_application_lock(self) do
-      result_io = ResultIO.new
-      op_group = PendingAppOpGroup.new(op_type: :remove_namespace, args: {"old_namespace" => old_namespace}, parent_op: parent_op, user_agent: self.user_agent)
-      self.pending_op_groups.push op_group
-      self.run_jobs(result_io)
-      result_io
-    end
-  end
-
+  ##
   # Adds the given ssh key to the application.
-  #
-  # == Parameters:
-  # user_id::
-  #   The ID of the user associated with the keys. If the user ID is nil, then the key is assumed to be a system generated key.
-  # keys::
-  #   Array of keys to add to the application.
-  # parent_op::
-  #   {PendingDomainOps} object used to track this operation at a domain level.
-  #
-  # == Returns:
-  # {PendingAppOps} object which tracks the progress of the operation.
+  # @param user_id [String] The ID of the user associated with the keys. If the user ID is nil, then the key is assumed to be a system generated key
+  # @param keys [Array<SshKey>] Array of keys to add to the application.
+  # @param parent_op [PendingDomainOps] object used to track this operation at a domain level
+  # @return [ResultIO] Output from cartridges
   def add_ssh_keys(user_id, keys, parent_op)
     return if keys.empty?
-    key_attrs = get_updated_ssh_keys(user_id, keys)
+    keys_attrs = get_updated_ssh_keys(user_id, keys)
     Application.run_in_application_lock(self) do
-      op_group = PendingAppOpGroup.new(op_type: :update_configuration,  args: {"add_keys_attrs" => key_attrs}, parent_op: parent_op, user_agent: self.user_agent)
+      op_group = PendingAppOpGroup.new(op_type: :update_configuration,  args: {"add_keys_attrs" => keys_attrs}, parent_op: parent_op, user_agent: self.user_agent)
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -226,24 +261,18 @@ class Application
     end
   end
 
-  # Removes the given ssh key from the application. If multiple users share the same key, only the specified users key is removed
+  ##
+  # Remove the given ssh key from the application. If multiple users share the same key, only the specified users key is removed
   # but application access will still be possible.
-  #
-  # == Parameters:
-  # user_id::
-  #   The ID of the user associated with the keys. Update to system keys is not supported.
-  # keys_attrs::
-  #   Array of keys attributes to remove from the application. The name of the key is used to match existing keys.
-  # parent_op::
-  #   {PendingDomainOps} object used to track this operation at a domain level.
-  #
-  # == Returns:
-  # {PendingAppOps} object which tracks the progress of the operation.
-  def remove_ssh_keys(user_id, keys_attrs, parent_op=nil)
-    return if keys_attrs.empty?
-    key_attrs = get_updated_ssh_keys(user_id, keys_attrs)
+  # @param user_id [String] The ID of the user associated with the keys. If the user ID is nil, then the key is assumed to be a system generated key
+  # @param keys [Array<SshKey>] Array of keys to remove from the application.
+  # @param parent_op [PendingDomainOps] object used to track this operation at a domain level
+  # @return [ResultIO] Output from cartridges
+  def remove_ssh_keys(user_id, keys, parent_op=nil)
+    return if keys.empty?
+    keys_attrs = get_updated_ssh_keys(user_id, keys)
     Application.run_in_application_lock(self) do
-      op_group = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_keys_attrs" => key_attrs}, parent_op: parent_op, user_agent: self.user_agent)
+      op_group = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_keys_attrs" => keys_attrs}, parent_op: parent_op, user_agent: self.user_agent)
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -251,6 +280,11 @@ class Application
     end
   end
 
+  ##
+  # Adds environment variables to all gears on the application.
+  # @param vars [Array<Hash>] List of environment variables. Each entry must contain key and value
+  # @param parent_op [PendingDomainOps] object used to track this operation at a domain level
+  # @return [ResultIO] Output from cartridges  
   def add_env_variables(vars, parent_op=nil)
     Application.run_in_application_lock(self) do
       op_group = PendingAppOpGroup.new(op_type: :update_configuration, args: {"add_env_vars" => vars}, parent_op: parent_op, user_agent: self.user_agent)
@@ -260,7 +294,12 @@ class Application
       result_io
     end
   end
-
+  
+  ##
+  # Remove environment variables from all gears on the application.
+  # @param vars [Array<Hash>] List of environment variables. Each entry must contain key and value
+  # @param parent_op [PendingDomainOps] object used to track this operation at a domain level
+  # @return [ResultIO] Output from cartridges
   def remove_env_variables(vars, parent_op=nil)
     Application.run_in_application_lock(self) do
       op_group = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_env_vars" => vars}, parent_op: parent_op, user_agent: self.user_agent)
@@ -271,34 +310,31 @@ class Application
     end
   end
 
+  ##
   # Returns the total number of gears currently used by this application
+  # @return [Integer] number of gears
   def num_gears
     num = 0
     group_instances.each { |g| num += g.gears.count}
     num
   end
   
+  ##
+  # Retrieve the list of {GroupInstance} objects along with min and max gear specifications from group overrides
+  # @return [Array<GroupInstance>]
   def group_instances_with_scale
-    # processed_group_overrides, cleaned_group_overrides = process_group_overrides(self.component_instances.map{|c| c.to_hash}, self.group_overrides)
-    
-    #map to current group_instances
     self.group_instances.map do |group_instance|
       override_spec = group_instance.get_group_override
-      # override_spec = processed_group_overrides.select{ |go| go["components"] == group_instance.to_hash[:component_instances] }.first
       group_instance.min = override_spec["min_gears"]
       group_instance.max = override_spec["max_gears"]
       group_instance
     end
   end
 
+  ##
   # Returns the feature requirements of the application
-  #
-  # == Parameters:
-  # include_pending::
-  #   Include the pending changes when calculating the list of features
-  #
-  # == Returns:
-  #   List of features
+  # @param include_pending [Boolean] Include the pending changes when calculating the list of features
+  # @return [Array<String>] List of features
   def requires(include_pending=false)
     features = component_instances.map {|ci| get_feature(ci.cartridge_name, ci.component_name)}
 
@@ -316,15 +352,25 @@ class Application
     features || []
   end
 
+  ##
   # Adds components to the application
-  # @note {#run_jobs} must be called in order to perform the updates
+  # @param features [Array<String>] List of features to add to the application. Each feature will be resolved to the cartridge which provides it
+  # @param group_overrides [Array] List of group overrides
+  # @param init_git_url [String] URL to git repository to retrieve application code
+  # @return [ResultIO] Output from cartridges
+  # @raise [OpenShift::UserException] Exception raised if there is any reason the feature/cartridge cannot be added into the Application
   def add_features(features, group_overrides=[], init_git_url=nil)
     features.each do |feature_name|
       cart = CartridgeCache.find_cartridge(feature_name)
 
+      # Make sure this is a valid cartridge
+      if cart.nil?
+        raise OpenShift::UserException.new("Invalid cartridge '#{feature_name}' specified.", 109)  
+      end
+
       # Validate that the features support scalable if necessary
       if self.scalable && !(cart.is_plugin? || cart.is_service?)
-        raise OpenShift::UserException.new("#{feature_name} cannot be embedded in scalable app '#{name}'.", 108)  
+        raise OpenShift::UserException.new("#{feature_name} cannot be embedded in scalable app '#{name}'.", 109)  
       end
 
       # prevent a proxy from being added to a non-scalable (single-gear) application
@@ -350,14 +396,22 @@ class Application
       self.pending_op_groups.push PendingAppOpGroup.new(op_type: :add_features, args: {"features" => features, "group_overrides" => group_overrides, "init_git_url"=>init_git_url}, user_agent: self.user_agent)
       self.run_jobs(result_io)
     end
+    
+    # adding this feature may have caused pending_ops to be created on the domain 
+    # for adding env vars and ssh keys
+    # execute run_jobs on the domain to take care of those
     domain.with(consistency: :strong).reload
     domain.run_jobs
     result_io
   end
 
+  ##
   # Removes components from the application
-  # set force to true if deleting application
-  # @note {#run_jobs} must be called in order to perform the updates
+  # @param features [Array<String>] List of features to remove from the application. Each feature will be resolved to the cartridge which provides it
+  # @param group_overrides [Array] List of group overrides
+  # @param force [Boolean] Set to true when deleting an application. It allows removal of web_proxy and ignores missing features
+  # @return [ResultIO] Output from cartridges
+  # @raise [OpenShift::UserException] Exception raised if there is any reason the feature/cartridge cannot be removed from the Application
   def remove_features(features, group_overrides=[], force=false)
     installed_features = self.requires
     
@@ -391,13 +445,20 @@ class Application
       self.pending_op_groups.push PendingAppOpGroup.new(op_type: :remove_features, args: {"features" => features, "group_overrides" => group_overrides}, user_agent: self.user_agent)
       self.run_jobs(result_io)
     end
+
+    # removing this feature may have caused pending_ops to be created on the domain 
+    # for removing env vars and ssh keys
+    # execute run_jobs on the domain to take care of those
     domain.with(consistency: :strong).reload
     domain.run_jobs
     result_io
   end
 
+  ##
   # Destroys all gears on the application.
   # @note {#run_jobs} must be called in order to perform the updates
+  # This operation will trigger deletion of any applications listed in {#domain_requires}
+  # @return [ResultIO] Output from cartridges  
   def destroy_app
     self.domain.applications.each { |app|
       app.domain_requires.each { |app_id|
@@ -418,12 +479,10 @@ class Application
     end
   end
 
-  # Updates the component grouping overrides of the application and create tasks to perform the update.
-  # @note {#run_jobs} must be called in order to perform the updates
-  #
-  # == Parameters:
-  # group_overrides::
-  #   A list of component grouping overrides to use while creating gears
+  ##
+  # Updates the component grouping overrides of the application and create tasks to perform the update
+  # @param group_overrides [Array] list of group overrides
+  # @return [ResultIO] Output from cartridges
   def set_group_overrides(group_overrides)
     Application.run_in_application_lock(self) do    
       pending_op = PendingAppOpGroup.new(op_type: :add_features, args: {"features" => [], "group_overrides" => group_overrides}, created_at: Time.new, user_agent: self.user_agent)
@@ -435,11 +494,19 @@ class Application
     end
   end
   
+  ##
+  # Create and add group overrides to update scaling and filesystem limits for a the {GroupInstance} hosting a {ComponentInstance}
+  # @param component_instance [ComponentInstance] The component instance to use when creating the override definition
+  # @param scale_from [Integer] Minimum scale for the component
+  # @param scale_to [Integer] Maximum scale for the component
+  # @param additional_filesystem_gb [Integer] Gb of disk storage required beyond is default in the gear size
+  # @return [ResultIO] Output from cartridges
+  # @raise [OpenShift::UserException] Exception raised if request cannot be completed
   def update_component_limits(component_instance, scale_from, scale_to, additional_filesystem_gb)
     if additional_filesystem_gb && additional_filesystem_gb != 0
       max_storage = self.domain.owner.capabilities['max_storage_per_gear']
-      raise OpenShift::UserException.new("User is not allowed to change storage quota", 164) unless max_storage
-      raise OpenShift::UserException.new("User can not exceed max storage quota per gear: #{max_storage} GB", 166) if additional_filesystem_gb > max_storage
+      raise OpenShift::UserException.new("You are not allowed to request additional gear storage", 164) unless max_storage
+      raise OpenShift::UserException.new("You have requested more additional gear storage than you are allowed (max: #{max_storage} GB)", 166) if additional_filesystem_gb > max_storage
     end
     Application.run_in_application_lock(self) do    
       pending_op = PendingAppOpGroup.new(op_type: :update_component_limits, args: {"comp_spec" => component_instance.to_hash, "min"=>scale_from, "max"=>scale_to, "additional_filesystem_gb"=>additional_filesystem_gb}, created_at: Time.new, user_agent: self.user_agent)
@@ -451,14 +518,13 @@ class Application
     end    
   end
 
-  # Scales the group instance that runs this component
-  #
-  # == Parameters:
-  # component::
-  #   Component to scale
-  #
-  # scale_by::
-  #   Number of gears to add (+ve) or remove (-ve)
+  ##
+  # Trigger a scale up or scale down of a {GroupInstance}
+  # @param group_instance_id [String] ID of the {GroupInstance}
+  # @param scale_by [Integer] Number of gears to scale add/remove from the {GroupInstance}. 
+  #   A postive value will trigger a scale up and a negative value a scale down
+  # @return [ResultIO] Output from cartridges
+  # @raise [OpenShift::UserException] Exception raised if request cannot be completed
   def scale_by(group_instance_id, scale_by)
     raise OpenShift::UserException.new("Application #{self.name} is not scalable") if !self.scalable
     
@@ -474,14 +540,21 @@ class Application
     end
   end
 
-  # Returns the fully qualified domain name where the application can be accessed
+  ##
+  # Returns the fully qualified DNS name for the primary application gear
+  # @return [String]
   def fqdn(domain=nil)
     domain = domain || self.domain
     "#{self.name}-#{domain.namespace}.#{Rails.configuration.openshift[:domain_suffix]}"
   end
 
-  # Returns the ssh URL to access the gear hosting the web_proxy component
-  def ssh_uri(domain=nil)
+  ##
+  # Returns the SSH URI for the primary application gear
+  # @return [String]
+  def ssh_uri(domain=nil, gear_uuid=nil)
+    #if gear_uuid provided
+    return "#{gear_uuid}@#{fqdn(domain)}" if gear_uuid
+    # else get the gear_uuid of head gear
     self.group_instances.each do |group_instance|
       if group_instance.gears.where(app_dns: true).count > 0
         gear = group_instance.gears.find_by(app_dns: true)
@@ -491,14 +564,17 @@ class Application
     ""
   end
 
+  ##
   # Retrieves the gear state for all gears within the application.
-  #
-  # == Returns:
-  #  Hash of gear id to gear state mappings
+  # @return [Hash<String, String>] Map of {Gear} ID to state
   def get_gear_states
     Gear.get_gear_states(group_instances.map{|g| g.gears}.flatten)
   end
 
+  ##
+  # Returns the application descriptor as a Hash. The descriptor contains all the metadata
+  # necessary to descript the application.
+  # @requires [Hash]
   def to_descriptor
     h = {
       "Name" => self.name,
@@ -512,6 +588,10 @@ class Application
     h
   end
 
+  ##
+  # Start an application of feature
+  # @param feature [String, #optional] Optional feature name to start. If nil, it will trigger start on all features in the application
+  # @return [ResultIO] Output from cartridges  
   def start(feature=nil)
     result_io = ResultIO.new
     op_group = nil
@@ -603,13 +683,16 @@ class Application
   end
   
   def threaddump
+    threaddump_available = false
     result_io = ResultIO.new
     component_instances.each do |component_instance|
       GroupInstance.run_on_gears(component_instance.group_instance.gears, result_io, false) do |gear, r|
         r.append gear.threaddump(component_instance.cartridge_name)
-      end
+        threaddump_available = true
+      end if component_instance.get_additional_control_actions and component_instance.get_additional_control_actions.include? "threaddump"
     end
-    result_io
+    raise OpenShift::UserException.new("The threaddump command is not available for this application", 180) if !threaddump_available 
+    result_io 
   end
 
   def reload_component_config(component_name, cartridge_name)
@@ -638,7 +721,8 @@ class Application
   end
 
   def remove_gear(gear_uuid)
-    raise OpenShift::UserException.new("Application #{self.name} is not scalable") if !self.scalable or gear_uuid.nil?
+    raise OpenShift::UserException.new("Application #{self.name} is not scalable") if !self.scalable
+    raise OpenShift::UserException.new("Gear for removal not specified") if gear_uuid.nil?
     Application.run_in_application_lock(self) do
       self.pending_op_groups.push PendingAppOpGroup.new(op_type: :remove_gear, args: {"gear_id" => gear_uuid}, user_agent: self.user_agent)
       result_io = ResultIO.new
@@ -679,32 +763,41 @@ class Application
   # == Parameters:
   # fqdn::
   #   Fully qualified domain name of the alias to associate with this application
+  # ssl_certificate:: SSL certificate to add
+  # private_key::Private key for the SSL certificate
+  # pass_phrase::Optional passphrase for the private key
   #
   # == Returns:
   # {PendingAppOps} object which tracks the progress of the operation.
   #
   # == Raises:
   # OpenShift::UserException if the alias is already been associated with an application.
-  def add_alias(fqdn)
+  def add_alias(fqdn, ssl_certificate=nil, private_key=nil, pass_phrase="")
     # Server aliases validate as DNS host names in accordance with RFC
     # 1123 and RFC 952.  Additionally, OpenShift does not allow an
     # Alias to be an IP address or a host in the service domain.
     # Since DNS is case insensitive, all names are downcased for
     # indexing/compares.
-    server_alias = fqdn.downcase
+    server_alias = fqdn.downcase if fqdn
     if !(server_alias =~ /\A[0-9a-zA-Z\-\.]+\z/) or
         (server_alias =~ /#{Rails.configuration.openshift[:domain_suffix]}$/) or
         (server_alias.length > 255 ) or
         (server_alias.length == 0 ) or
-        (server_alias =~ /^\d+\.\d+\.\d+\.\d+$/)
+        (server_alias.nil?) or
+        (server_alias =~ /^\d+\.\d+\.\d+\.\d+$/) or
+        (server_alias =~ /\A[\S]+(\.(json|xml|yml|yaml|html|xhtml))\z/)
       raise OpenShift::UserException.new("Invalid Server Alias '#{server_alias}' specified", 105)
     end
+    validate_certificate(ssl_certificate, private_key, pass_phrase)
     
     Application.run_in_application_lock(self) do
-      raise OpenShift::UserException.new("Alias #{server_alias} is already registered", 140) if Application.where(aliases: server_alias).count > 0
-      aliases.push(server_alias)
+      raise OpenShift::UserException.new("Alias #{server_alias} is already registered", 140) if Application.where("aliases.fqdn" => server_alias).count > 0
       op_group = PendingAppOpGroup.new(op_type: :add_alias, args: {"fqdn" => server_alias}, user_agent: self.user_agent)
       self.pending_op_groups.push op_group
+      if ssl_certificate and !ssl_certificate.empty?
+        op_group = PendingAppOpGroup.new(op_type: :add_ssl_cert, args: {"fqdn" => server_alias, "ssl_certificate" => ssl_certificate, "private_key" => private_key, "pass_phrase" => pass_phrase}, user_agent: self.user_agent)
+        self.pending_op_groups.push op_group
+      end
       result_io = ResultIO.new
       self.run_jobs(result_io)
       result_io
@@ -720,14 +813,39 @@ class Application
   # == Returns:
   # {PendingAppOps} object which tracks the progress of the operation.
   def remove_alias(fqdn)
-    fqdn = fqdn.downcase
-    
+    fqdn = fqdn.downcase if fqdn
+    al1as = aliases.find_by(fqdn: fqdn)
     Application.run_in_application_lock(self) do
-      raise OpenShift::UserException.new("Alias '#{fqdn}' does not exist for '#{self.name}'") unless aliases.include? fqdn
-      
-      aliases.delete(fqdn)
-      op_group = PendingAppOpGroup.new(op_type: :remove_alias, args: {"fqdn" => fqdn}, user_agent: self.user_agent)
+      if al1as.has_private_ssl_certificate
+         op_group = PendingAppOpGroup.new(op_type: :remove_ssl_cert, args: {"fqdn" => al1as.fqdn}, user_agent: self.user_agent)
+         self.pending_op_groups.push op_group
+      end
+      op_group = PendingAppOpGroup.new(op_type: :remove_alias, args: {"fqdn" => al1as.fqdn}, user_agent: self.user_agent)
       self.pending_op_groups.push op_group
+      result_io = ResultIO.new
+      self.run_jobs(result_io)
+      result_io
+    end
+  end
+  
+  def update_alias(fqdn, ssl_certificate=nil, private_key=nil, pass_phrase="")
+    
+    validate_certificate(ssl_certificate, private_key, pass_phrase)
+    
+    fqdn = fqdn.downcase if fqdn
+    old_alias = aliases.find_by(fqdn: fqdn)
+    Application.run_in_application_lock(self) do
+      #remove old certificate
+      if old_alias.has_private_ssl_certificate
+         op_group = PendingAppOpGroup.new(op_type: :remove_ssl_cert, args: {"fqdn" => fqdn}, user_agent: self.user_agent)
+         self.pending_op_groups.push op_group
+      end
+      #add new certificate
+      if ssl_certificate and !ssl_certificate.empty?
+        op_group = PendingAppOpGroup.new(op_type: :add_ssl_cert, args: {"fqdn" => fqdn, "ssl_certificate" => ssl_certificate, "private_key" => private_key, "pass_phrase" => pass_phrase}, user_agent: self.user_agent)
+        self.pending_op_groups.push op_group
+      end
+      
       result_io = ResultIO.new
       self.run_jobs(result_io)
       result_io
@@ -810,44 +928,26 @@ class Application
   # == Parameters:
   # result_io::
   #   {ResultIO} object with directives from cartridge hooks
-  def process_commands(result_io)
+  def process_commands(result_io, component_id=nil)
     commands = result_io.cart_commands
     add_ssh_keys = []
-    remove_ssh_keys = []
 
     remove_env_vars = []
 
     domain_keys_to_add = []
-    domain_keys_to_rm = []
 
     domain_env_vars_to_add = []
-    domain_env_vars_to_rm = []
 
     commands.each do |command_item|
       case command_item[:command]
       when "SYSTEM_SSH_KEY_ADD"
-        domain_keys_to_add.push(SystemSshKey.new(name: self.name, type: "ssh-rsa", content: command_item[:args][0]))
-      when "SYSTEM_SSH_KEY_REMOVE"
-        begin
-          key = self.domain.system_ssh_keys.find_by(name: self.name)
-          domain_keys_to_rm.push(key)
-        rescue Mongoid::Errors::DocumentNotFound
-          #ignore
-        end
+        domain_keys_to_add.push(SystemSshKey.new(name: self.name, type: "ssh-rsa", content: command_item[:args][0], component_id: component_id))
       when "APP_SSH_KEY_ADD"
-        add_ssh_keys << ApplicationSshKey.new(name: "application-" + command_item[:args][0], type: "ssh-rsa", content: command_item[:args][1], created_at: Time.now)
-      when "APP_SSH_KEY_REMOVE"
-        begin
-          remove_ssh_keys << self.app_ssh_keys.find_by(name: "application-" + command_item[:args][0])
-        rescue Mongoid::Errors::DocumentNotFound
-          #ignore
-        end
+        add_ssh_keys << ApplicationSshKey.new(name: command_item[:args][0], type: "ssh-rsa", content: command_item[:args][1], created_at: Time.now, component_id: component_id)
       when "APP_ENV_VAR_REMOVE"
         remove_env_vars.push({"key" => command_item[:args][0]})
       when "ENV_VAR_ADD"
-        domain_env_vars_to_add.push({"key" => command_item[:args][0], "value" => command_item[:args][1]})
-      when "ENV_VAR_REMOVE"
-        self.domain.env_vars.each {|env_var| domain_env_vars_to_rm << env_var if env_var["key"] == command_item[:args][0]}
+        domain_env_vars_to_add.push({"key" => command_item[:args][0], "value" => command_item[:args][1], "component_id" => component_id})
       when "BROKER_KEY_ADD"
         iv, token = OpenShift::Auth::BrokerKey.new.generate_broker_key(self)
         pending_op = PendingAppOpGroup.new(op_type: :add_broker_auth_key, args: { "iv" => iv, "token" => token }, user_agent: self.user_agent)
@@ -859,14 +959,9 @@ class Application
     end
 
     if add_ssh_keys.length > 0
-      keys_attrs = add_ssh_keys.map{|k| k.attributes.dup}
+      keys_attrs = get_updated_ssh_keys(nil, add_ssh_keys)
       pending_op = PendingAppOpGroup.new(op_type: :update_configuration, args: {"add_keys_attrs" => keys_attrs}, user_agent: self.user_agent)
       Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: pending_op.serializable_hash }, "$pushAll" => { app_ssh_keys: keys_attrs }})
-    end
-    if remove_ssh_keys.length > 0
-      keys_attrs = remove_ssh_keys.map{|k| k.attributes.dup}
-      pending_op = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_keys_attrs" => keys_attrs}, user_agent: self.user_agent)
-      Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: pending_op.serializable_hash }, "$pullAll" => { app_ssh_keys: keys_attrs }})
     end
     if remove_env_vars.length > 0
       pending_op = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_env_vars" => remove_env_vars})
@@ -874,8 +969,7 @@ class Application
     end
 
     # Have to remember to run_jobs for the other apps involved at some point
-    domain.remove_system_ssh_keys(domain_keys_to_rm) if !domain_keys_to_rm.empty?
-    domain.remove_env_variables(domain_env_vars_to_rm) if !domain_env_vars_to_rm.empty?
+    # run_jobs is called on the domain after all processing is done from add_features and remove_features
     domain.add_system_ssh_keys(domain_keys_to_add) if !domain_keys_to_add.empty?
     domain.add_env_variables(domain_env_vars_to_add) if !domain_env_vars_to_add.empty?
     nil
@@ -933,7 +1027,7 @@ class Application
             self.delete
           when :remove_gear
             ops = calculate_remove_gear_ops(op_group.args)
-            op_group.pending_ops.push(*ops)
+            try_reserve_gears(0, 1, op_group, ops)
           when :scale_by
             #need rollback
             ops, add_gear_count, rm_gear_count = calculate_scale_by(op_group.args["group_instance_id"], op_group.args["scale_by"])
@@ -951,6 +1045,23 @@ class Application
               if group_instance.gears.where(app_dns: true).count > 0
                 gear = group_instance.gears.find_by(app_dns: true)
                 op_group.pending_ops.push PendingAppOp.new(op_type: :remove_alias, args: {"group_instance_id" => group_instance.id.to_s, "gear_id" => gear.id.to_s, "fqdn" => op_group.args["fqdn"]} )
+                break
+              end
+            end
+          when :add_ssl_cert
+            self.group_instances.each do |group_instance|
+              if group_instance.gears.where(app_dns: true).count > 0
+                gear = group_instance.gears.find_by(app_dns: true)
+                op_group.pending_ops.push PendingAppOp.new(op_type: :add_ssl_cert, args: {"group_instance_id" => group_instance.id.to_s, "gear_id" => gear.id.to_s, 
+                  "fqdn" => op_group.args["fqdn"], "ssl_certificate" => op_group.args["ssl_certificate"], "private_key" => op_group.args["private_key"], "pass_phrase" => op_group.args["pass_phrase"] } )
+                break
+              end
+            end
+          when :remove_ssl_cert
+            self.group_instances.each do |group_instance|
+              if group_instance.gears.where(app_dns: true).count > 0
+                gear = group_instance.gears.find_by(app_dns: true)
+                op_group.pending_ops.push PendingAppOp.new(op_type: :remove_ssl_cert, args: {"group_instance_id" => group_instance.id.to_s, "gear_id" => gear.id.to_s, "fqdn" => op_group.args["fqdn"]} )
                 break
               end
             end
@@ -1031,11 +1142,11 @@ class Application
 
   def calculate_remove_gear_ops(args, prereqs={})
     gear_id = args["gear_id"]
-    group_instance = self.group_instances.find { |gi| gi.gears.find { |g| g._id.to_s==gear_id.to_s } }
+    group_instance = (self.group_instances.select { |gi| (gi.gears.select { |g| g._id.to_s == gear_id.to_s }).length > 0 }).first
     return [] if group_instance.nil?
-    ops=calculate_gear_destroy_ops(group_instance._id.to_s, [gear_uuid], group_instance.addtl_fs_gb)
-    last_op = ops.last
-    ops.push PendingAppOp.new(op_type: :execute_connections, prereq: last_op)
+    ops = calculate_gear_destroy_ops(group_instance._id.to_s, [gear_id], group_instance.addtl_fs_gb)
+    all_ops_ids = ops.map{ |op| op._id.to_s }
+    ops.push PendingAppOp.new(op_type: :execute_connections, prereq: all_ops_ids)
     ops
   end
 
@@ -1141,6 +1252,16 @@ class Application
 
     delete_comp_ops = []
     comp_specs.each do |comp_spec|
+      comp_instance = self.component_instances.find_by(cartridge_name: comp_spec["cart"], component_name: comp_spec["comp"])
+      remove_ssh_keys = self.app_ssh_keys.find_by(component_id: comp_instance._id) rescue []
+      remove_ssh_keys = [remove_ssh_keys].flatten
+      if remove_ssh_keys.length > 0
+        keys_attrs = remove_ssh_keys.map{|k| k.attributes.dup}
+        pending_op = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_keys_attrs" => keys_attrs}, user_agent: self.user_agent)
+        Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: pending_op.serializable_hash }, "$pullAll" => { app_ssh_keys: keys_attrs }})
+      end
+      domain.remove_system_ssh_keys(comp_instance._id)
+      domain.remove_env_variables(comp_instance._id)
       delete_comp_ops.push(PendingAppOp.new(op_type: :del_component, args: {"group_instance_id"=> group_instance._id.to_s, "comp_spec" => comp_spec}, prereq: gear_destroy_op_ids))
     end
     pending_ops.push(*delete_comp_ops)
@@ -1156,9 +1277,9 @@ class Application
     pending_ops = []
 
     a_ssh_keys = self.app_ssh_keys.map{|k| k.attributes}
-    d_ssh_keys = get_updated_ssh_keys(nil, self.domain.system_ssh_keys.map{|k| k.attributes})
-    o_ssh_keys = get_updated_ssh_keys(self.domain.owner._id, self.domain.owner.ssh_keys.map{|k| k.attributes})
-    u_ssh_keys = CloudUser.find(self.domain.user_ids).map{|u| get_updated_ssh_keys(u._id, u.ssh_keys.map{|k| k.attributes})}.flatten
+    d_ssh_keys = get_updated_ssh_keys(nil, self.domain.system_ssh_keys)
+    o_ssh_keys = get_updated_ssh_keys(self.domain.owner._id, self.domain.owner.ssh_keys)
+    u_ssh_keys = CloudUser.find(self.domain.user_ids).map{|u| get_updated_ssh_keys(u._id, u.ssh_keys)}.flatten
     
     ssh_keys = a_ssh_keys + d_ssh_keys + o_ssh_keys + u_ssh_keys
     env_vars = self.domain.env_vars
@@ -1370,6 +1491,15 @@ class Application
           end
         end
       end
+      remove_ssh_keys = self.app_ssh_keys.find_by(component_id: component_instance._id) rescue []
+      remove_ssh_keys = [remove_ssh_keys].flatten
+      if remove_ssh_keys.length > 0
+        keys_attrs = remove_ssh_keys.map{|k| k.attributes.dup}
+        pending_op = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_keys_attrs" => keys_attrs}, user_agent: self.user_agent)
+        Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: pending_op.serializable_hash }, "$pullAll" => { app_ssh_keys: keys_attrs }})
+      end
+      domain.remove_system_ssh_keys(component_instance._id)
+      domain.remove_env_variables(component_instance._id)
       ops.push(PendingAppOp.new(op_type: :del_component, args: {"group_instance_id"=> group_instance._id.to_s, "comp_spec" => comp_spec}, prereq: ops.map{|o| o._id.to_s}))
     end
     ops
@@ -1512,7 +1642,8 @@ class Application
           if scale_change < 0
             remove_gears += -scale_change
             ginst = self.group_instances.find(change[:from])
-            gears = ginst.gears[(ginst.gears.length + scale_change)..-1]
+            scaled_gears = ginst.gears.select { |g| g.app_dns==false }
+            gears = scaled_gears[(scaled_gears.length + scale_change)..-1]
             remove_ids = gears.map{|g| g._id.to_s}
             ops = calculate_gear_destroy_ops(ginst._id.to_s, remove_ids, ginst.addtl_fs_gb)
             pending_ops.push(*ops)
@@ -2025,14 +2156,20 @@ class Application
     group_overrides
   end
   
-  def get_updated_ssh_keys(user_id, keys_attrs)
-    updated_keys_attrs = deep_copy(keys_attrs).map { |k|
-      if user_id.nil?
-        k["name"] = "domain-" + k["name"]
-      else
-        k["name"] = user_id.to_s + "-" + k["name"]
+  # The ssh key names are used as part of the ssh key comments on the application's gears
+  # Do not change the format of the key name, otherwise it may break key removal code on the node
+  def get_updated_ssh_keys(user_id, keys)
+    updated_keys_attrs = keys.map { |key|
+      key_attrs = deep_copy(key.attributes)
+      case key.class
+      when UserSshKey
+        key_attrs["name"] = user_id.to_s + "-" + key_attrs["name"]
+      when SystemSshKey
+        key_attrs["name"] = "domain-" + key_attrs["name"]
+      when ApplicationSshKey
+        key_attrs["name"] = "application-" + key_attrs["name"]
       end
-      k
+      key_attrs
     }
     updated_keys_attrs
   end
@@ -2078,4 +2215,31 @@ class Application
     end
     web_cart
   end  
+  
+  def validate_certificate(ssl_certificate, private_key, pass_phrase)
+    if ssl_certificate and !ssl_certificate.empty?
+      raise OpenShift::UserException.new("Private key is required", 172, nil, "private_key") if private_key.nil? 
+      #validate certificate
+      begin
+        ssl_cert_clean = OpenSSL::X509::Certificate.new(ssl_certificate.strip)
+      rescue Exception => e
+        raise OpenShift::UserException.new("Invalid certificate: #{e.message}", 174, nil, "ssl_certificate")
+      end
+      #validate private key
+      begin
+        pass_phrase = '' if pass_phrase.nil?
+        priv_key_clean = OpenSSL::PKey.read(private_key.strip, pass_phrase.strip)
+      rescue Exception => e
+        raise OpenShift::UserException.new("Invalid private key or pass phrase: #{e.message}", 172, nil, "private_key")
+      end
+      if not ssl_cert_clean.check_private_key(priv_key_clean)
+        raise OpenShift::UserException.new("Private key/certificate mismatch", 172, nil, "private_key")
+      end
+
+      if not [OpenSSL::PKey::RSA, OpenSSL::PKey::DSA].include?(priv_key_clean.class)
+        raise OpenShift::UserException.new("Key must be RSA or DSA for Apache mod_ssl",172, nil, "private_key")
+      end
+    end
+  end
+  
 end

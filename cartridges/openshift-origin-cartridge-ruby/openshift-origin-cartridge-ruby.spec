@@ -6,15 +6,17 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/v2/ruby
 %global frameworkdir %{_libexecdir}/openshift/cartridges/v2/ruby
 
-Name: openshift-origin-cartridge-ruby
-Version: 0.1.2
-Release: 1%{?dist}
-Summary: Ruby cartridge
-Group: Development/Languages
-License: ASL 2.0
-URL: https://openshift.redhat.com
-Source0: http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{version}.tar.gz
+Name:          openshift-origin-cartridge-ruby
+Version: 0.2.7
+Release:       1%{?dist}
+Summary:       Ruby cartridge
+Group:         Development/Languages
+License:       ASL 2.0
+URL:           https://openshift.redhat.com
+Source0:       http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
+Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      sqlite-devel
 Requires:      libev
 Requires:      libev-devel
@@ -113,12 +115,8 @@ Requires:      js
 Requires:      ImageMagick-devel
 Requires:      ruby-RMagick
 BuildRequires: git
+BuildRoot:     %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch:     noarch
-Obsoletes:     cartridge-ruby-1.9
-
-
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-BuildArch: noarch
 
 %description
 Ruby cartridge for openshift.
@@ -139,21 +137,111 @@ cp -r * %{buildroot}%{cartridgedir}/
 %clean
 rm -rf %{buildroot}
 
+%post
+%{_sbindir}/oo-admin-cartridge --action install --offline --source /usr/libexec/openshift/cartridges/v2/ruby
 
 %files
 %defattr(-,root,root,-)
 %dir %{cartridgedir}
 %dir %{cartridgedir}/bin
+%dir %{cartridgedir}/hooks
 %dir %{cartridgedir}/env
 %dir %{cartridgedir}/metadata
 %dir %{cartridgedir}/versions
 %attr(0755,-,-) %{cartridgedir}/bin/
+%attr(0755,-,-) %{cartridgedir}/hooks/
 %attr(0755,-,-) %{frameworkdir}
 %{cartridgedir}/metadata/manifest.yml
 %doc %{cartridgedir}/README.md
 
 
 %changelog
+* Sun Apr 14 2013 Krishna Raman <kraman@gmail.com> 0.2.7-1
+- Merge pull request #2065 from jwhonce/wip/manifest_scrub
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2053 from calfonso/master
+  (dmcphers+openshiftbot@redhat.com)
+- WIP Cartridge Refactor - Scrub manifests (jhonce@redhat.com)
+- Merge pull request #2046 from BanzaiMan/dev/hasari/bz949439
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2045 from BanzaiMan/dev/hasari/bz951389
+  (dmcphers+openshiftbot@redhat.com)
+- Adding connection hook for mongodb There are three leading params we don't
+  care about, so the hooks are using shift to discard. (calfonso@redhat.com)
+- Remove unrelated files from ruby cartridge and put ones for Ruby.
+  (asari.ruby@gmail.com)
+- Provide overrides based on Ruby version so that a Ruby-1.8 app can scale.
+  (asari.ruby@gmail.com)
+
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 0.2.6-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Thu Apr 11 2013 Adam Miller <admiller@redhat.com> 0.2.5-1
+- Bug 950823 (asari.ruby@gmail.com)
+- Merge pull request #2001 from brenton/misc2 (dmcphers@redhat.com)
+- Merge pull request #1752 from BanzaiMan/ruby_v2_work (dmcphers@redhat.com)
+- Calling oo-admin-cartridge from a few more v2 cartridges
+  (bleanhar@redhat.com)
+- Correct the log directory to clean up during tidy in Ruby v2 cartridge
+  (asari.ruby@gmail.com)
+- Postpone implementing pre-build, post-deploy and threaddump in Ruby v2.
+  (asari.ruby@gmail.com)
+- Roll 'build' logic into 'control' script in Ruby cartridge.
+  (asari.ruby@gmail.com)
+- Ruby v2 cartridge work (asari.ruby@gmail.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 0.2.4-1
+- Anchor locked_files.txt entries at the cart directory (ironcladlou@gmail.com)
+
+* Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 0.2.3-1
+- Merge pull request #1962 from danmcp/master (dmcphers@redhat.com)
+- jenkins WIP (dmcphers@redhat.com)
+- Rename cideploy to geardeploy. (mrunalp@gmail.com)
+- Merge pull request #1942 from ironcladlou/dev/v2carts/vendor-changes
+  (dmcphers+openshiftbot@redhat.com)
+- Remove vendor name from installed V2 cartridge path (ironcladlou@gmail.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 0.2.2-1
+- Merge pull request #1930 from mrunalp/dev/cart_hooks (dmcphers@redhat.com)
+- Add hooks for other carts. (mrunalp@gmail.com)
+- Fix Jenkins deploy cycle (ironcladlou@gmail.com)
+- adding all the jenkins jobs (dmcphers@redhat.com)
+- Adding jenkins templates to carts (dmcphers@redhat.com)
+- Merge pull request #1847 from BanzaiMan/dev/hasari/bz928675
+  (dmcphers@redhat.com)
+- Update OpenShift web site URL on the Rack template. (asari.ruby@gmail.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 0.2.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+- BZ928282: Copy over hidden files under template. (mrunalp@gmail.com)
+
+* Mon Mar 25 2013 Adam Miller <admiller@redhat.com> 0.1.6-1
+- corrected some 1.8/1.9 issues, cucumber tests now work (mmcgrath@redhat.com)
+- fixed for vendor-ruby bits (mmcgrath@redhat.com)
+- removing 18 reference (mmcgrath@redhat.com)
+- moving argument parsing to util (mmcgrath@redhat.com)
+- Force follow reference (mmcgrath@redhat.com)
+- Adding actual 1.8 and 1.9 support (mmcgrath@redhat.com)
+- make sleep more efficient (mmcgrath@redhat.com)
+- Added setup parsing (mmcgrath@redhat.com)
+
+* Thu Mar 21 2013 Adam Miller <admiller@redhat.com> 0.1.5-1
+- No need to set OPENSHIFT_RUBY_DIR in setup. (asari.ruby@gmail.com)
+- Remove debug outputs (asari.ruby@gmail.com)
+- Use a better defined ENV variable. (asari.ruby@gmail.com)
+- Enough to get a Ruby 1.9 app bootable. (asari.ruby@gmail.com)
+- Change V2 manifest Version elements to strings (pmorie@gmail.com)
+- Fix cart names to exclude versions. (mrunalp@gmail.com)
+
+* Mon Mar 18 2013 Adam Miller <admiller@redhat.com> 0.1.4-1
+- add cart vendor and version (dmcphers@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 0.1.3-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+- Make packages build/install on F19+ (tdawson@redhat.com)
+- remove old obsoletes (tdawson@redhat.com)
+
 * Tue Mar 12 2013 Adam Miller <admiller@redhat.com> 0.1.2-1
 - Fixing tags on master
 

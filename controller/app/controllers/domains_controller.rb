@@ -27,8 +27,14 @@ class DomainsController < BaseController
   # @param [String] id The namespace of the domain
   # @return [RestReply<RestDomain>] The requested domain
   def show
-    id = params[:id]
+    id = params[:id].downcase if params[:id]
     Rails.logger.debug "Getting domain #{id}"
+
+    # validate the domain name using regex to avoid a mongo call, if it is malformed
+    if id !~ Domain::DOMAIN_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Domain #{id} not found.", 127, "SHOW_DOMAIN")
+    end
+
     begin
       domain = Domain.find_by(owner: @cloud_user, canonical_namespace: id.downcase)
       @domain_name = domain.namespace
@@ -48,19 +54,11 @@ class DomainsController < BaseController
   # 
   # @return [RestReply<RestDomain>] The new domain
   def create
-    namespace = params[:id]
+    namespace = params[:id].downcase if params[:id]
     Rails.logger.debug "Creating domain with namespace #{namespace}"
 
     return render_error(:unprocessable_entity, "Namespace is required and cannot be blank.",
                         106, "ADD_DOMAIN", "id") if !namespace or namespace.empty?
-
-    if Domain.where(canonical_namespace: namespace.downcase).count > 0
-      return render_error(:unprocessable_entity, "Namespace '#{namespace}' is already in use. Please choose another.", 103, "ADD_DOMAIN", "id")
-    end
-
-    if Domain.where(owner: @cloud_user).count > 0
-      return render_error(:conflict, "There is already a namespace associated with this user", 103, "ADD_DOMAIN", "id")
-    end
 
     domain = Domain.new(namespace: namespace, owner: @cloud_user)
     if not domain.valid?
@@ -69,9 +67,19 @@ class DomainsController < BaseController
       return render_error(:unprocessable_entity, nil, nil, "ADD_DOMAIN", nil, nil, messages)
     end
 
+    if Domain.with(consistency: :strong).where(canonical_namespace: namespace).count > 0 
+      return render_error(:unprocessable_entity, "Namespace '#{namespace}' is already in use. Please choose another.", 103, "ADD_DOMAIN", "id")
+    end
+
+    if Domain.where(owner: @cloud_user).count > 0
+      return render_error(:conflict, "There is already a namespace associated with this user", 103, "ADD_DOMAIN", "id")
+    end
+
     @domain_name = domain.namespace
     begin
       domain.save
+    rescue OpenShift::UserException => e
+      return render_error(:unprocessable_entity, e.message, e.code, "ADD_DOMAIN", e.field)
     rescue Exception => e
       return render_exception(e, "ADD_DOMAIN") 
     end
@@ -81,7 +89,7 @@ class DomainsController < BaseController
 
   # Create a new domain for the user
   # 
-  # URL: /domains/:id
+  # URL: /domains/:existing_id
   #
   # Action: PUT
   #
@@ -90,22 +98,23 @@ class DomainsController < BaseController
   # 
   # @return [RestReply<RestDomain>] The updated domain
   def update
-    id = params[:existing_id]
-    new_namespace = params[:id]
+    id = params[:existing_id].downcase if params[:existing_id]
+    new_namespace = params[:id].downcase if params[:id]
     
     return render_error(:unprocessable_entity, "Namespace is required and cannot be blank.",
                         106, "UPDATE_DOMAIN", "id") if !new_namespace or new_namespace.empty?
-    
+
+    # validate the domain name using regex to avoid a mongo call, if it is malformed
+    if id !~ Domain::DOMAIN_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Domain #{id} not found", 127, "UPDATE_DOMAIN")
+    end
+
     begin
       domain = Domain.find_by(owner: @cloud_user, canonical_namespace: id.downcase)
       existing_namespace = domain.namespace
       @domain_name = domain.namespace
     rescue Mongoid::Errors::DocumentNotFound
       return render_error(:not_found, "Domain '#{id}' not found", 127, "UPDATE_DOMAIN")
-    end
-    
-    if Domain.where(canonical_namespace: new_namespace.downcase).count > 0
-      return render_error(:unprocessable_entity, "Namespace '#{new_namespace}' is already in use. Please choose another.", 103, "UPDATE_DOMAIN", "id")
     end
 
     # set the new namespace for validation 
@@ -124,6 +133,8 @@ class DomainsController < BaseController
     begin
       domain.update_namespace(new_namespace)
       domain.save
+    rescue OpenShift::UserException => e
+      return render_error(:unprocessable_entity, e.message, e.code, "UPDATE_DOMAIN", e.field)
     rescue Exception => e
       return render_exception(e, "UPDATE_DOMAIN") 
     end
@@ -139,30 +150,40 @@ class DomainsController < BaseController
   #
   # @param [Boolean] force If true, broker will destroy all application within the domain and then destroy the domain
   def destroy
-    id = params[:id]
+    id = params[:id].downcase if params[:id]
     force = get_bool(params[:force])
+    
+    # validate the domain name using regex to avoid a mongo call, if it is malformed
+    if id !~ Domain::DOMAIN_NAME_COMPATIBILITY_REGEX
+      return render_error(:not_found, "Domain #{id} not found", 127, "DELETE_DOMAIN")
+    end
 
     begin
       domain = Domain.find_by(owner: @cloud_user, canonical_namespace: id.downcase)
     rescue Mongoid::Errors::DocumentNotFound
-      return render_error(:not_found, "Domain #{id} not found", 127,"DELETE_DOMAIN")
+      return render_error(:not_found, "Domain #{id} not found", 127, "DELETE_DOMAIN")
     end
 
     if force
-      apps = domain.with(consistency: :strong).applications
+      apps = Application.with(consistency: :strong).where(domain_id: domain._id)
       while apps.count > 0
         apps.each do |app|
           app.destroy_app
         end
-        domain.with(consistency: :strong).reload
-        apps = domain.with(consistency: :strong).applications
+        apps = Application.with(consistency: :strong).where(domain_id: domain._id)
       end
-    elsif not domain.with(consistency: :strong).applications.empty?
-      return render_error(:bad_request, "Domain contains applications. Delete applications first or set force to true.", 128, "DELETE_DOMAIN")
+    elsif Application.with(consistency: :strong).where(domain_id: domain._id).count > 0
+      if requested_api_version <= 1.3
+        return render_error(:bad_request, "Domain contains applications. Delete applications first or set force to true.", 128, "DELETE_DOMAIN")
+      else
+        return render_error(:unprocessable_entity, "Domain contains applications. Delete applications first or set force to true.", 128, "DELETE_DOMAIN")
+      end
     end
 
     @domain_name = domain.namespace
     begin
+      # reload the domain so that MongoId does not see any applications
+      domain.with(consistency: :strong).reload
       domain.delete
       render_success(:no_content, nil, nil, "DELETE_DOMAIN", "Domain #{id} deleted.", true)
     rescue Exception => e

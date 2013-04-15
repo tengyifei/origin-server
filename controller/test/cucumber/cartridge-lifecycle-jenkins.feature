@@ -1,5 +1,6 @@
 @runtime_extended
 @runtime_extended3
+@runtime_extended_other3
 Feature: Cartridge Lifecycle Jenkins Verification Tests
   Scenario: Application Creation
     Given the libra client tools
@@ -10,11 +11,6 @@ Feature: Cartridge Lifecycle Jenkins Verification Tests
   Scenario: Application Restarting
     Given an existing jenkins-1.4 application
     When the application is restarted
-    Then the application should be accessible
-
-  Scenario: Application Change Namespace
-    Given an existing jenkins-1.4 application
-    When the application namespace is updated
     Then the application should be accessible
 
   Scenario: Application Destroying

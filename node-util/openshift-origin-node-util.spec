@@ -1,6 +1,6 @@
 Summary:       Utility scripts for the OpenShift Origin broker
 Name:          openshift-origin-node-util
-Version: 1.6.1
+Version: 1.7.4
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -24,9 +24,14 @@ run on a node instance.
 
 %install
 mkdir -p %{buildroot}%{_sbindir}
+mkdir -p %{buildroot}%{_bindir}
 
 cp bin/oo-* %{buildroot}%{_sbindir}/
-cp bin/rhc-* %{buildroot}%{_sbindir}/
+rm %{buildroot}%{_sbindir}/oo-snapshot
+rm %{buildroot}%{_sbindir}/oo-restore
+cp bin/rhc-* %{buildroot}%{_bindir}/
+cp bin/oo-snapshot %{buildroot}%{_bindir}/
+cp bin/oo-restore %{buildroot}%{_bindir}/
 
 %if 0%{?fedora} >= 18
   mv %{buildroot}%{_sbindir}/oo-httpd-singular.apache-2.4 %{buildroot}%{_sbindir}/oo-httpd-singular
@@ -60,6 +65,7 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 %files
 %attr(0750,-,-) %{_sbindir}/oo-accept-node
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-gears
+%attr(0750,-,-) %{_sbindir}/oo-admin-ctl-gears.rb
 %attr(0750,-,-) %{_sbindir}/oo-app-idle
 %attr(0750,-,-) %{_sbindir}/oo-autoidler
 %attr(0750,-,-) %{_sbindir}/oo-idler
@@ -68,13 +74,17 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 %attr(0750,-,-) %{_sbindir}/oo-last-access
 %attr(0750,-,-) %{_sbindir}/oo-list-stale
 %attr(0750,-,-) %{_sbindir}/oo-list-access
+%attr(0750,-,-) %{_sbindir}/oo-restorecon
 %attr(0750,-,-) %{_sbindir}/oo-restorer
 %attr(0750,-,apache) %{_sbindir}/oo-restorer-wrapper.sh
-%attr(0750,-,-) %{_sbindir}/oo-setup-node
-%attr(0755,-,-) %{_sbindir}/rhc-list-ports
 %attr(0755,-,-) %{_sbindir}/oo-httpd-singular
 %attr(0750,-,-) %{_sbindir}/oo-su
 %attr(0750,-,-) %{_sbindir}/oo-cartridge
+%attr(0750,-,-) %{_sbindir}/oo-admin-cartridge
+%attr(0750,-,-) %{_sbindir}/oo-cart-version
+%attr(0755,-,-) %{_bindir}/rhc-list-ports
+%attr(0755,-,-) %{_bindir}/oo-snapshot
+%attr(0755,-,-) %{_bindir}/oo-restore
 
 %doc LICENSE
 %doc README-Idler.md
@@ -88,9 +98,9 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 %{_mandir}/man8/oo-last-access.8.gz
 %{_mandir}/man8/oo-list-stale.8.gz
 %{_mandir}/man8/oo-list-access.8.gz
+%{_mandir}/man8/oo-restorecon.8.gz
 %{_mandir}/man8/oo-restorer.8.gz
 %{_mandir}/man8/oo-restorer-wrapper.sh.8.gz
-%{_mandir}/man8/oo-setup-node.8.gz
 %{_mandir}/man8/rhc-list-ports.8.gz
 %{_mandir}/man8/oo-httpd-singular.8.gz
 
@@ -109,6 +119,55 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 /sbin/restorecon /usr/sbin/oo-restorer* || :
 
 %changelog
+* Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 1.7.4-1
+- Merge pull request #2066 from sosiouxme/nodescripts20130413
+  (dmcphers+openshiftbot@redhat.com)
+- <node> fixing some minor inconsistencies in node scripts (lmeyer@redhat.com)
+
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Bug 949121 - FQDNs are lowercased in Apache logs. (rmillner@redhat.com)
+- WIP: v2 snapshot/restore (pmorie@gmail.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+- WIP Cartridge Refactor - more robust oo-admin-cartridge (jhonce@redhat.com)
+
+* Wed Mar 27 2013 Adam Miller <admiller@redhat.com> 1.6.6-1
+- Removing oo-setup-* scripts as they have been replaced by puppet and ansible
+  modules. Updating puppet setup docs (kraman@gmail.com)
+
+* Fri Mar 22 2013 Adam Miller <admiller@redhat.com> 1.6.5-1
+- Fix all incorrect occurrences of 'who's'. (asari.ruby@gmail.com)
+- Merge pull request #1745 from jwhonce/bug/923832
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 923832 - Add timeout option to oo-accept-node (jhonce@redhat.com)
+
+* Thu Mar 21 2013 Adam Miller <admiller@redhat.com> 1.6.4-1
+- Bug 923561 - Make help match usage Bug 923559 - Make help match usage
+  (jhonce@redhat.com)
+- Fix bug 918823 (pmorie@gmail.com)
+- Merge pull request #1682 from pmorie/dev/toggle
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1681 from brenton/oo-restorecon (dmcphers@redhat.com)
+- Reading in GEAR_BASE_DIR for oo-restorecon / oo-accept-node
+  (bleanhar@redhat.com)
+- Add cartridge version toggler (pmorie@gmail.com)
+- Adding a tool to restore the OpenShift MCS (bleanhar@redhat.com)
+
+* Mon Mar 18 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- WIP Cartridge Refactor - Introduce oo-admin-cartridge command
+  (jhonce@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Bug 920880 - Only allow httpd-singular to return when Apache is fully back up
+  and protect the SSL cert operations with the Alias lock.
+  (rmillner@redhat.com)
+- Fixes and tests for oo-cartridge (pmorie@gmail.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

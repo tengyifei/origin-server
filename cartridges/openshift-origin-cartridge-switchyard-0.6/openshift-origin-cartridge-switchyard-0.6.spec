@@ -8,7 +8,7 @@
 
 Summary:       Embedded SwitchYard modules for JBoss
 Name:          openshift-origin-cartridge-switchyard-0.6
-Version: 1.5.1
+Version: 1.6.3
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -16,6 +16,7 @@ URL:           https://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      mysql-devel
 Requires:      wget
 Requires:      java-1.6.0-openjdk
@@ -66,6 +67,23 @@ alternatives --set switchyard-0.6 /usr/share/switchyard
 
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Fri Mar 22 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
+- Bug 921902 (bdecoste@gmail.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.5.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.5.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

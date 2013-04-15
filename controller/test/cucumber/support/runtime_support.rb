@@ -68,7 +68,7 @@ module OpenShift
   # UUID for the application is automatically generated upon init.
   class TestApplication
     attr_reader :name, :uuid, :account, :gears
-    attr_accessor :hot_deploy_enabled
+    attr_accessor :hot_deploy_enabled, :git_repo
 
     def initialize(account)
       @name = gen_unique_app_name
@@ -112,6 +112,30 @@ module OpenShift
       @gears.each do |gear|
         gear.destroy
       end
+    end
+
+    def start
+      default_gear.container.start_gear
+    end
+
+    def stop
+      default_gear.container.stop_gear
+    end
+
+    def tidy
+      default_gear.container.tidy
+    end
+
+    def restart
+      default_gear.container.restart(default_gear.default_cart.name)
+    end
+
+    def status
+      default_gear.container.status(default_gear.default_cart.name)
+    end
+
+    def reload
+      default_gear.container.reload(default_gear.default_cart.name)
     end
 
     # Collects and returns the PIDs for every cartridge associated
@@ -173,7 +197,12 @@ module OpenShift
       end
 
       # Create the container object for use in the event listener later
-      @container = OpenShift::ApplicationContainer.new(@app.uuid, @uuid, nil, @app.name, @app.name, @app.account.domain, nil, nil, $logger)
+      begin
+        @container = OpenShift::ApplicationContainer.new(@app.uuid, @uuid, nil, @app.name, @app.name, @app.account.domain, nil, nil, $logger)
+      rescue Exception => e
+        $logger.error("#{e.message}\n#{e.backtrace}")
+        raise
+      end
       
       unless cli
         @container.create
@@ -192,13 +221,7 @@ module OpenShift
       $logger.info("Adding alias #{alias_name} to gear #{@uuid} of application #{@app.name}")
       
       frontend = OpenShift::FrontendHttpServer.new(@uuid, @app.name, @app.account.domain)
-      out, err, rc = frontend.add_alias(alias_name)
-
-      outbuf = "Stdout: #{out}, Stderr: #{err}"
-      if rc != 0
-        $logger.error(outbuf)
-        raise Exception.new(outbuf)
-      end
+      frontend.add_alias(alias_name)
     end
 
     # Removes an alias from the gear
@@ -207,13 +230,7 @@ module OpenShift
       $logger.info("Adding alias #{alias_name} to gear #{@uuid} of application #{@app.name}")
 
       frontend = OpenShift::FrontendHttpServer.new(@uuid, @app.name, @app.account.domain)
-      out, err, rc = frontend.remove_alias(alias_name)
-
-      outbuf = "Stdout: #{out}, Stderr: #{err}"
-      if rc != 0
-        $logger.error(outbuf)
-        raise Exception.new(outbuf)
-      end
+      frontend.remove_alias(alias_name)
     end
 
     # List FrontendHttpServer proxy for the gear
@@ -318,9 +335,10 @@ module OpenShift
       begin
         yield
       rescue Utils::ShellExecutionException => e
-        $logger.error("Caught ShellExecutionException (#{e.rc}): #{e.message}; output: #{e.stdout} #{e.stderr}")
+        $logger.error("Caught ShellExecutionException (#{e.rc}): #{e.message}; output: #{e.stdout} #{e.stderr}\n#{e.backtrace}")
         raise
-      rescue Exception => e
+      rescue => e
+        $logger.error("Caught an Exception, #{e.message}\n#{e.backtrace}")
         raise
       end
     end
@@ -377,8 +395,8 @@ module OpenShift
     end
 
     class DatabaseCartListener
-      def supports?(cart_name) 
-        ['mysql-5.1', 'mongodb-2.2', 'postgresql-8.4'].include?(cart_name)
+      def supports?(cart_name)
+        cart_name =~ /^(mysql|mongodb|postgresql)-[0-9\.]+/
       end
 
       class DbConnection

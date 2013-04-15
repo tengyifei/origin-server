@@ -78,6 +78,10 @@ module Console::HelpHelper
     community_base_url 'developers/tools'
   end
 
+  def developers_get_help_url
+    community_base_url 'developers/get-help'
+  end
+
   def developers_get_started_path
     community_base_url 'developers/get-started'
   end
@@ -229,10 +233,6 @@ module Console::HelpHelper
     community_base_url 'policy/security'
   end
 
-  def tax_exempt_help_status
-    community_base_url 'policy/tax-exemptions'
-  end
-
   def create_quickstart_url
     community_base_url 'node/add/quickstart'
   end
@@ -269,5 +269,9 @@ module Console::HelpHelper
 
   def resource_request_url
     community_base_url 'page/resource-request-form'
+  end
+
+  def alias_docs_url
+    community_base_url 'blogs/custom-url-names-for-your-paas-applications-host-forwarding-and-cnames-the-openshift-way'
   end
 end

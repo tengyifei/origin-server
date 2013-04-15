@@ -22,7 +22,7 @@ action "cartridge_do", :description => "run a cartridge action" do
         :prompt         => "Action",
         :description    => "Cartridge hook to run",
         :type           => :string,
-        :validation     => '^(app-create|app-destroy|env-var-add|env-var-remove|broker-auth-key-add|broker-auth-key-remove|authorized-ssh-key-add|authorized-ssh-key-remove|app-state-show|cartridge-list|configure|deconfigure|update-namespace|tidy|deploy-httpd-proxy|remove-httpd-proxy|move|pre-move|post-move|info|post-install|post-remove|pre-install|reload|restart|start|status|stop|force-stop|add-alias|remove-alias|threaddump|expose-port|conceal-port|show-port|frontend-backup|frontend-restore|frontend-create|frontend-destroy|frontend-update-name|frontend-update-namespace|frontend-connect|frontend-disconnect|frontend-connections|frontend-idle|frontend-unidle|frontend-check-idle|frontend-sts|frontend-no-sts|frontend-get-sts|aliases|ssl-cert-add|ssl-cert-remove|ssl-certs|frontend-to-hash|system-messages|connector-execute|get-quota|set-quota)$',
+        :validation     => '^(app-create|app-destroy|env-var-add|env-var-remove|broker-auth-key-add|broker-auth-key-remove|authorized-ssh-key-add|authorized-ssh-key-remove|app-state-show|cartridge-list|configure|deconfigure|update-namespace|tidy|deploy-httpd-proxy|remove-httpd-proxy|info|post-install|post-remove|pre-install|reload|restart|start|status|stop|force-stop|add-alias|remove-alias|threaddump|expose-port|conceal-port|show-port|frontend-backup|frontend-restore|frontend-create|frontend-destroy|frontend-update-name|frontend-update-namespace|frontend-connect|frontend-disconnect|frontend-connections|frontend-idle|frontend-unidle|frontend-check-idle|frontend-sts|frontend-no-sts|frontend-get-sts|aliases|ssl-cert-add|ssl-cert-remove|ssl-certs|frontend-to-hash|system-messages|connector-execute|get-quota|set-quota)$',
         :optional       => false,
         :maxlength      => 64
 
@@ -71,6 +71,17 @@ action "get_all_active_gears", :description => "get all the active gears" do
     display :always
     output  :output,
             :description => "Active gears",
+            :display_as => "Output"
+
+    output :exitcode,
+           :description => "Exit code",
+           :display_as => "Exit Code"
+end
+
+action "get_all_gears_sshkeys", :description => "get all sshkeys for all gears" do
+    display :always
+    output  :output,
+            :description => "Gear ssh keys",
             :display_as => "Output"
 
     output :exitcode,
@@ -194,6 +205,48 @@ action "has_uid_or_gid", :description => "Returns whether this system has alread
            :display_as => "Exit Code"
 end
 
+action 'cartridge_repository', :description => 'perform given operation on a cartridge repository' do
+  display :always
+
+  input :action,
+        :prompt      => 'Action',
+        :description => 'Operation to perform on cartridge repository',
+        :type        => :list,
+        :list        => %w(install list erase),
+        :optional    => false
+
+  input :path,
+        :prompt      => 'Cartridge Source',
+        :description => 'Full path to cartridge source',
+        :type        => :string,
+        :validation  => '^/.*$',
+        :optional    => true,
+        :maxlength   => 2056
+
+  input :name,
+        :prompt      => 'Cartridge Name',
+        :description => 'Cartridge Name to Remove',
+        :type        => :string,
+        :validation  => '^[A-Za-z\d]+$',
+        :optional    => true,
+        :maxlength   => 64
+
+  input :version,
+        :prompt      => 'Software Version',
+        :description => 'Version for Software packaged by cartridge',
+        :type        => :string,
+        :validation  => '^\d+[\\.\d]*$',
+        :optional    => true,
+        :maxlength   => 64
+
+  input :cartridge_version,
+        :prompt      => 'Cartridge Version',
+        :description => 'Cartridge Version number',
+        :type        => :string,
+        :validation  => '^\d+[\\.\d]*$',
+        :optional    => true,
+        :maxlength   => 64
+end
 
 action "echo", :description => "echo's a string back" do
     display :always

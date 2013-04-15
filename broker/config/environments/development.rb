@@ -39,6 +39,9 @@ Broker::Application.configure do
   ############################################
 
   conf = OpenShift::Config.new(File.join(OpenShift::Config::CONF_DIR, 'broker-dev.conf'))
+
+  config.send(:cache_store=, eval("[#{conf.get("CACHE_STORE")}]")) if conf.get("CACHE_STORE")
+
   config.datastore = {
     :host_port => conf.get("MONGO_HOST_PORT", "localhost:27017"),
     :user => conf.get("MONGO_USER", "openshift"),
@@ -60,6 +63,11 @@ Broker::Application.configure do
   config.user_action_logging = {
     :logging_enabled => conf.get_bool("ENABLE_USER_ACTION_LOG", "true"),
     :log_filepath => conf.get("USER_ACTION_LOG_FILE", "/var/log/openshift/broker/user_action.log")
+  }
+
+  config.maintenance = {
+    :enabled => conf.get_bool("ENABLE_MAINTENANCE_MODE", "false"),
+    :outage_msg_filepath => conf.get("MAINTENANCE_NOTIFICATION_FILE", "/etc/openshift/outage_notification.txt")
   }
 
   config.openshift = {

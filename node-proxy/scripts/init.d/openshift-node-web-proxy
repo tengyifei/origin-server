@@ -25,11 +25,11 @@ prog="web-proxy"
 lockfile="/var/lock/subsys/node-web-proxy"
 pidfile="/var/run/openshift-node-web-proxy-supervisor.pid"
 childpidfile="/var/run/openshift-node-web-proxy.pid"
-logfile="/var/log/node-web-proxy/supervisor_log"
+logfile="/var/log/node-web-proxy/supervisor.log"
 
 start() {
     echo -n $"Starting node-web-proxy: "
-    chown apache.apache /var/log/node-web-proxy/*.log
+    chown apache.apache /var/log/node-web-proxy/*.log >/dev/null 2>&1 || :
     export NODE_PATH="$nodesysmodulespath"
     nohup $cmd &> $logfile &
     echo $! > $pidfile

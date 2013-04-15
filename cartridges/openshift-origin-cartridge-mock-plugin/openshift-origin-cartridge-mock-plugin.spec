@@ -2,7 +2,7 @@
 %global frameworkdir %{_libexecdir}/openshift/cartridges/v2/mock-plugin
 
 Name: openshift-origin-cartridge-mock-plugin
-Version: 0.1.1
+Version: 0.2.7
 Release: 1%{?dist}
 Summary: Mock plugin cartridge for V2 Cartridge SDK
 Group: Development/Languages
@@ -12,6 +12,8 @@ Source0: http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
+Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 
 %description
 Provides a mock plugin cartridge for use in the V2 Cartridge SDK. Used to integration
@@ -31,7 +33,6 @@ mkdir -p %{buildroot}%{cartridgedir}
 mkdir -p %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2
 cp -r * %{buildroot}%{cartridgedir}/
 ln -s %{cartridgedir}/conf/ %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2/%{name}
-ln -s %{cartridgedir} %{buildroot}/%{frameworkdir}
 
 
 %clean
@@ -46,7 +47,7 @@ rm -rf %{buildroot}
 %dir %{cartridgedir}/conf.d
 %dir %{cartridgedir}/env
 %dir %{cartridgedir}/metadata
-%dir %{cartridgedir}/opt
+%dir %{cartridgedir}/usr
 %config(noreplace) %{cartridgedir}/conf/
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{frameworkdir}
@@ -57,6 +58,49 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 0.2.7-1
+- Merge pull request #2068 from jwhonce/wip/path
+  (dmcphers+openshiftbot@redhat.com)
+- WIP Cartridge Refactor - Move PATH to /etc/openshift/env (jhonce@redhat.com)
+
+* Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 0.2.6-1
+- WIP: scalable snapshot/restore (pmorie@gmail.com)
+- WIP Cartridge Refactor - Scrub manifests (jhonce@redhat.com)
+
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 0.2.5-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 0.2.4-1
+- Anchor locked_files.txt entries at the cart directory (ironcladlou@gmail.com)
+
+* Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 0.2.3-1
+- Merge pull request #1942 from ironcladlou/dev/v2carts/vendor-changes
+  (dmcphers+openshiftbot@redhat.com)
+- Remove vendor name from installed V2 cartridge path (ironcladlou@gmail.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 0.2.2-1
+- Refactor mock and mock-plugin connection hooks (pmorie@gmail.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 0.2.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+- Improve mock/mock-plugin cartridges (ironcladlou@gmail.com)
+
+* Thu Mar 21 2013 Adam Miller <admiller@redhat.com> 0.1.4-1
+- Change V2 manifest Version elements to strings (pmorie@gmail.com)
+- WIP Cartridge Refactor - Mung cartridge-vendor omit spaces and downcase
+  (jhonce@redhat.com)
+- Merge pull request #1683 from jwhonce/wip/mock_updated (dmcphers@redhat.com)
+- WIP Cartridge Refactor - cucumber test refactor (jhonce@redhat.com)
+
+* Mon Mar 18 2013 Adam Miller <admiller@redhat.com> 0.1.3-1
+- WIP Cartridge Refactor - Mock plugin installed from CartridgeRepository
+  (jhonce@redhat.com)
+- add cart vendor and version (dmcphers@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 0.1.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 0.1.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

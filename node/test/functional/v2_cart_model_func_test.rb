@@ -13,118 +13,94 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #++
-
-require_relative '../../lib/openshift-origin-node/model/v2_cart_model'
-require_relative '../../lib/openshift-origin-node/model/cartridge'
-require_relative '../../lib/openshift-origin-node/utils/shell_exec'
-
-require 'pathname'
-require 'ostruct'
+require 'openshift-origin-node/model/unix_user'
+require 'openshift-origin-node/model/frontend_proxy'
+require 'openshift-origin-node/model/v2_cart_model'
+require 'openshift-origin-node/model/cartridge_repository'
+require 'openshift-origin-node/utils/application_state'
+require 'etc'
 require 'test/unit'
 require 'mocha'
 
-module OpenShift
-  class V2CartridgeModelFuncTest < Test::Unit::TestCase
-    MockUser = Struct.new(:gid, :uid, :homedir) do
-      def get_mcs_label(uid)
-        's0:c0,c1000'
-      end
-    end
-    # Called before every test method runs. Can be used
-    # to set up fixture information.
-    def setup
-      @uuid    = `uuidgen -r |sed -e s/-//g`.chomp
-      @homedir = "/tmp/tests/#@uuid"
-      FileUtils.mkpath(File.join(@homedir, 'mock', 'metadata'))
-      FileUtils.mkpath(File.join(@homedir, 'mock', 'env'))
+class V2CartridgeModelFunctionalTest < Test::Unit::TestCase
+  GEAR_BASE_DIR = '/var/lib/openshift'
 
-      @files = [File.join(@homedir, 'mock/a'), File.join(@homedir, '.mocking_bird')]
-      @dirs  = [File.join(@homedir, 'mock/b/')]
+  # Called before every test method runs. Can be used
+  # to set up fixture information.
+  def setup
+    @uid = 5996
 
-      user   = MockUser.new(1000, 1000, @homedir.to_s)
-      @model = V2CartridgeModel.new(nil, user)
-    end
+    @config = mock('OpenShift::Config')
+    @config.stubs(:get).returns(nil)
+    @config.stubs(:get).with("GEAR_BASE_DIR").returns(GEAR_BASE_DIR)
+    @config.stubs(:get).with("GEAR_GECOS").returns('Functional Test')
+    @config.stubs(:get).with("CREATE_APP_SYMLINKS").returns('0')
+    @config.stubs(:get).with("GEAR_SKEL_DIR").returns(nil)
+    @config.stubs(:get).with("GEAR_SHELL").returns(nil)
+    @config.stubs(:get).with("CLOUD_DOMAIN").returns('example.com')
+    @config.stubs(:get).with("OPENSHIFT_HTTP_CONF_DIR").returns('/etc/httpd/conf.d/openshift')
+    @config.stubs(:get).with("PORT_BEGIN").returns(nil)
+    @config.stubs(:get).with("PORT_END").returns(nil)
+    @config.stubs(:get).with("PORTS_PER_USER").returns(5)
+    @config.stubs(:get).with("UID_BEGIN").returns(@uid)
+    @config.stubs(:get).with("BROKER_HOST").returns('localhost')
 
-    def teardown
-      FileUtils.rm_rf(@homedir)
-    end
+    script_dir     = File.expand_path(File.dirname(__FILE__))
+    cart_base_path = File.join(script_dir, '..', '..', '..', 'cartridges')
+    raise "Couldn't find cart base path at #{cart_base_path}" unless File.exists?(cart_base_path)
+    @config.stubs(:get).with("CARTRIDGE_BASE_PATH").returns(cart_base_path)
 
-    def test_environment_variable
-      cartridge_home = File.join(@homedir, 'mock-0.0')
+    OpenShift::Config.stubs(:new).returns(@config)
 
-      manifest            = OpenStruct.new
-      manifest.short_name = 'MOCK'
-      @model.write_environment_variable(manifest,
-                                  File.join(cartridge_home, 'env'),
-                                  dir: cartridge_home)
+    OpenShift::Utils::Sdk.stubs(:new_sdk_app?).returns(true)
 
-      expected = File.join(cartridge_home, 'env', 'OPENSHIFT_MOCK_DIR')
-      assert File.file?(expected), "#{expected} is missing"
+    @uuid = %x(uuidgen -r |sed -e s/-//g).chomp
 
-      path = File.read(File.join(cartridge_home, 'env', 'OPENSHIFT_MOCK_DIR'))
-      assert cartridge_home, path
+    begin
+      %x(userdel -f #{Etc.getpwuid(@uid).name})
+    rescue ArgumentError
     end
 
+    @user = OpenShift::UnixUser.new(@uuid, @uuid,
+                                    @uid,
+                                    'V2CartridgeModelFunctionalTest',
+                                    'V2CartridgeModelFunctionalTest',
+                                    'functional-test')
+    @user.create
+    refute_nil @user.homedir
 
-    def test_do_unlock_gear
-      @model.do_unlock(@files + @dirs)
+    OpenShift::CartridgeRepository.instance.clear
+    OpenShift::CartridgeRepository.instance.load
+    @model = OpenShift::V2CartridgeModel.new(@config, @user, OpenShift::Utils::ApplicationState.new(@uuid))
+    @model.configure('mock-0.1')
+    @model.configure('mock-plugin-0.1')
+  end
 
-      @files.each do |f|
-        assert File.file?(f), "Unlock failed to create file #{f}"
-      end
+  # Called after every test method runs. Can be used to tear
+  # down fixture information.
+  def teardown
+    @user.destroy
+  end
 
-      @dirs.each do |d|
-        assert File.directory?(d), "Unlock failed to create directory #{d}"
-      end
-    end
+  def test_hidden_erb
+    assert File.exists?(File.join(@user.homedir, 'mock', '.mock_hidden')), 'Failed to process .mock_hidden.erb'
+    refute File.exists?(File.join(@user.homedir, 'mock', '.mock_hidden.erb')), 'Failed to delete .mock_hidden.erb after processing'
+  end
 
-    def test_do_lock_gear
-      @files.each do |f|
-        FileUtils.touch(f)
-      end
-      @dirs.each do |d|
-        FileUtils.mkpath(d)
-      end
+  def test_publish_db_connection_info
+    results = @model.connector_execute('mock-plugin-0.1', 'publish-db-connection-info', "")
+    refute_nil results
 
-      @model.do_lock(@files + @dirs)
+    assert_match(
+        %r(OPENSHIFT_MOCK_PLUGIN_DB_USERNAME=UT_username; OPENSHIFT_MOCK_PLUGIN_DB_PASSWORD=UT_password; OPENSHIFT_MOCK_PLUGIN_GEAR_UUID=.*; OPENSHIFT_MOCK_PLUGIN_DB_HOST=\d+\.\d+\.\d+\.\d+; OPENSHIFT_MOCK_PLUGIN_DB_PORT=8080; OPENSHIFT_MOCK_PLUGIN_DB_URL=mock://\d+\.\d+\.\d+\.\d+:8080/unit_test;),
+        results)
+  end
 
-      @files.each do |f|
-        assert File.file?(f), "Lock deleted file #{f}"
-      end
+  def test_set_db_connection_info
+    @model.connector_execute('mock-0.1', 'set-db-connection-info', "test testdomain 515c7e8bdf3e460939000001 \\'75e36e529c9211e29cc622000a8c0259\\'\\=\\'OPENSHIFT_MOCK_DB_GEAR_UUID\\=75e36e529c9211e29cc622000a8c0259\\;\\;\\ '\n'\\'")
 
-      @dirs.each do |d|
-        assert File.directory?(d), "Lock deleted directory #{d}"
-      end
-    end
-
-    def test_lock_files
-      Dir.chdir(@homedir) do
-        File.open('mock/metadata/locked_files.txt', 'w') do |f|
-          f.write("\nmock/c\nmock/d/\n")
-        end
-        assert File.exists? File.join(@homedir, 'mock', 'metadata', 'locked_files.txt')
-
-        files = @model.lock_files('mock')
-
-        expected = [File.join(@homedir, 'mock/c'), File.join(@homedir, 'mock/d/')]
-        assert_equal(expected, files)
-      end
-    end
-
-    def test_unlock_gear
-      Dir.chdir(@homedir) do
-        File.open('mock/metadata/locked_files.txt', 'w') do |f|
-          f.write("\nmock/c\nmock/d/\n")
-        end
-        assert File.exists? File.join(@homedir, 'mock', 'metadata', 'locked_files.txt')
-
-        @model.unlock_gear('mock') do |actual|
-          assert_equal 'mock', actual
-        end
-      end
-
-      assert File.file?(File.join(@homedir, 'mock', 'c')), 'Unlock gear failed to create file'
-      assert File.directory?(File.join(@homedir, 'mock', 'd')), 'Unlock gear failed to create directory'
-    end
+    uservar_file = File.join(@user.homedir, '.env', '.uservars', 'OPENSHIFT_MOCK_DB_GEAR_UUID')
+    assert File.exists?(uservar_file), "#{uservar_file} is missing"
+    assert_equal "export OPENSHIFT_MOCK_DB_GEAR_UUID='75e36e529c9211e29cc622000a8c0259'", IO.read(uservar_file).chomp
   end
 end

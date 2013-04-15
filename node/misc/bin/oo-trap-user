@@ -55,20 +55,27 @@ def _set_env_uservars(uservars_dir):
 # Read in environment variables
 #
 def read_env_vars():
-#    os.putenv
-    envdir = os.path.expanduser('~/.env/')
-    for env in os.listdir(envdir):
-        if env in ['USER_VARS', 'TYPELESS_TRANSLATED_VARS']:
-           continue
-        elif os.path.isdir(envdir + env):
-           if '.uservars' == env:
-              _set_env_uservars(envdir + env)
-           continue
+    load_vars('/etc/openshift/env/')
+    load_vars('~/.env/')
+    load_vars('~/*/env/')
 
-        fp = open(os.path.expanduser('~/.env/') + env, 'r')
+def load_vars(dir):
+    for entry in glob.glob(os.path.expanduser(dir + '*')):
+        env = os.path.basename(entry)
+
+        if env in ['USER_VARS', 'TYPELESS_TRANSLATED_VARS']:
+          continue
+
+        fp = open(entry, 'r')
         env_var = fp.readlines()[0].strip().split('=')[1].strip('\'"')
         fp.close()
+
         os.putenv(env, env_var)
+
+    uservars = os.path.expanduser(dir + '.uservars')
+    if os.path.isdir(uservars):
+      _set_env_uservars(uservars)
+
 
 def get_mcs_level(uid):
     cmd = "/usr/bin/oo-get-mcs-level %s" % (uid)
@@ -135,14 +142,14 @@ if __name__ == '__main__':
         allargs = ['-c', str]
     if basecmd in ('snapshot',):
         # This gets called with "snapshot"
-        allargs = ['snapshot.sh']
+        allargs = ['oo-snapshot']
     if basecmd in ('restore',):
         # This gets called with "restore <INCLUDE_GIT>"
         include_git = False
         if len(allargs) > 1 and allargs[1] == 'INCLUDE_GIT':
             include_git = True
 
-        allargs = ['restore.sh']
+        allargs = ['oo-restore']
         if include_git:
             allargs.append('INCLUDE_GIT')
     elif basecmd in ('rhcsh',):

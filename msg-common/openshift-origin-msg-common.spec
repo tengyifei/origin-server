@@ -6,9 +6,9 @@
     %global mco_root /usr/libexec/mcollective/mcollective/
 %endif
 
-Summary:       Common dependencies of the msg components for OpenShift server and node
+Summary:       Common msg components for OpenShift broker and node
 Name:          openshift-origin-msg-common
-Version: 1.4.1
+Version:       1.5.3
 Release:       1%{?dist}
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
@@ -17,7 +17,8 @@ Requires:      %{?scl:%scl_prefix}mcollective-common
 BuildArch:     noarch
 
 %description
-Provides the common dependencies of the msg components for OpenShift server and node
+Provides the common dependencies of the msg components
+for OpenShift broker and node
 
 %prep
 %setup -q
@@ -37,6 +38,26 @@ chmod 644 %{buildroot}%{mco_root}validator/*
 %{mco_root}validator/*
 
 %changelog
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+- Adding checks for ssh key matches (abhgupta@redhat.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 1.5.2-1
+- fixing rebase (tdawson@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.5.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.4.2-1
+- WIP Cartridge Refactor - Cartridge Repository (jhonce@redhat.com)
+- Revert "Merge pull request #1622 from jwhonce/wip/cartridge_repository"
+  (dmcphers@redhat.com)
+- WIP Cartridge Refactor - Cartridge Repository (jhonce@redhat.com)
+- Revert "Merge pull request #1604 from jwhonce/wip/cartridge_repository"
+  (dmcphers@redhat.com)
+- WIP Cartridge Refactor - Cartridge Repository (jhonce@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.4.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

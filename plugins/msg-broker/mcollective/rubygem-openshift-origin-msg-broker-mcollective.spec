@@ -9,18 +9,20 @@
 
 Summary:       OpenShift plugin for mcollective service
 Name:          rubygem-%{gem_name}
-Version: 1.6.1
+Version: 1.7.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
-Requires:      %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
-Requires:      %{?scl:%scl_prefix}ruby
+%if 0%{?fedora} >= 19
+Requires:      ruby(release)
+%else
+Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      %{?scl:%scl_prefix}rubygem(json)
 Requires:      rubygem(openshift-origin-common)
-Requires:      mcollective
 Requires:      mcollective-client
 Requires:      selinux-policy-targeted
 Requires:      policycoreutils-python
@@ -29,13 +31,14 @@ Requires:      openshift-origin-msg-common
 BuildRequires: %{?scl:%scl_prefix}build
 BuildRequires: scl-utils-build
 %endif
-BuildRequires: %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
-BuildRequires: %{?scl:%scl_prefix}ruby
+%if 0%{?fedora} >= 19
+BuildRequires: ruby(release)
+%else
+BuildRequires: %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 BuildRequires: %{?scl:%scl_prefix}rubygems
 BuildRequires: %{?scl:%scl_prefix}rubygems-devel
 BuildArch:     noarch
-Obsoletes:     rubygem-gearchanger-mcollective-plugin
-Obsoletes:     rubygem-gearchanger-m-collective-plugin
 
 %description
 OpenShift plugin for mcollective based node/gear manager
@@ -77,6 +80,44 @@ cp %{buildroot}/%{gem_dir}/gems/%{gem_name}-%{version}/conf/openshift-origin-msg
 %attr(0644,-,-) %ghost /etc/mcollective/client.cfg
 
 %changelog
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- Change 'allow_change_district' to 'change_district' and remove warnings when
+  target server or district is specified. Fix start/stop carts order in move
+  gear. (rpenta@redhat.com)
+- Gear Move changes: Keep same uid for the gear When changing the gear from one
+  district to another. (rpenta@redhat.com)
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+- Adding checks for ssh key matches (abhgupta@redhat.com)
+
+* Mon Apr 08 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- broker messaging does not require mcollective server (markllama@gmail.com)
+- Bug 928752: Run threaddump/system-messages only on primary cart
+  (ironcladlou@gmail.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Mon Mar 25 2013 Adam Miller <admiller@redhat.com> 1.6.5-1
+- Merge pull request #1505 from jreuning/bug-916809
+  (dmcphers+openshiftbot@redhat.com)
+- Prevent exit() call from mcollective on rpc_client connect error, throw
+  appropriate exception (john@ibiblio.org)
+
+* Thu Mar 21 2013 Adam Miller <admiller@redhat.com> 1.6.4-1
+- Updating rest-client and rake gem versions to match F18 (kraman@gmail.com)
+
+* Mon Mar 18 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- Add SNI upload support to API (lnader@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Make packages build/install on F19+ (tdawson@redhat.com)
+- Merge pull request #1625 from tdawson/tdawson/remove-obsoletes
+  (dmcphers+openshiftbot@redhat.com)
+- remove old obsoletes (tdawson@redhat.com)
+- Adding the ability to fetch all gears with broker auth tokens
+  (bleanhar@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

@@ -11,7 +11,10 @@
   - if not inactive and cartridge_type.tags.include? :experimental
     %span.label.pull-right Experimental
 
-  %h3= cartridge_type.display_name
+  %h3
+    = cartridge_type.display_name
+    - if cartridge_type.usage_rates?
+      = usage_rate_indicator
 
   - if extra_info
     %ul.unstyled.meta

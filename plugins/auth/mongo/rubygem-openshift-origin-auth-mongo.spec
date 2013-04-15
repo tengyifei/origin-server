@@ -9,14 +9,17 @@
 
 Summary:       OpenShift plugin for mongo auth service
 Name:          rubygem-%{gem_name}
-Version:       1.5.1
+Version:       1.5.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
-Requires:      %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
-Requires:      %{?scl:%scl_prefix}ruby
+%if 0%{?fedora} >= 19
+Requires:      ruby(release)
+%else
+Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      %{?scl:%scl_prefix}rubygem(activeresource)
 Requires:      %{?scl:%scl_prefix}rubygem(json)
@@ -30,13 +33,15 @@ Requires:      openssl
 BuildRequires: %{?scl:%scl_prefix}build
 BuildRequires: scl-utils-build
 %endif
-BuildRequires: %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
-BuildRequires: %{?scl:%scl_prefix}ruby 
+%if 0%{?fedora} >= 19
+BuildRequires: ruby(release)
+%else
+BuildRequires: %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
+%endif
 BuildRequires: %{?scl:%scl_prefix}rubygems
 BuildRequires: %{?scl:%scl_prefix}rubygems-devel
 BuildArch:     noarch
 Provides:      rubygem(%{gem_name}) = %version
-Obsoletes:     rubygem-swingshift-mongo-plugin
 
 %description
 Provides a mongo auth service based plugin
@@ -94,6 +99,15 @@ cp %{buildroot}/%{gem_instdir}/conf/openshift-origin-auth-mongo.conf.example %{b
 %doc %{gem_docdir}
 
 %changelog
+* Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 1.5.2-1
+- Read values from node.conf for origin testing. (rmillner@redhat.com)
+- Updating rest-client and rake gem versions to match F18 (kraman@gmail.com)
+- Merge pull request #1643 from kraman/update_parseconfig (dmcphers@redhat.com)
+- Replacing get_value() with config['param'] style calls for new version of
+  parseconfig gem. (kraman@gmail.com)
+- Make packages build/install on F19+ (tdawson@redhat.com)
+- remove old obsoletes (tdawson@redhat.com)
+
 * Tue Mar 12 2013 Troy Dawson <tdawson@redhat.com> 1.5.1-1
 - Implement authorization support in the broker (ccoleman@redhat.com)
 - fix rubygem sources (tdawson@redhat.com)

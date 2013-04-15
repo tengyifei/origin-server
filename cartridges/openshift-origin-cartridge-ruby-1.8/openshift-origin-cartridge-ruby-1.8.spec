@@ -2,7 +2,7 @@
 
 Summary:       Provides ruby rack support running on Phusion Passenger
 Name:          openshift-origin-cartridge-ruby-1.8
-Version: 1.6.1
+Version: 1.7.4
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -10,6 +10,7 @@ URL:           http://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      mod_bw
 Requires:      sqlite-devel
 Requires:      rubygems
@@ -44,8 +45,6 @@ Requires:      rubygem-nokogiri
 %endif
 BuildRequires: git
 BuildArch:     noarch
-Obsoletes:     cartridge-ruby-1.8
-Obsoletes:     openshift-origin-cartridge-ruby-1.1
 
 %description
 Provides ruby support to OpenShift
@@ -87,7 +86,6 @@ ln -s %{cartridgedir}/../abstract/info/hooks/stop %{buildroot}%{cartridgedir}/in
 ln -s %{cartridgedir}/../abstract/info/hooks/update-namespace %{buildroot}%{cartridgedir}/info/hooks/update-namespace
 ln -s %{cartridgedir}/../abstract/info/hooks/deploy-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/deploy-httpd-proxy
 ln -s %{cartridgedir}/../abstract/info/hooks/remove-httpd-proxy %{buildroot}%{cartridgedir}/info/hooks/remove-httpd-proxy
-ln -s %{cartridgedir}/../abstract/info/hooks/move %{buildroot}%{cartridgedir}/info/hooks/move
 ln -s %{cartridgedir}/../abstract/info/hooks/system-messages %{buildroot}%{cartridgedir}/info/hooks/system-messages
 mkdir -p %{buildroot}%{cartridgedir}/info/connection-hooks/
 ln -s %{cartridgedir}/../abstract/info/connection-hooks/publish-gear-endpoint %{buildroot}%{cartridgedir}/info/connection-hooks/publish-gear-endpoint
@@ -115,6 +113,28 @@ ln -s %{cartridgedir}/../abstract/info/bin/sync_gears.sh %{buildroot}%{cartridge
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.4-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Card 534 (lnader@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Thu Mar 21 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- <threaddump> fix bug 923405 so ruby thread dump reports useful log file
+  (lmeyer@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+- remove old obsoletes (tdawson@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 

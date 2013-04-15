@@ -19,6 +19,7 @@
 #
 require 'test_helper'
 require 'openshift-origin-node/model/unix_user'
+require 'openshift-origin-node/utils/selinux'
 require 'test/unit'
 require 'mocha'
 
@@ -41,6 +42,7 @@ class UnixUserModelFunctionalTest < Test::Unit::TestCase
     @verbose = false
 
     @config = mock('OpenShift::Config')
+    @config.stubs(:get).returns(nil)
     @config.stubs(:get).with("GEAR_BASE_DIR").returns("/tmp")
     @config.stubs(:get).with("CLOUD_DOMAIN").returns("rhcloud.com")
     @config.stubs(:get).with("OPENSHIFT_HTTP_CONF_DIR").returns("/tmp")
@@ -50,19 +52,24 @@ class UnixUserModelFunctionalTest < Test::Unit::TestCase
     @frontend.stubs(:create)
     @frontend.stubs(:destroy)
     OpenShift::FrontendHttpServer.stubs(:new).returns(@frontend)
+
+    # Use root's MCS label if we're using root's uid.
+    if @user_uid.to_i == 0
+      OpenShift::Utils::SELinux.stubs(:get_mcs_label).returns("s0:c0.c1023")
+    end
   end
 
   def test_initialize
     FileUtils.rm_rf("/tmp/homedir", :verbose => @verbose) if File.directory?("/tmp/homedir")
     o = OpenShift::UnixUser.new(@gear_uuid, @gear_uuid, @user_uid, @app_name,
-                                 @gear_name, @namespace,
-                                 nil, nil, @verbose)
+                                @gear_name, @namespace,
+                                nil, nil, @verbose)
     assert_not_nil o
 
     o.initialize_homedir("/tmp/", "/tmp/homedir/", "cartridges/openshift-origin-cartridge-abstract/")
     assert_directory?("/tmp/homedir")
-    assert ! File.symlink?("/tmp/homedir/data"), 'found deprecated data symlink'
-    assert ! File.directory?("/tmp/homedir/app"), 'found deprecated app directory'
+    assert !File.symlink?("/tmp/homedir/data"), 'found deprecated data symlink'
+    assert !File.directory?("/tmp/homedir/app"), 'found deprecated app directory'
     assert_directory?("/tmp/homedir/app-root")
     assert_directory?("/tmp/homedir/app-root/runtime/")
     assert File.exist?("/tmp/homedir/app-root/runtime/.state"), '.state file missing'
@@ -70,5 +77,8 @@ class UnixUserModelFunctionalTest < Test::Unit::TestCase
     assert_directory?("/tmp/homedir/.tmp")
     assert_directory?("/tmp/homedir/.env")
     assert_directory?("/tmp/homedir/.sandbox")
+    assert !File.exist?("/tmp/homedir/.env/OPENSHIFT_NAMESPACE"),
+           'OPENSHIFT_NAMESPACE should be created in V2CartridgeModel'
+
   end
 end

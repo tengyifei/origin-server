@@ -6,9 +6,9 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/embedded/jenkins-client-1.4
 %global frameworkdir %{_libexecdir}/openshift/cartridges/jenkins-client-1.4
 
-Summary:       Embedded jenkins client support for express 
+Summary:       Embedded jenkins client support for OpenShift 
 Name:          openshift-origin-cartridge-jenkins-client-1.4
-Version: 1.5.1
+Version: 1.6.3
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -16,6 +16,7 @@ URL:           https://openshift.redhat.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 Requires:      mysql-devel
 Requires:      wget
 %if 0%{?fedora}%{?rhel} <= 6
@@ -26,7 +27,6 @@ Requires:      java-1.7.0-openjdk
 Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      %{?scl:%scl_prefix}rubygem-json
 BuildArch:     noarch
-Obsoletes:     cartridge-jenkins-client-1.4
 
 %description
 Provides embedded jenkins client support
@@ -66,6 +66,25 @@ ln -s %{cartridgedir} %{buildroot}/%{frameworkdir}
 
 
 %changelog
+* Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
+- SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
+  ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)
+
+* Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
+- Bug 950224: Remove unnecessary Endpoints (ironcladlou@gmail.com)
+- Delete move/pre-move/post-move hooks, these hooks are no longer needed.
+  (rpenta@redhat.com)
+
+* Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 26 (admiller@redhat.com)
+
+* Thu Mar 21 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
+- Getting jenkins building (dmcphers@redhat.com)
+
+* Thu Mar 14 2013 Adam Miller <admiller@redhat.com> 1.5.2-1
+- Refactor Endpoints to support frontend mapping (ironcladlou@gmail.com)
+- remove old obsoletes (tdawson@redhat.com)
+
 * Thu Mar 07 2013 Adam Miller <admiller@redhat.com> 1.5.1-1
 - bump_minor_versions for sprint 25 (admiller@redhat.com)
 
