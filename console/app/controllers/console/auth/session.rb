@@ -6,7 +6,7 @@
 #
 module Console::Auth::Session
   extend ActiveSupport::Concern
-  include Console::AuthenticationHelper
+  #include Console::AuthenticationHelper
 
   class SessionUser < RestApi::Credentials
     extend ActiveModel::Naming

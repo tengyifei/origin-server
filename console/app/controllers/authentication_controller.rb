@@ -4,22 +4,28 @@ class AuthenticationController < Console.config.parent_controller.constantize
   layout false
 
   def signin
-    nil
+    reset_session
   end
 
   def signout
-  	session[:authentication_login] = nil
-    session[:authentication_token] = nil
+    redirect_to signin_path
 
-  	redirect_to signin_path
+    #reset_session
+
+    #session.delete :authentication_token
+    #session.delete :authentication_login
+
+    #clear session
+    #session.delete :domain
   end
 
   def auth
-    token = generate_token params[:password]
+    authentication = Authentication.new :login => params[:login]
+    authentication.generate_token params[:password]
 
-    secret = Digest::SHA1.hexdigest(Console.config.authentication_session_key)
-    session[:authentication_login] = params[:login]
-    session[:authentication_token] = ActiveSupport::MessageEncryptor.new(secret).encrypt_and_sign(token)
+    session[:authentication] = authentication
+
+    logger.debug(session[:authentication])
 
   	redirect_to applications_path
   end
