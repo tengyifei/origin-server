@@ -6,7 +6,6 @@
 #
 module Console::Auth::Session
   extend ActiveSupport::Concern
-  #include Console::AuthenticationHelper
 
   class SessionUser < RestApi::Credentials
     extend ActiveModel::Naming
@@ -45,25 +44,12 @@ module Console::Auth::Session
   # This method should test authentication and handle if the user
   # is unauthenticated
   def authenticate_user!
-    if session[:authentication_login]
-      secret = Digest::SHA1.hexdigest(Console.config.authentication_session_key)
+    return console_authentication unless session[:authentication]
+    
+    authentication = session[:authentication]
+    return console_access_expired if authentication.expired?
 
-      login = session[:authentication_login]
-
-      token = ActiveSupport::MessageEncryptor.new(secret).decrypt_and_verify(session[:authentication_token])
-      user = decode_token token
-
-      if not user[:expired]
-        token = generate_token user[:password]
-        secret = Digest::SHA1.hexdigest(Console.config.authentication_session_key)
-        session[:authentication_token] = ActiveSupport::MessageEncryptor.new(secret).encrypt_and_sign(token)
-        @authenticated_user = SessionUser.new(login, user[:password])
-      else
-        console_access_expired
-      end
-    else
-      console_authentication
-    end
+    @authenticated_user = SessionUser.new(authentication.login, authentication.password)
   end
 
   def user_signed_in?
