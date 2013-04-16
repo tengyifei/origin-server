@@ -4,6 +4,7 @@ module ActionDispatch::Routing
     def openshift_console(*args)
       opts = args.extract_options!
       openshift_console_routes
+      openshift_authentication_routes
       openshift_account_routes unless (Array(opts[:skip]).include? :account || Console.config.disable_account)
       root :to => 'console_index#index', :via => :get, :as => :console
     end
@@ -58,5 +59,14 @@ module ActionDispatch::Routing
         resources :authorizations, :except => [:index]
         match 'authorizations' => 'authorizations#destroy_all', :via => :delete
       end
+
+      def openshift_authentication_routes
+        # Authentication specific resources
+        resource :authentication, :only => [:new, :create, :destroy]
+
+        match 'signin' => 'authentication#signin', :via => :get, :format => false
+        match 'signout' => 'authentication#signout', :via => :get, :format => false
+        match 'auth' => 'authentication#auth', :via => :post, :format => false
+      end      
   end
 end

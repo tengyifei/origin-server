@@ -10,7 +10,7 @@ module Console::ConsoleHelper
 
   #FIXME: Replace with real isolation of login state
   def logout_path
-    nil
+    signout_path
   end
 
   def outage_notification

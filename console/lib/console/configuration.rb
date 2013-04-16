@@ -37,6 +37,8 @@ module Console
 
     config_accessor :community_url
 
+    config_accessor :authentication_session_key
+    config_accessor :authentication_session_expire
     #
     # A class that represents the capabilities object
     #
@@ -118,6 +120,10 @@ module Console
       def load(file)
         config = Console::ConfigFile.new(file)
         raise InvalidConfiguration, "BROKER_URL not specified in #{file}" unless config[:BROKER_URL]
+        raise InvalidConfiguration, "SESSION_KEY not specified in #{file}" unless config[:AUTH_SESSION_KEY]
+
+        self.authentication_session_key = config[:AUTH_SESSION_KEY]
+        self.authentication_session_expire = config[:AUTH_SESSION_EXPIRE] || 3600
 
         freeze_api(api_config_from(config), file)
 
@@ -180,5 +186,6 @@ module Console
     config.security_controller = 'Console::Auth::Basic'
     config.include_helpers = true
     config.capabilities_model = 'Capabilities::Cacheable'
+    config.authentication_session_expire = 3600
   end
 end
