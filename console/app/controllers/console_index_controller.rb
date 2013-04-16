@@ -5,7 +5,9 @@ class ConsoleIndexController < ConsoleController
     redirect_to applications_path
   end
   def unauthorized
-    render 'console/unauthorized'
+    flash[:error] = "Unauthorized"
+    redirect_to signin_path
+    #render 'console/unauthorized'
   end
 
   def help
