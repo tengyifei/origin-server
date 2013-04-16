@@ -35,6 +35,7 @@
           %h2 Dashboard Authentication
           %form{:action => auth_path, :id => 'form-authentication', :method => 'post'}
             %fieldset
+              = token_tag(nil)
               = email_field_tag 'login', '', :placeholder => "Login", :required => ''
               = password_field_tag 'password', '', :placeholder => "Password", :required => ''
 
