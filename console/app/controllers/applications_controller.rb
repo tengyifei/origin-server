@@ -69,8 +69,6 @@ end
 class ApplicationsController < ConsoleController
   include AsyncAware
 
-  before_filter :authenticate_user!
-
   require_dependency 'gear_group'
 
   def index
