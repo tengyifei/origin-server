@@ -39,6 +39,7 @@ module Console
 
     config_accessor :authentication_session_key
     config_accessor :authentication_session_expire
+    config_accessor :session_user_name
     #
     # A class that represents the capabilities object
     #
@@ -138,6 +139,9 @@ module Console
             value = config[s.upcase]
             self.send(:"#{s}=", s.to_s.ends_with?('s') ? value.split(',') : value) if value
           end
+        when 'session'
+          self.security_controller = 'Console::Auth::Session'
+          self.session_user_name = config[:SESSION_USER_NAME] || 'X-Remote-User'
         when String
           self.security_controller = config[:CONSOLE_SECURITY]
         end
@@ -187,5 +191,6 @@ module Console
     config.include_helpers = true
     config.capabilities_model = 'Capabilities::Cacheable'
     config.authentication_session_expire = 3600
+    config.session_user_name = 'X-Remote-User'
   end
 end

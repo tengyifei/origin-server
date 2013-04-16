@@ -12,13 +12,20 @@ module Console::Auth::Session
     extend ActiveModel::Naming
     include ActiveModel::Conversion
 
-    def initialize(opts={})
-      opts.each_pair { |key,value| instance_variable_set("@#{key}", value) }
+    def initialize(username, password)
+      @username = username
+      @password = password
+      @headers = { Console.config.session_user_name => username }.freeze
+    end
+    def login
+      @username
     end
     def email_address
       nil
     end
-
+    def to_headers
+      @headers
+    end
     def persisted?
       false
     end
@@ -50,8 +57,7 @@ module Console::Auth::Session
         token = generate_token user[:password]
         secret = Digest::SHA1.hexdigest(Console.config.authentication_session_key)
         session[:authentication_token] = ActiveSupport::MessageEncryptor.new(secret).encrypt_and_sign(token)
-
-        @authenticated_user = SessionUser.new :login => login, :password => user[:password]
+        @authenticated_user = SessionUser.new(login, user[:password])
       else
         console_access_expired
       end
