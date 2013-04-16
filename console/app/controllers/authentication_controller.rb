@@ -5,7 +5,7 @@ class AuthenticationController < Console.config.parent_controller.constantize
   end
 
   def signout
-    reset_session
+    session.delete :authentication
     redirect_to signin_path
   end
 
