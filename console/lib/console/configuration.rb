@@ -121,10 +121,6 @@ module Console
       def load(file)
         config = Console::ConfigFile.new(file)
         raise InvalidConfiguration, "BROKER_URL not specified in #{file}" unless config[:BROKER_URL]
-        raise InvalidConfiguration, "SESSION_KEY not specified in #{file}" unless config[:AUTH_SESSION_KEY]
-
-        self.authentication_session_key = config[:AUTH_SESSION_KEY]
-        self.authentication_session_expire = config[:AUTH_SESSION_EXPIRE] || 3600
 
         freeze_api(api_config_from(config), file)
 
@@ -140,6 +136,11 @@ module Console
             self.send(:"#{s}=", s.to_s.ends_with?('s') ? value.split(',') : value) if value
           end
         when 'session'
+          raise InvalidConfiguration, "SESSION_KEY not specified in #{file}" unless config[:AUTH_SESSION_KEY]
+
+          self.authentication_session_key = config[:AUTH_SESSION_KEY]
+          self.authentication_session_expire = config[:AUTH_SESSION_EXPIRE] || 3600
+                    
           self.security_controller = 'Console::Auth::Session'
           self.session_user_name = config[:SESSION_USER_NAME] || 'X-Remote-User'
         when String
