@@ -102,7 +102,7 @@ module Console
     end
 
     def user_agent
-      @user_agent ||= "openshift_console/#{Console::VERSION::STRING} (ruby #{RUBY_VERSION}; #{RUBY_PLATFORM})"
+      @user_agent ||= "auth_openshift_console/#{Console::VERSION::STRING} (ruby #{RUBY_VERSION}; #{RUBY_PLATFORM})"
     end
     def user_agent=(agent)
       @user_agent = agent
