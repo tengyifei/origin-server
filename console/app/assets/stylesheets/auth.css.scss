@@ -677,12 +677,21 @@ section form input.invalid:-ms-input-placeholder
     color: #EC534C;
 }
 
-section form button.sprite { border: 0; float: left; padding-left: 16px; text-indent: 0; font-family: 'ostrich medium'; font-size: 38px; line-height: 44px; color: #00FFF5; background-position: -40px -269px; cursor: pointer; }
+section form button.getup-sprite { border: 0; float: left; padding-left: 16px; text-indent: 0; font-family: 'ostrich medium'; font-size: 38px; line-height: 44px; color: #00FFF5; background-position: -40px -269px; cursor: pointer; }
 
 #flash { margin-top: 20px; }
 #flash .alert { font-size: 11px; text-align: center; text-transform: uppercase; }
 #flash .alert-error { color: #FF4C4D; }
 #flash .alert-success { color: #00FFF5; }
+
+
+@media (max-width: 767px) {
+    section form input,
+    section form button.getup-sprite { float: none; display: block; margin: 10px 0 0 185px; }
+
+    section form input:first-child { margin-top: 0; }
+    section form button.getup-sprite { margin: 30px 0 0 260px; }
+}
 
 /* ==========================================================================
    Helper classes
