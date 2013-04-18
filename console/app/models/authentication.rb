@@ -1,4 +1,8 @@
-class Authentication
+class Authentication < ActiveResource::Base
+
+  schema do
+    string :id, :login, :password
+  end
 
   def initialize(login, password)
     @login = login
@@ -6,11 +10,15 @@ class Authentication
   end
 
   def expired?
-    secret = Digest::SHA1.hexdigest(Console.config.authentication_session_key)
-    token = ActiveSupport::MessageEncryptor.new(secret).decrypt_and_verify(@token)
+    (Time.now.to_i - created_at > Console.config.authentication_session_expire.to_i)
+  end
 
-    created_at = token[-10..-1]
-    (Time.now.to_i - created_at.to_i > Console.config.authentication_session_expire.to_i)
+  def expires_in
+    Console.config.authentication_session_expire.to_i - (Time.now.to_i - created_at)
+  end
+
+  def update_expires
+    generate_token password
   end
 
   def generate_token(password)
@@ -28,7 +36,33 @@ class Authentication
     token[2..length].reverse
   end
 
+  def change_password(password, new_password)
+    uri = URI.parse "https://broker.getupcloud.com:443/getup/accounts/password_change/"
+
+    http = Net::HTTP.new uri.host, uri.port
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+    request = Net::HTTP::Post.new uri.request_uri 
+    request["Cookie"] = "csrftoken=getup"
+    request.set_form_data({ :email => @login, :old_password => password, :new_password => new_password, :csrfmiddlewaretoken => 'getup' })
+
+    response = http.request request
+
+    generate_token new_password if response.code == '204'
+    
+    response
+  end
+
   def login
     @login
   end
+
+  private
+    def created_at
+      secret = Digest::SHA1.hexdigest(Console.config.authentication_session_key)
+      token = ActiveSupport::MessageEncryptor.new(secret).decrypt_and_verify(@token)
+
+      token[-10..-1].to_i
+    end
 end
