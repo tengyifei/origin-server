@@ -9,9 +9,10 @@
     font-style: normal;
 }
 
-.sprite { background: url(http://getupcloud.com/img/sprite.png) no-repeat; text-indent: -5000em; }
-
 .getup { border-bottom: 5px solid #FF4C4D; min-height: 125px; background: #fff url('http://getupcloud.com/img/header.png') no-repeat top center; }
+
+.getup .sprite { background: url(http://getupcloud.com/img/sprite.png) no-repeat; text-indent: -5000em; }
+
 .getup .logo { width: 182px; height: 81px; margin: 0; border-top: 5px solid #FF4C4D; background-position: 0 0; }
 .getup .app { position: absolute; top: 49px; left: 161px; margin: 0; line-height: 34px; font-family: 'ostrich black'; font-size: 34px; color: #2D2D2D; }
 
