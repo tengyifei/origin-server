@@ -12,12 +12,11 @@ module Console::Auth::Session
     include ActiveModel::Conversion
 
     def initialize(login, password)
-      #opts.each_pair { |key,value| instance_variable_set("@#{key}", value) }
       @login = login
       @password = password
 
-      authorization = ActionController::HttpAuthentication::Basic.encode_credentials(login, password)
-      headers = {'X-Remote-User' => login, 'Authorization' => authorization}
+      authorization = ActionController::HttpAuthentication::Basic.encode_credentials login, password
+      headers = {'Authorization' => authorization}
 
       @headers = headers.freeze
     end
