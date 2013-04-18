@@ -53,6 +53,8 @@ module Console::Auth::Session
     authentication = session[:authentication]
     return console_access_expired if authentication.expired?
 
+    authentication.update_expires
+
     @authenticated_user = SessionUser.new authentication.login, authentication.password
   end
 
