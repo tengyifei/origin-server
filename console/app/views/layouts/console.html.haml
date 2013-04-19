@@ -12,7 +12,7 @@
 
   %body{ :class => "console #{controller.controller_name} #{controller.action_name}" }
 
-    %header
+    %header.getup
       = render 'layouts/console/header'
 
     .section-console#content{:class => content_for?(:dark_layout) ? '' : 'section-console-light'}

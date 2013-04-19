@@ -25,10 +25,10 @@
   %body{ :class => "console #{controller.controller_name} #{controller.action_name}" }
 
     %div.content
-      %header
+      %header.getup
         .wrap
-          %h1.sprite Getup
-          %h2 Openshift Console
+          %h1.getup-sprite.logo Getup
+          %h2.app Openshift Console
 
       %section
         %div.signin
@@ -39,7 +39,7 @@
               = email_field_tag 'login', '', :placeholder => "Login", :required => ''
               = password_field_tag 'password', '', :placeholder => "Password", :required => ''
 
-              %button.sprite Sign in
+              %button.getup-sprite Sign in
               
         = flashes
 

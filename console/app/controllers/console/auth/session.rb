@@ -11,20 +11,24 @@ module Console::Auth::Session
     extend ActiveModel::Naming
     include ActiveModel::Conversion
 
-    def initialize(username, password)
-      @username = username
+    def initialize(login, password)
+      @login = login
       @password = password
-      @headers = { Console.config.session_user_name => username }.freeze
+
+      authorization = ActionController::HttpAuthentication::Basic.encode_credentials login, password
+      headers = {'Authorization' => authorization}
+
+      @headers = headers.freeze
     end
-    def login
-      @username
-    end
+
     def email_address
       nil
     end
+
     def to_headers
       @headers
     end
+
     def persisted?
       false
     end
@@ -49,7 +53,9 @@ module Console::Auth::Session
     authentication = session[:authentication]
     return console_access_expired if authentication.expired?
 
-    @authenticated_user = SessionUser.new(authentication.login, authentication.password)
+    authentication.update_expires
+
+    @authenticated_user = SessionUser.new authentication.login, authentication.password
   end
 
   def user_signed_in?

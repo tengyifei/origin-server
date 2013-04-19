@@ -44,9 +44,10 @@ module ActionDispatch::Routing
 
       def openshift_account_routes
         # Account specific resources
-        resource :account,
-                 :controller => :account,
-                 :only => [:show]
+        resource :account, :controller => :account, :only => [:show] do
+          get 'password' => 'account#password'
+          post 'password' => 'account#update_password'
+        end
 
         scope 'account' do
           openshift_account_resource_routes
@@ -62,7 +63,7 @@ module ActionDispatch::Routing
 
       def openshift_authentication_routes
         # Authentication specific resources
-        resource :authentication, :only => [:new, :create, :destroy]
+        resource :authentication, :only => [:new]
 
         match 'signin' => 'authentication#signin', :via => :get, :format => false
         match 'signout' => 'authentication#signout', :via => :get, :format => false
