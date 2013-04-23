@@ -3,11 +3,15 @@ module Console::HelpHelper
   # Given a relative path within the user guide, display the topic
   def user_guide_topic_url(topic)
     locale = 'en-US'
-    "http://access.redhat.com/knowledge/docs/#{locale}/OpenShift_Enterprise/1/html/User_Guide/#{topic}"
+    "http://access.redhat.com/knowledge/docs/#{locale}/OpenShift/2.0/html/User_Guide/#{topic}"
   end
 
   def user_guide_url
     user_guide_topic_url 'index.html'
+  end
+
+  def newsletter_signup_url
+    community_base_url 'newsletter/signup'
   end
 
   def ssh_keys_help_path
@@ -19,9 +23,9 @@ module Console::HelpHelper
   end
 
   def add_domains_user_guide_topic_url
-    user_guide_topic_url 'sect-OpenShift-User_Guide-OpenShift_Web_Interface-Managing_Your_Namespace.html'
+    user_guide_topic_url 'sect-OpenShift-User_Guide-Working_With_Namespaces.html'
   end
-  
+
   def cartridge_list_url
     community_base_url 'developers/technologies'
   end
@@ -29,7 +33,7 @@ module Console::HelpHelper
   def get_involved_url
     community_base_url 'get-involved'
   end
-  
+
   def suggest_features_url
     community_base_url 'ideas'
   end
@@ -44,6 +48,10 @@ module Console::HelpHelper
 
   def get_involved_developers_url
     community_base_url 'developers/get-involved'
+  end
+
+  def partners_url
+    community_base_url 'partners'
   end
 
   def get_started_quickstart_url
@@ -83,9 +91,9 @@ module Console::HelpHelper
   end
 
   def events_url
-    community_base_url 'events/'
+    community_base_url 'events'
   end
-  
+
   def jenkins_help_url
     community_base_url 'jenkins'
   end
@@ -146,6 +154,10 @@ module Console::HelpHelper
     community_base_url 'developers/scaling'
   end
 
+  def storage_help_url
+    community_base_url 'faq/what-is-add-on-storage'
+  end
+
   def user_guide_url
     user_guide_topic_url 'index.html'
   end
@@ -185,8 +197,8 @@ module Console::HelpHelper
     "http://git-scm.com/"
   end
 
-  def pricing_url
-    community_base_url 'developers/pricing'
+  def pricing_url(opts = nil)
+    community_base_url 'developers/pricing', opts
   end
 
   def legal_url
@@ -221,6 +233,14 @@ module Console::HelpHelper
     community_base_url 'policy/tax-exemptions'
   end
 
+  def create_quickstart_url
+    community_base_url 'node/add/quickstart'
+  end
+
+  def community_quickstarts_url
+    community_base_url 'quickstarts'
+  end
+
   def console_help_links
     [
       {:href => developers_url,
@@ -238,21 +258,16 @@ module Console::HelpHelper
     [
       {:href => community_base_url('faq/how-do-i-start-a-new-forum-discussion'),
        :name => 'How do I start a new Forum discussion?'},
-      {:href => community_base_url('faq/how-do-i-install-the-rhc-client-tools-on-windows'), 
+      {:href => community_base_url('faq/how-do-i-install-the-rhc-client-tools-on-windows'),
        :name => 'How do I install the rhc client tools on Windows?'}
     ]
   end
 
-  def community_path
-    community_base_url('')
+  def enterprise_evaluation_request_url
+    community_base_url 'page/openshift-enterprise-online-evaluation-request'
   end
 
-  def community_url
-    community_path
+  def resource_request_url
+    community_base_url 'page/resource-request-form'
   end
-
-  private
-    def community_base_url(path, opts=nil)
-      "https://openshift.redhat.com/community/#{path}#{opts && opts[:anchor] ? "##{opts[:anchor]}" : ""}"
-    end
 end
