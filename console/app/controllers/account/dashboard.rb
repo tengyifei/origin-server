@@ -27,8 +27,9 @@ module Account
       return redirect_to password_account_path, :flash => {:error => 'Invalid password.'} unless (old_password == authentication.password)
 
       response = authentication.change_password old_password, new_password
+      response_code = response.code.to_i
 
-      flash = if response.code == '204'
+      flash = if response_code >= 200 and response_code < 400
         {:success => 'Your password has been changed.'}
       else
         {:error => 'Your password cannot be changed'}
