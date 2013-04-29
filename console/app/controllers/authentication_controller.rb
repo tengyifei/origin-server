@@ -25,8 +25,17 @@ class AuthenticationController < Console.config.parent_controller.constantize
   end
 
   def update_password
-    Authentication.update_password params[:password], session[:token]
-    flash[:success] = "New password saved."
+    if params[:password] != params[:'verify-password']
+      redirect_to signin
+    end
+
+    updated = Authentication.update_password params[:password], session[:token]
+
+    if updated
+      flash[:success] = "New password saved."
+    else
+      flash[:error] = "Error to save your new password."
+    end
 
     redirect_to signin_path    
   end

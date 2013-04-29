@@ -73,19 +73,17 @@ class Authentication < ActiveResource::Base
   def self.update_password(password, token)
     uri = URI.parse "http://broker.getupcloud.com:443/getup/accounts/password_reset/" + token + "/"
 
-    print uri
-
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
     request = Net::HTTP::Post.new uri.request_uri 
     request["Cookie"] = "csrftoken=getup"
-    request.set_form_data({ :password => password, :csrfmiddlewaretoken => 'getup' })
+    request.set_form_data({ :new_password => password, :csrfmiddlewaretoken => 'getup' })
 
     response = http.request request
 
-    response
+    response.code == '200'
   end
 
   def login
