@@ -282,10 +282,10 @@ module Console::HelpHelper
   end
 
   def support_url
-    support_url 'https://getup.zendesk.com/home'
+    'https://getup.zendesk.com/home'
   end
 
   def getupcloud_url
-    support_url 'http://getupcloud.com'
+    'http://getupcloud.com'
   end
 end
