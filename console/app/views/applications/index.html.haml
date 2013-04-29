@@ -40,11 +40,11 @@
             %li= link_to l[:name], l[:href]
           %li= link_to 'More help »', console_help_path
 
-        %h5 Popular FAQs
+        %h5 Popular Tips
         %ul.unstyled
           - console_faq_links.each do |l|
             %li= link_to l[:name], l[:href]
-          %li= link_to 'More FAQs »', faq_url
+          %li= link_to 'More Tips »', faq_url
 
 -# FIXME: Refactor me into an unobtrusive javascript function
 - content_for :javascripts do
