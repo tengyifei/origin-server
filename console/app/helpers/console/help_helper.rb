@@ -280,4 +280,12 @@ module Console::HelpHelper
   def resource_request_url
     community_base_url 'page/resource-request-form'
   end
+
+  def support_url
+    support_url 'https://getup.zendesk.com/home'
+  end
+
+  def getupcloud_url
+    support_url 'http://getupcloud.com'
+  end
 end
