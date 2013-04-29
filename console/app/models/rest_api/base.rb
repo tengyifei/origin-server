@@ -541,8 +541,6 @@ module RestApi
         if options[:as]
           UserAwareConnection.new(c, options[:as])
         elsif allow_anonymous?
-          # FIXME
-          self.headers['User-Agent'] = "openshift_console/#{Console::VERSION::STRING} (ruby #{RUBY_VERSION}; #{RUBY_PLATFORM})"          
           c
         else
           raise RestApi::MissingAuthorizationError

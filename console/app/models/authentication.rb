@@ -54,6 +54,44 @@ class Authentication < ActiveResource::Base
     response
   end
 
+  def self.reset_password(email)
+    uri = URI.parse "https://broker.getupcloud.com:443/getup/accounts/password_reset/"
+
+    http = Net::HTTP.new uri.host, uri.port
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+    request = Net::HTTP::Post.new uri.request_uri 
+    request["Cookie"] = "csrftoken=getup"
+    request.set_form_data({ :email => email, :csrfmiddlewaretoken => 'getup' })
+
+    response = http.request request
+
+    generate_token new_password if response.code == '204'
+    
+    response
+  end
+
+  def self.update_password(password, token)
+    uri = URI.parse "http://broker.getupcloud.com:443/getup/accounts/password_reset/" + token + "/"
+
+    print uri
+
+    http = Net::HTTP.new uri.host, uri.port
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+    request = Net::HTTP::Post.new uri.request_uri 
+    request["Cookie"] = "csrftoken=getup"
+    request.set_form_data({ :password => password, :csrfmiddlewaretoken => 'getup' })
+
+    response = http.request request
+
+    generate_token new_password if response.code == '204'
+    
+    response
+  end
+
   def login
     @login
   end

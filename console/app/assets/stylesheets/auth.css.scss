@@ -678,12 +678,12 @@ section form input.invalid:-ms-input-placeholder
 }
 
 section form button.getup-sprite { border: 0; float: left; padding-left: 16px; text-indent: 0; font-family: 'ostrich medium'; font-size: 38px; line-height: 44px; color: #00FFF5; background-position: -40px -269px; cursor: pointer; }
+section form a { margin: 10px 0 0 395px; clear: both; display: inline-block; color: #00FFF5; font-weight: normal; font-size: 12px; }
 
 #flash { margin-top: 20px; }
 #flash .alert { font-size: 11px; text-align: center; text-transform: uppercase; }
 #flash .alert-error { color: #FF4C4D; }
 #flash .alert-success { color: #00FFF5; }
-
 
 @media (max-width: 767px) {
 
@@ -694,6 +694,8 @@ section form button.getup-sprite { border: 0; float: left; padding-left: 16px; t
 
     section form input:first-child { margin-top: 0; }
     section form button.getup-sprite { margin-top: 30px; }
+
+    section form a { margin: 0 auto; display: block; width: 125px; }
 }
 
 /* ==========================================================================

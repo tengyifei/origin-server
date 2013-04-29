@@ -68,6 +68,14 @@ module ActionDispatch::Routing
         match 'signin' => 'authentication#signin', :via => :get, :format => false
         match 'signout' => 'authentication#signout', :via => :get, :format => false
         match 'auth' => 'authentication#auth', :via => :post, :format => false
+
+        match 'password_reset/*token' => 'authentication#change_password', :via => :get, :format => false
+
+        scope 'password' do
+          get 'change/*token' => 'authentication#change_password', :format => false
+          post 'reset' => 'authentication#send_token', :format => false
+          post 'update' => 'authentication#update_password', :format => false
+        end
       end      
   end
 end
