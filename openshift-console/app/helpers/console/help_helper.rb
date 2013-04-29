@@ -83,7 +83,7 @@ module Console::HelpHelper
   end
 
   def client_tools_install_help_url
-    community_base_url 'developers/install-the-client-tools'
+    community_base_url 'entries/23056511'
   end
 
   def client_tools_help_url
@@ -111,7 +111,7 @@ module Console::HelpHelper
   end
 
   def forums_url
-    community_base_url 'forums/openshift'
+    community_base_url 'forums'
   end
 
   def knowledge_base_url
@@ -202,7 +202,7 @@ module Console::HelpHelper
   end
 
   def cli_on_windows_user_guide_topic_url
-    community_base_url 'developers/install-the-client-tools#windows'
+    community_base_url 'entries/23056511#windows'
   end
 
   def git_homepage_url
@@ -257,7 +257,7 @@ module Console::HelpHelper
     [
       {:href => user_guide_url,
        :name => 'OpenShift User Guide'},
-      {:href => getting_started_path,
+      {:href => client_tools_install_help_url,
        :name => 'Installing OpenShift client tools on Mac OSX, Linux, and Windows'},
       {:href => sync_git_with_remote_repo_knowledge_base_url,
        :name => 'Sync your OpenShift repo with an existing Git repo'}
@@ -268,8 +268,10 @@ module Console::HelpHelper
     [
       {:href => community_base_url('entries/23042806'),
        :name => 'How do I start a new Forum discussion?'},
-      {:href => community_base_url('entries/23056511'),
-       :name => 'How do I install the rhc client tools on Windows?'}
+      {:href => cli_on_windows_user_guide_topic_url,
+       :name => 'How do I install the rhc client tools on Windows?'},
+      {:href => community_base_url('entries/23042806'),
+       :name => 'How to publish my site files? What tools should I use?'}
     ]
   end
 
