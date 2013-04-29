@@ -48,8 +48,9 @@ class Authentication < ActiveResource::Base
     request.set_form_data({ :email => @login, :old_password => password, :new_password => new_password, :csrfmiddlewaretoken => 'getup' })
 
     response = http.request request
+    response_code = response.code
 
-    generate_token new_password if response.code == '204'
+    generate_token new_password if response_code >= 200 and response_code < 400
     
     response
   end
@@ -82,8 +83,9 @@ class Authentication < ActiveResource::Base
     request.set_form_data({ :new_password => password, :csrfmiddlewaretoken => 'getup' })
 
     response = http.request request
+    response_code = response.code.to_i
 
-    response.code == '200'
+    response_code >= 200 and response_code < 400
   end
 
   def login
