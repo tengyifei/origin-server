@@ -11,15 +11,27 @@ module Console::HelpHelper
   end
 
   def newsletter_signup_url
-    community_base_url 'newsletter/signup'
+    'http://eepurl.com/yxiAr'
+  end
+
+  def feature_request_path
+    community_base_url 'forums/21724148'
+  end
+
+  def forum_path
+    community_base_url 'forums'
+  end
+ 
+  def getup_community_path
+    community_base_url 'forums/21724128'
   end
 
   def ssh_keys_help_path
-    community_base_url 'developers/remote-access#keys'
+    community_base_url 'entries/23649786'
   end
 
   def deploy_hook_user_guide_topic_url
-    community_base_url 'developers/deploying-and-building-applications'
+    community_base_url 'entries/23042806'
   end
 
   def add_domains_user_guide_topic_url
@@ -107,7 +119,7 @@ module Console::HelpHelper
   end
 
   def faq_url
-   community_base_url 'faq'
+   community_base_url 'forums/21706392'
   end
 
   def signup_faq_url
@@ -123,7 +135,7 @@ module Console::HelpHelper
   end
 
   def sync_git_with_remote_repo_knowledge_base_url
-    community_base_url 'kb/kb-e1006-sync-new-express-git-repo-with-your-own-existing-git-repo'
+    community_base_url 'entries/23649496'
   end
 
   def rails_quickstart_guide_url
@@ -163,7 +175,7 @@ module Console::HelpHelper
   end
 
   def getting_started_path(opts=nil)
-    community_base_url "get-started", opts
+    community_base_url "entries/23660343"
   end
 
   def product_overview_path(opts=nil)
@@ -243,8 +255,6 @@ module Console::HelpHelper
 
   def console_help_links
     [
-      {:href => developers_url,
-       :name => 'Developer Center'},
       {:href => user_guide_url,
        :name => 'OpenShift User Guide'},
       {:href => getting_started_path,
@@ -256,9 +266,9 @@ module Console::HelpHelper
 
   def console_faq_links
     [
-      {:href => community_base_url('faq/how-do-i-start-a-new-forum-discussion'),
+      {:href => community_base_url('entries/23042806'),
        :name => 'How do I start a new Forum discussion?'},
-      {:href => community_base_url('faq/how-do-i-install-the-rhc-client-tools-on-windows'),
+      {:href => community_base_url('entries/23056511'),
        :name => 'How do I install the rhc client tools on Windows?'}
     ]
   end
