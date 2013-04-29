@@ -266,8 +266,8 @@ module Console::HelpHelper
 
   def console_faq_links
     [
-      {:href => community_base_url('entries/23042806'),
-       :name => 'How do I start a new Forum discussion?'},
+      {:href => community_base_url('entries/23608756'),
+       :name => 'How to use my own domain?'},
       {:href => cli_on_windows_user_guide_topic_url,
        :name => 'How do I install the rhc client tools on Windows?'},
       {:href => community_base_url('entries/23042806'),
