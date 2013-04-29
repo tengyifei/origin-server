@@ -67,8 +67,6 @@ class Authentication < ActiveResource::Base
 
     response = http.request request
 
-    generate_token new_password if response.code == '204'
-    
     response
   end
 
@@ -87,8 +85,6 @@ class Authentication < ActiveResource::Base
 
     response = http.request request
 
-    generate_token new_password if response.code == '204'
-    
     response
   end
 
