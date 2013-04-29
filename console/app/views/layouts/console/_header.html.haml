@@ -4,7 +4,6 @@
 
       %ul.navbar-text.pull-right#utility-nav
         %li.hidden-phone= link_to "Community", community_url, :class => 'community'
-        %li.hidden-phone= link_to "Developer Center", developers_url, :class => 'developer'
         - if Console.config.disable_account
           %li.hidden-phone= link_to "Sign Out", logout_path, :class => "sign_out"
         - elsif logout_path.nil?
