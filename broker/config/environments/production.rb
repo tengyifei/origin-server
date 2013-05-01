@@ -78,7 +78,8 @@ Broker::Application.configure do
     :community_quickstarts_url => conf.get("COMMUNITY_QUICKSTARTS_URL"),
     :scopes => ['Scope::Session', 'Scope::Read', 'Scope::Application', 'Scope::Userinfo'],
     :default_scope => 'userinfo',
-    :scope_expirations => OpenShift::Controller::Configuration.parse_expiration(conf.get('AUTH_SCOPE_TIMEOUTS'), 1.day)
+    :scope_expirations => OpenShift::Controller::Configuration.parse_expiration(conf.get('AUTH_SCOPE_TIMEOUTS'), 1.day),
+    :blacklist => conf.get("BLACKLISTED_WORDS", "").split(",")
   }
 
   config.auth = {
