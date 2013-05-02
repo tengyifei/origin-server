@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Creates a S3 instance
+
+# Exit on any errors
+set -e
+
+function print_help {
+    echo "Usage: $0 app-name namespace uuid git-url"
+
+    echo "$0 $@" | logger -p local0.notice -t openshift_origin_s3_configure
+    exit 1
+}
+
+while getopts 'd' OPTION
+do
+    case $OPTION in
+        d) set -x
+        ;;
+        ?) print_help
+        ;;
+    esac
+done
+
+
+[ $# -eq 4 -o $# -eq 3 ] || print_help
+CART_NAME="s3"
+CART_VERSION="0.1"
+cartridge_type="$CART_NAME-$CART_VERSION"
+source "/etc/openshift/node.conf"
+source ${CARTRIDGE_BASE_PATH}/abstract/info/lib/util
+
+setup_embedded_configure "$1" $2 $3 $4
+disable_cgroups
+
+create_cartridge_instance_dir "$cartridge_type"
+
+#
+# Create the core of the application
+#
+
+S3_INSTANCE_DIR=$(get_cartridge_instance_dir "$cartridge_type")
+S3_DIR=$S3_INSTANCE_DIR/s3
+pushd "$S3_INSTANCE_DIR" > /dev/null
+mkdir -p $S3_DIR
+popd > /dev/null
+
+secure_app_dir
+secure_cart_instance_dir
+
+#
+# Create environment variables
+#
+mkdir $S3_DIR
+S3_PREFIX_URL='https://s3-us-west-2.amazonaws.com/mateus-caruccio/'
+
+echo "export OPENSHIFT_S3_DIR='$S3_DIR'" > $APP_HOME/.env/OPENSHIFT_S3_DIR
+echo "export OPENSHIFT_S3_PREFIX_URL='$S3_DIR'" > $APP_HOME/.env/OPENSHIFT_S3_DIR
+
+client_result ''
+client_result 'Amazon S3 is setup to your gear.'
+client_result 'Now drop your assets inside dir s3/ on the root of your application.'
+client_result 'Any files there will be automatically uploaded to Amazon S3.'
+client_result 'Assets are reached by prefixing its URLs with $OPENSHIFT_S3_PREFIX_URL'
+client_result ''
+client_result 'For example, instead:'
+client_result '   <img src="/media/logo.png">'
+client_result 'now you should use:'
+client_result '   <img src=<?php echo $_ENV["OPENSHIFT_S3_PREFIX_URL"] ?>/media/logo.logo.png>'
+client_result ''
+
+enable_cgroups

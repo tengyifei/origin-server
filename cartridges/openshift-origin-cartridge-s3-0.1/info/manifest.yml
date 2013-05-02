@@ -1,0 +1,25 @@
+Name: s3-0.1
+Namespace: S3
+Display-Name: Amazon S3
+Description: "The Amazon S3 embeded cartridge will provide predefined credentials for an Amazon S3 bucket for your application. It will upload the exact same structure found inside your $OPENSHIFT_S3_DIR/ into that bucket."
+Version: 0.1
+License: "ASL 2.0"
+License-Url: http://www.apache.org/licenses/LICENSE-2.0.txt
+Categories:
+  - embedded
+Website:
+Help-Topics:
+  "Getting Started": See https://getup.zendesk.com/ for help
+Cart-Data:
+  - Key: OPENSHIFT_S3_DIR
+    Type: environment
+    Description: "Directory to store files to upload."
+  - Key: OPENSHIFT_S3_PREFIX_URL
+    Type: environment
+    Description: "Prefix URL where your files sit."
+Provides:
+  - s3-0.1
+  - s3
+Scaling:
+  Min: 1
+  Max: 1
