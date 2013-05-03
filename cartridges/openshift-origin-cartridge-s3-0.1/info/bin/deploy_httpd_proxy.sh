@@ -20,9 +20,9 @@ IP=$4
 
 source "/etc/openshift/node.conf"
 
-oo-frontend-connect \
-    --with-container-uuid "$uuid" \
-    --with-container-name "$application" \
-    --with-namespace "$namespace" \
-    --path "" --target "$IP:8080" --websocket \
-    --path "/health" --target "${CARTRIDGE_BASE_PATH}/diy-0.1/info/configuration/health.html" --file
+#oo-frontend-connect \
+#    --with-container-uuid "$uuid" \
+#    --with-container-name "$application" \
+#    --with-namespace "$namespace" \
+#    --path "" --target "$IP:8080" --websocket \
+#    --path "/health" --target "${CARTRIDGE_BASE_PATH}/s3-0.1/info/configuration/health.html" --file

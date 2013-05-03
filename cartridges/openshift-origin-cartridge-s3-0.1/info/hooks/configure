@@ -39,11 +39,8 @@ create_cartridge_instance_dir "$cartridge_type"
 # Create the core of the application
 #
 
-S3_INSTANCE_DIR=$(get_cartridge_instance_dir "$cartridge_type")
-S3_DIR=$S3_INSTANCE_DIR/s3
-pushd "$S3_INSTANCE_DIR" > /dev/null
-mkdir -p $S3_DIR
-popd > /dev/null
+S3_DIR=$OPENSHIFT_DATA_DIR/s3
+mkdir $S3_DIR
 
 secure_app_dir
 secure_cart_instance_dir
@@ -51,7 +48,6 @@ secure_cart_instance_dir
 #
 # Create environment variables
 #
-mkdir $S3_DIR
 S3_PREFIX_URL='https://s3-us-west-2.amazonaws.com/mateus-caruccio/'
 
 echo "export OPENSHIFT_S3_DIR='$S3_DIR'" > $APP_HOME/.env/OPENSHIFT_S3_DIR
