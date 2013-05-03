@@ -2,7 +2,7 @@
 
 Summary:       Provides s3 support
 Name:          openshift-origin-cartridge-s3-0.1
-Version:       0.0.0
+Version:       0.0.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -86,3 +86,6 @@ ln -s %{cartridgedir}/../abstract/info/bin/sync_gears.sh %{buildroot}%{cartridge
 
 
 %changelog
+* Fri May 03 2013 Unknown name 0.0.1-1
+- new package built with tito
+
