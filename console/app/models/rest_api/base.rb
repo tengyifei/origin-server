@@ -27,7 +27,7 @@ module Net
         remove_method :__new__
       end
     end
-    self.enable_debug!
+    #self.enable_debug!
   end
 end
 
