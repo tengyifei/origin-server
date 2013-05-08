@@ -290,4 +290,7 @@ module Console::HelpHelper
   def getupcloud_url
     'http://getupcloud.com'
   end
+  def alias_docs_url
+    community_base_url 'blogs/custom-url-names-for-your-paas-applications-host-forwarding-and-cnames-the-openshift-way'
+  end
 end
