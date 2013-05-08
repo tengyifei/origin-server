@@ -58,7 +58,7 @@ OpenshiftConsole::Application.configure do
   config.assets.initialize_on_precompile = false
   config.assets.compress = true
   config.assets.js_compressor = :uglifier
-  config.assets.precompile += %w(common.css origin.css console.js modernizr.min.js openshift-icon.css auth.css auth.js auth_reset.js)
+  config.assets.precompile += %w(common.css origin.css console.js modernizr.min.js auth.css auth.js auth_reset.js)
 
   Console.configure(ENV['CONSOLE_CONFIG_FILE'] || '/etc/openshift/console.conf')
 end
