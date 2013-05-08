@@ -1,7 +1,7 @@
 module Console::CommunityHelper
 
   def irc_web_url
-    'http://webchat.freenode.net/?randomnick=1&channels=openshift&uio=d4'
+    'http://webchat.freenode.net/?randomnick=1&channels=getupcloud&uio=d4'
   end
 
   def link_to_irc
@@ -13,7 +13,11 @@ module Console::CommunityHelper
   end
 
   def openshift_twitter_url
-    'http://twitter.com/openshift'
+    'http://twitter.com/getupcloud'
+  end
+
+  def getup_facebook_url
+    'http://fb.com/getupcloud'
   end
 
   def openshift_ops_twitter_url
@@ -30,10 +34,6 @@ module Console::CommunityHelper
 
   def stack_overflow_url
     'http://stackoverflow.com/questions/tagged/openshift/'
-  end
-
-  def stack_overflow_link
-    link_to "StackOverflow", stack_overflow_url
   end
 
   def client_tools_url

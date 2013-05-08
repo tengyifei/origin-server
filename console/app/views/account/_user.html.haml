@@ -3,3 +3,11 @@
 
   %p
     You are authenticated to the server <strong>#{broker_host}</strong> with the login <strong>#{current_user_id}</strong>.
+
+  %h2 Change password
+
+  %p
+    Allow to change your Getup account password.
+
+  .btn-toolbar
+    = link_to "Change password...", password_account_path, :class => 'btn btn-small btn-danger'

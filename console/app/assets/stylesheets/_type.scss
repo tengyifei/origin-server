@@ -1,7 +1,16 @@
 // Typography.scss
 // Headings, body text, lists, code, and more for a versatile and durable typography system
 // ----------------------------------------------------------------------------------------
-
+@font-face {
+    font-family: 'ostrich medium';
+    src: url('http://getupcloud.com/fonts/ostrich-regular-webfont.eot');
+    src: url('http://getupcloud.com/fonts/ostrich-regular-webfont.eot?#iefix') format('embedded-opentype'),
+         url('http://getupcloud.com/fonts/ostrich-regular-webfont.woff') format('woff'),
+         url('http://getupcloud.com/fonts/ostrich-regular-webfont.ttf') format('truetype'),
+         url('http://getupcloud.com/fonts/ostrich-regular-webfont.svg#ostrich_sansmedium') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
 
 // BODY TEXT
 // ---------

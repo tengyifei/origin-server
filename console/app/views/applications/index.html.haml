@@ -25,7 +25,7 @@
           %span.tile-arrow.font-icon{"aria-hidden" => "true", "data-icon" => "\ue007"}
 
   .btn-toolbar.base.right
-    = link_to application_types_path, :class => 'btn btn-primary btn-large' do
+    = link_to application_types_path, :class => 'btn btn-danger btn-large' do
       Add
       %strong Application
       %i.icon-add
@@ -34,7 +34,7 @@
   .digest-bg
     %aside#secondary
       #assistance
-        %h5 OpenShift Help
+        %h5 Getup Help
         %ul.unstyled
           - console_help_links.each do |l|
             %li= link_to l[:name], l[:href]

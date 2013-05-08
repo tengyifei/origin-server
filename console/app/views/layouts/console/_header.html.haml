@@ -3,8 +3,7 @@
     .container
 
       %ul.navbar-text.pull-right#utility-nav
-        %li.hidden-phone= link_to "Community", community_url, :class => 'community'
-        %li.hidden-phone= link_to "Developer Center", developers_url, :class => 'developer'
+        %li.hidden-phone= link_to "Forum", forums_url, :class => 'community'
         - if Console.config.disable_account
           %li.hidden-phone= link_to "Sign Out", logout_path, :class => "sign_out"
         - elsif logout_path.nil?
@@ -24,10 +23,8 @@
 
       .brand
         = link_to root_path do
-          = product_branding
-
-        %span.navbar-text.headline 
-          Management Console
+          %h1.sprite-sprite.logo Getup
+        %h2.app Openshift Console
 
       .nav-collapse.collapse
         = navigation_tabs do
