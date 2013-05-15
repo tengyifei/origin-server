@@ -23,7 +23,7 @@ module Console::HelpHelper
   end
 
   def add_domains_user_guide_topic_url
-    user_guide_topic_url 'sect-OpenShift-User_Guide-Working_With_Namespaces.html'
+    user_guide_topic_url 'chap-OpenShift-User_Guide-Namespaces.html'
   end
 
   def cartridge_list_url
@@ -84,6 +84,10 @@ module Console::HelpHelper
 
   def developers_get_started_path
     community_base_url 'developers/get-started'
+  end
+
+  def downloadable_cartridges_help_url
+    community_base_url 'developers/download-cartridges'
   end
 
   def livecd_wiki_url(anchor=nil)

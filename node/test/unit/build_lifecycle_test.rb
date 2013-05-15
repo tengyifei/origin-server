@@ -17,23 +17,13 @@
 #
 # Test the OpenShift application_container model
 #
+require_relative '../test_helper'
+require 'fileutils'
+require 'yaml'
+
 module OpenShift
   ;
 end
-
-require 'test_helper'
-require 'openshift-origin-node/model/application_container'
-require 'openshift-origin-node/model/application_repository'
-require 'openshift-origin-node/model/v2_cart_model'
-require 'openshift-origin-node/model/unix_user'
-require 'openshift-origin-node/model/default_builder'
-require 'openshift-origin-node/utils/application_state'
-require 'openshift-origin-node/utils/environ'
-require 'openshift-origin-common'
-require 'test/unit'
-require 'fileutils'
-require 'yaml'
-require 'mocha'
 
 class BuildLifecycleTest < Test::Unit::TestCase
 
@@ -63,6 +53,9 @@ class BuildLifecycleTest < Test::Unit::TestCase
 
     @container = OpenShift::ApplicationContainer.new(@gear_uuid, @gear_uuid, @user_uid,
         @app_name, @gear_uuid, @namespace, nil, nil, nil)
+
+    @frontend = mock('OpenShift::FrontendHttpServer')
+    OpenShift::FrontendHttpServer.stubs(:new).returns(@frontend)
   end
 
   def test_pre_receive_default_builder
@@ -71,7 +64,7 @@ class BuildLifecycleTest < Test::Unit::TestCase
     primary = mock()
     @cartridge_model.expects(:primary_cartridge).returns(primary)
 
-    @container.expects(:stop_gear).with(user_initiated: true, out: $stdout, err: $stderr)
+    @container.expects(:stop_gear).with(user_initiated: true, hot_deploy: nil, out: $stdout, err: $stderr)
     @cartridge_model.expects(:do_control).with('pre-receive',
                                                primary,
                                                out:                       $stdout,
@@ -90,10 +83,12 @@ class BuildLifecycleTest < Test::Unit::TestCase
 
     repository.expects(:deploy)
     @container.expects(:build).with(out: $stdout, err: $stderr)
-    @container.expects(:start_gear).with(secondary_only: true, user_initiated: true, out: $stdout, err: $stderr)
+    @container.expects(:start_gear).with(secondary_only: true, user_initiated: true, hot_deploy: nil, out: $stdout, err: $stderr)
     @container.expects(:deploy).with(out: $stdout, err: $stderr)
-    @container.expects(:start_gear).with(primary_only: true, user_initiated: true, out: $stdout, err: $stderr)
+    @container.expects(:start_gear).with(primary_only: true, user_initiated: true, hot_deploy: nil, out: $stdout, err: $stderr)
     @container.expects(:post_deploy).with(out: $stdout, err: $stderr)
+
+    @frontend.expects(:unprivileged_unidle)
 
     @container.post_receive(out: $stdout, err: $stderr)
   end
@@ -120,7 +115,15 @@ class BuildLifecycleTest < Test::Unit::TestCase
     @state.expects(:value=).with(OpenShift::State::BUILDING)
 
     primary = mock()
-    @cartridge_model.expects(:primary_cartridge).returns(primary).twice
+    @cartridge_model.expects(:primary_cartridge).returns(primary).times(3)
+
+    @cartridge_model.expects(:do_control).with('process-version',
+                                               primary,
+                                               pre_action_hooks_enabled:  false,
+                                               post_action_hooks_enabled: false,
+                                               out:                       $stdout,
+                                               err:                       $stderr)
+                                          .returns('process-version|')
 
     @cartridge_model.expects(:do_control).with('pre-build',
                                                primary,
@@ -140,7 +143,7 @@ class BuildLifecycleTest < Test::Unit::TestCase
 
     output = @container.build(out: $stdout, err: $stderr)
 
-    assert_equal "pre-build|build", output
+    assert_equal "process-version|pre-build|build", output
   end
 
   def test_deploy_no_web_proxy_success
@@ -210,9 +213,20 @@ class BuildLifecycleTest < Test::Unit::TestCase
   end
 
   def test_remote_deploy_success
-    @container.expects(:start_gear).with(secondary_only: true, user_initiated: true, out: $stdout, err: $stderr)
+    primary = mock()
+    @cartridge_model.expects(:primary_cartridge).returns(primary)
+    
+    @cartridge_model.expects(:do_control).with('process-version',
+                                               primary,
+                                               pre_action_hooks_enabled:  false,
+                                               post_action_hooks_enabled: false,
+                                               out:                       $stdout,
+                                               err:                       $stderr)
+                                          .returns('')
+
+    @container.expects(:start_gear).with(secondary_only: true, user_initiated: true, hot_deploy: nil, out: $stdout, err: $stderr)
     @container.expects(:deploy).with(out: $stdout, err: $stderr)
-    @container.expects(:start_gear).with(primary_only: true, user_initiated: true, out: $stdout, err: $stderr)
+    @container.expects(:start_gear).with(primary_only: true, user_initiated: true, hot_deploy: nil, out: $stdout, err: $stderr)
     @container.expects(:post_deploy).with(out: $stdout, err: $stderr)
 
     @container.remote_deploy(out: $stdout, err: $stderr)

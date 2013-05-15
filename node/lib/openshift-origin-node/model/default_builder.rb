@@ -26,8 +26,9 @@ module OpenShift
 
     def pre_receive(options)
       @container.stop_gear(user_initiated: true,
-                           out: options[:out],
-                           err: options[:err])
+                           hot_deploy:     options[:hot_deploy],
+                           out:            options[:out],
+                           err:            options[:err])
     end
 
     def post_receive(options)
@@ -38,6 +39,7 @@ module OpenShift
 
       @container.start_gear(secondary_only: true,
                             user_initiated: true,
+                            hot_deploy:     options[:hot_deploy],
                             out:            options[:out],
                             err:            options[:err])
 
@@ -46,8 +48,11 @@ module OpenShift
 
       @container.start_gear(primary_only:   true,
                             user_initiated: true,
+                            hot_deploy:     options[:hot_deploy],
                             out:            options[:out],
                             err:            options[:err])
+
+      FrontendHttpServer.new(@container.uuid).unprivileged_unidle
 
       @container.post_deploy(out: options[:out],
                              err: options[:err])

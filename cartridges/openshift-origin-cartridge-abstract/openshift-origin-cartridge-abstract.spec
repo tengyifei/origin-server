@@ -7,11 +7,11 @@
 
 Summary:       OpenShift common cartridge components
 Name:          openshift-origin-cartridge-abstract
-Version: 1.7.5
+Version: 1.9.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      rubygem(openshift-origin-node)
 Requires:      openshift-origin-node-util
@@ -90,6 +90,32 @@ cp -rv -p abstract-jboss %{buildroot}%{cartdir}/
 %doc %{_libexecdir}/openshift/cartridges/abstract-jboss/README.md
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Tue May 07 2013 Adam Miller <admiller@redhat.com> 1.8.5-1
+- Bug 960291 (bdecoste@gmail.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.8.4-1
+- Merge pull request #2338 from mrunalp/bugs/missing_pub_gear_hook
+  (dmcphers+openshiftbot@redhat.com)
+- Adding back the abstract publish-gear-endpoint hook. (mrunalp@gmail.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.8.3-1
+- Bugs 958709, 958744, 958757 (dmcphers@redhat.com)
+- Using post-configure to deploy quickstarts for v1 (dmcphers@redhat.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- Card 276 (asari.ruby@gmail.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- Bug 955492: Fix rsync command to correct hot deployment
+  (ironcladlou@gmail.com)
+- Bug 835778 (dmcphers@redhat.com)
+- Bug 954317 - rhcsh test for V1 vs V2 failed (jhonce@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
 * Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.5-1
 - SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
   ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)

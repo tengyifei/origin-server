@@ -1,4 +1,4 @@
-@runtime_other
+@runtime2
 Feature: V2 SDK Mock Cartridge
 
   Scenario: Exercise basic platform functionality in isolation
@@ -10,6 +10,15 @@ Feature: V2 SDK Mock Cartridge
     And the mock setup_called marker will exist
     And the mock setup_version marker will exist
     And the mock setup_failure marker will not exist
+    And the mock install_called marker will exist
+    And the mock install_version marker will exist
+    And the mock install_failure marker will not exist
+    And the mock post_setup_called marker will exist
+    And the mock post_setup_version marker will exist
+    And the mock post_setup_failure marker will not exist
+    And the mock post_install_called marker will exist
+    And the mock post_install_version marker will exist
+    And the mock post_install_failure marker will not exist
     And the mock-0.1 MOCK_VERSION env entry will exist
     And the mock-0.1 MOCK_EXAMPLE env entry will exist
     And the mock-0.1 MOCK_SERVICE_URL env entry will exist
@@ -18,13 +27,12 @@ Feature: V2 SDK Mock Cartridge
     And the "mock/mock_cart_locked_file" content does exist for mock-0.1
     And the "app-root/data/mock_gear_data_locked_file" content does exist for mock-0.1
     And the "invalid_locked_file" content does not exist for mock-0.1
-
-    When I start the newfangled application
-    Then the mock control_start marker will exist
+    And the mock control_start marker will exist
     And the mock action_hook_pre_start marker will exist
     And the mock action_hook_pre_start_mock marker will exist
     And the mock action_hook_post_start marker will exist
     And the mock action_hook_post_start_mock marker will exist
+    And the mock control_build marker will not exist
 
     When I status the mock-0.1 cartridge
     Then the mock control_status marker will exist
@@ -57,6 +65,8 @@ Feature: V2 SDK Mock Cartridge
     And a simple update is pushed to the application repo
     Then the mock control_stop marker will exist
     And the mock control_pre_receive marker will exist
+    And the mock control_process_version marker will exist
+    And the mock control_pre_build marker will exist
     And the mock control_build marker will exist
     And the mock control_deploy marker will exist
     And the mock control_start marker will exist
@@ -75,4 +85,3 @@ Feature: V2 SDK Mock Cartridge
 
     When I destroy the application
     Then the application git repo will not exist
-

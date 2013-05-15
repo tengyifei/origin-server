@@ -1,13 +1,12 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/v2/mysql
-%global frameworkdir %{_libexecdir}/openshift/cartridges/v2/mysql
 
 Summary:       Provides embedded mysql support
 Name:          openshift-origin-cartridge-mysql
-Version: 0.1.6
+Version: 0.3.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      mysql-server
 Requires:      mysql-devel
@@ -17,7 +16,7 @@ BuildArch:     noarch
 
 
 %description
-Provides mysql cartridge support to OpenShift
+Provides mysql cartridge support to OpenShift. (Cartridge Format V2)
 
 
 %prep
@@ -25,36 +24,70 @@ Provides mysql cartridge support to OpenShift
 
 
 %build
+%__rm %{name}.spec
 
 
 %install
-rm -rf %{buildroot}
-mkdir -p %{buildroot}%{cartridgedir}
-mkdir -p %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2
-cp -r * %{buildroot}%{cartridgedir}/
-ln -s %{cartridgedir}/conf/ %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2/%{name}
+%__rm -rf %{buildroot}
+%__mkdir -p %{buildroot}%{cartridgedir}
+%__cp -r * %{buildroot}%{cartridgedir}
 
+%post
+%{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
 %clean
-rm -rf %{buildroot}
+%__rm -rf %{buildroot}
 
 
 %files
 %defattr(-,root,root,-)
 %dir %{cartridgedir}
-%dir %{cartridgedir}/bin
-%dir %{cartridgedir}/conf
-%dir %{cartridgedir}/env
-%dir %{cartridgedir}/metadata
-%config(noreplace) %{cartridgedir}/conf/
 %attr(0755,-,-) %{cartridgedir}/bin/
-%attr(0755,-,-) %{frameworkdir}
-%{_sysconfdir}/openshift/cartridges/v2/%{name}
-%{cartridgedir}/metadata/manifest.yml
+%attr(0755,-,-) %{cartridgedir}
 %doc %{cartridgedir}/README.md
-
+%doc %{cartridgedir}/COPYRIGHT
+%doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.3.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 0.2.3-1
+- Special file processing (fotios@redhat.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 0.2.2-1
+- Env var WIP. (mrunalp@gmail.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 0.2.1-1
+- Merge pull request #2246 from ironcladlou/bz/955538
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2241 from pmorie/dev/v2_mysql
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2239 from jwhonce/wip/raw_envvar
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 955538: Don't fail on error in mysql control (ironcladlou@gmail.com)
+- Fix bug 956018 - communicate database name to broker for v2 mysql
+  (pmorie@gmail.com)
+- WIP Cartridge Refactor - cleanup in cartridges (jhonce@redhat.com)
+- Bug 956667 - Updated MySQL v2 cart to install with oo-admin-cartridge in
+  %%post (jdetiber@redhat.com)
+- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
+- implementing install and post-install (dmcphers@redhat.com)
+- WIP Cartridge Refactor - Change environment variable files to contain just
+  value (jhonce@redhat.com)
+- Adding V2 Format to all v2 cartridges (calfonso@redhat.com)
+- Merge pull request #2161 from pmorie/dev/v2_mysql
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- Move v2 mysql setup invocation marker to gear data directory
+  (pmorie@gmail.com)
+- V2 documentation refactoring (ironcladlou@gmail.com)
+- V2 cartridge documentation updates (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
+* Tue Apr 16 2013 Troy Dawson <tdawson@redhat.com> 0.1.7-1
+- Fix bug 927850 (pmorie@gmail.com)
+
 * Sun Apr 14 2013 Krishna Raman <kraman@gmail.com> 0.1.6-1
 - WIP Cartridge Refactor - Move PATH to /etc/openshift/env (jhonce@redhat.com)
 - WIP Cartridge Refactor - Scrub manifests (jhonce@redhat.com)

@@ -100,16 +100,7 @@ function set_env_var {
   [ ! -d $target ] && \
     error "Target directory must exist for environment variables" 64
 
-  target="${target}/${var}"
-
-  if [[ "$val" =~ ^[0-9]+$ ]]
-  then
-    str=$val
-  else
-    str="'$val'"
-  fi
-
-  echo "export ${var}=${str}" > $target
+  echo "$val" >"${target}/${var}"
 }
 
 # Generate a random string from /dev/urandom
@@ -123,9 +114,10 @@ function random_string {
 
   local len=${1-$DEFAULT_LEN}
   local space=${2-"${DEFAULT_SPACE}"}
+  local omit=${3-""}
 
   local rnd=$(head -n 50 /dev/urandom | tr -dc $space | fold -w $len)
-  [ "$3" ] && rnd=$(echo "${rnd}" | grep -v "${3}")
+  [ -n "${omit}" ] && rnd=$(echo "${rnd}" | grep -v "${omit}")
   echo $(echo "${rnd}" | head -n1)
 }
 
@@ -258,7 +250,7 @@ function set_uservars() {
             local name=$(echo "$line" | cut -f 1 -d '=')
             local value=$(echo "$line" | cut -f 2- -d '=')
             if [ -n "$name" ]; then
-                echo "export $name='$value'" > $OPENSHIFT_HOMEDIR/.env/.uservars/$name 
+                echo "$value" > $OPENSHIFT_HOMEDIR/.env/.uservars/$name
             fi
         done
     done
@@ -274,10 +266,37 @@ function hot_deploy_marker_is_present() {
 
 
 function primary_cartridge_name() {
-  for f in ~/.env/*
-  do
-      [ -f "$f" ]  &&  . "$f"
-  done
- 
-  cat $OPENSHIFT_PRIMARY_CARTRIDGE_DIR/env/OPENSHIFT_*_IDENT | awk -F: '{printf "%s-%s", $2, $3}'
+  awk -F: '{printf "%s-%s", $2, $3}' $OPENSHIFT_PRIMARY_CARTRIDGE_DIR/env/OPENSHIFT_*_IDENT
+}
+
+# Returns 0 if the named marker $1 exists, otherwise 1.
+function marker_present() {
+  [ -f "${OPENSHIFT_REPO_DIR}/.openshift/markers/$1" ]
+}
+
+# Add element to end of path
+#
+# $1 path
+# $2 element to add
+# return modified path
+path_append ()  {
+    echo -n "$(path_remove $1 $2):$2"
+}
+
+# Add element to front of path
+#
+# $1 path
+# $2 element to add
+# return modified path
+function path_prepend () {
+    echo -n "$2:$(path_remove $1 $2)"
+}
+
+# Remove element from path
+#
+# $1 path
+# $2 element to remove
+# return modified path
+function path_remove ()  {
+    echo -n $(echo -n $1 | awk -v RS=: -v ORS=: '$0 != "'$2'"' | sed 's/:$//')
 }

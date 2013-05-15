@@ -13,21 +13,21 @@ def usage
 #{$0} -c <command>
 
 == List of arguments
-       -c|--command     One of <show|toggle>
+       -c|--command     One of <show|toggle|v1|v2>
        -h|--help        Print this message
 USAGE
   exit 255
 end
 
-VERSION_MARKER = '/var/lib/openshift/.settings/v2_cartridge_format'
+VERSION_MARKER = '/var/lib/openshift/.settings/v1_cartridge_format'
 
 def check_version
   if File.exists? VERSION_MARKER
-    puts 'Node is currently in v2 mode'
-    :v2
-  else
     puts 'Node is currently in v1 mode'
     :v1
+  else
+    puts 'Node is currently in v2 mode'
+    :v2
   end
 end
 
@@ -36,17 +36,43 @@ def toggle_version
 
   puts 'Switching node cartridge version'
 
-  if (version == :v1) 
+  if (version == :v2)
     `mkdir -p /var/lib/openshift/.settings;
      touch #{VERSION_MARKER}`
   else
     `rm #{VERSION_MARKER}`
   end
 
-  `echo 'Rails.cache.clear' | /var/www/openshift/broker/script/rails console development;
-   service rhc-broker restart`
+  # if our node is also a broker, exchange old cartridge cache for new
+  if system("rpm -q openshift-origin-broker")
+    puts 'Clearing broker cache'
+    `oo-admin-broker-cache --clear --console`
+    puts 'Restarting broker'
+    `service openshift-broker restart`
+  elsif system("rpm -q rhc-broker")
+    puts 'Clearing broker cache'
+    `oo-admin-broker-cache --clear --console`
+    puts 'Restarting broker'
+    `service rhc-broker restart`
+  else
+    puts <<-OUT
+      You will need to clear the cache on your broker(s) and restart the broker application.
+      You can clear the cache on the broker as follows:
+        oo-admin-broker-cache --clear --console
+    OUT
+  end
+  # in any case, node needs an mcollective restart
+  `service mcollective restart`
 
    check_version
+end
+
+def set_version(version)
+  if check_version == version
+    puts 'No change necessary'
+  else
+    toggle_version
+  end
 end
 
 opts = GetoptLong.new(
@@ -62,11 +88,17 @@ opts.each do |opt, arg|
     case arg
     when 'show'
       check_version
-      exit
     when 'toggle'
       toggle_version
-      exit
+    when 'v1'
+      set_version :v1
+    when 'v2'
+      set_version :v2
+    else
+      puts "unknown command #{arg}"
+      usage
     end
+    exit
   end
 end
 

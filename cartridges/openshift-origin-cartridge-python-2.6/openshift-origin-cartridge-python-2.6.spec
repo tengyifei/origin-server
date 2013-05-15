@@ -2,11 +2,11 @@
 
 Summary:       Provides python-2.6 support
 Name:          openshift-origin-cartridge-python-2.6
-Version: 1.7.3
+Version: 1.9.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
@@ -103,6 +103,22 @@ ln -s %{cartridgedir}/../abstract/info/bin/sync_gears.sh %{buildroot}%{cartridge
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.8.3-1
+- Merge pull request #2342 from BanzaiMan/dev/hasari/c288_followup
+  (dmcphers+openshiftbot@redhat.com)
+- Add Cartridge-Vendor to manifest.yml in v1. (asari.ruby@gmail.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- Bugs 958709, 958744, 958757 (dmcphers@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
 * Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
 - SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
   ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)

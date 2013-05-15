@@ -20,7 +20,7 @@ function is_up() {
     jenkins_url="http://${OPENSHIFT_JENKINS_IP}:8080/"
 
     let count=0
-    while [ ${count} -lt 15 ]
+    while [ ${count} -lt 25 ]
     do
         url="curl -s -k -X GET --user \"${JENKINS_USERNAME}:${JENKINS_PASSWORD}\" ${jenkins_url}"
         result=`$url`
@@ -95,7 +95,6 @@ function stop() {
     wait_for_stop $pid
   else
     echo "Application is already stopped!" 1>&2
-    exit 0
   fi
 }
 
@@ -120,18 +119,13 @@ function reload() {
     restart
 }
 
+# Clean up any log files
 function tidy() {
-    echo "Tidying $cartridge_type cart"
-    
-    for logdir in `awk 'BEGIN {
-                           for (a in ENVIRON)
-                           if (a ~ /LOG_DIR$/)
-                           print ENVIRON[a] }'`
-	  do
-    	  client_message "Emptying log dir: ${logdir}"
-    	  rm -rf ${logdir}* ${logdir}.[^.]*
-	  done
+  client_message "Emptying log dir: $OPENSHIFT_JENKINS_LOG_DIR"
+  shopt -s dotglob
+  rm -rf $OPENSHIFT_JENKINS_LOG_DIR/*
 }
+
 
 case "$1" in
   start)     	start ;;

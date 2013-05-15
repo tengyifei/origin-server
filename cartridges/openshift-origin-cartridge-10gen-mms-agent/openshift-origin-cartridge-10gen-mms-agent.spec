@@ -2,13 +2,13 @@
 
 Summary:       Embedded 10gen MMS agent for performance monitoring of MondoDB
 Name:          openshift-origin-cartridge-10gen-mms-agent
-Version: 1.21.7
+Version: 1.23.1
 Release:       1%{?dist}
 Group:         Applications/Internet
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{version}.tar.gz
-Requires:      openshift-origin-cartridge-mongodb-2.2
+Requires:      openshift-origin-cartridge-mongodb
 Requires:      rubygem(openshift-origin-node)
 Requires:      openshift-origin-node-util
 Requires:      pymongo
@@ -16,7 +16,7 @@ Requires:      mms-agent
 BuildArch:     noarch
 
 %description
-Provides 10gen MMS agent cartridge support
+Provides 10gen MMS agent cartridge support. (Cartridge Format V2)
 
 
 %prep
@@ -24,33 +24,46 @@ Provides 10gen MMS agent cartridge support
 
 
 %build
+%__rm %{name}.spec
 
 
 %install
-rm -rf %{buildroot}
-mkdir -p %{buildroot}%{cartridgedir}
-cp -r * %{buildroot}%{cartridgedir}/
+%__rm -rf %{buildroot}
+%__mkdir -p %{buildroot}%{cartridgedir}
+%__cp -r * %{buildroot}%{cartridgedir}
 
 %clean
-rm -rf %{buildroot}
+%__rm -rf %{buildroot}
 
 %post
-%{_sbindir}/oo-admin-cartridge --action install --offline --source /usr/libexec/openshift/cartridges/v2/10gen-mms-agent
+%{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
 
 %files
 %defattr(-,root,root,-)
 %dir %{cartridgedir}
-%dir %{cartridgedir}/metadata
-%attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}
-%{cartridgedir}/metadata/manifest.yml
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.23.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.22.2-1
+- Special file processing (fotios@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
+- implementing install and post-install (dmcphers@redhat.com)
+- install and post setup tests (dmcphers@redhat.com)
+- Adding V2 Format to all v2 cartridges (calfonso@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- V2 documentation refactoring (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
 * Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.21.7-1
 - SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
   ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)

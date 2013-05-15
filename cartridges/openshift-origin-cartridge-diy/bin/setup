@@ -1,13 +1,9 @@
 #!/bin/bash -eu
 
-version=0.1
-echo "export OPENSHIFT_DIY_VERSION='$version'" > "$OPENSHIFT_DIY_DIR/env/OPENSHIFT_DIY_VERSION"
-echo "export OPENSHIFT_DIY_VERSION=${OPENSHIFT_DIY_DIR}logs" > "$OPENSHIFT_DIY_DIR/env/OPENSHIFT_DIY_LOG_DIR"
-
-# Copy the version specific files into diy directory
-shopt -s dotglob
-cp -r $OPENSHIFT_DIY_DIR/versions/$version/configuration/* $OPENSHIFT_DIY_DIR/configuration
-cp -r $OPENSHIFT_DIY_DIR/versions/$version/template/* $OPENSHIFT_DIY_DIR/template
+case "$1" in
+  -v|--version)
+    version="$2"
+esac
 
 # Create additional directories required by the diy cartridge
-mkdir $OPENSHIFT_DIY_DIR/{logs,run}
+mkdir -p $OPENSHIFT_DIY_DIR/{logs,run}

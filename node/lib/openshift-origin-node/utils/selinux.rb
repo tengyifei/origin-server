@@ -18,6 +18,7 @@ require 'etc'
 require 'selinux'
 require 'find'
 require 'openshift-origin-common'
+require 'openshift-origin-node/utils/node_logger'
 
 module OpenShift
   module Utils
@@ -34,9 +35,8 @@ module OpenShift
       @@DEF_MLS_NUM    =        0  # 0 unless MLS in use
 
 
-      @@matchpathcon_files_mtimes = Hash.new
-
-      # Return an enumerator which yields each UID -> MCS label combination.
+      #
+      # Public: Return an enumerator which yields each UID -> MCS label combination.
       #
       # Provides a more efficient way to iterate through all of the
       # available ones than re-running the combinations each time.
@@ -63,7 +63,8 @@ module OpenShift
         end
       end
 
-      # Determine the MCS label for a given index
+      #
+      # Public: Determine the MCS label for a given index
       #
       # @param [Integer] The user name or uid
       # @return [String] The SELinux MCS label
@@ -92,20 +93,38 @@ module OpenShift
       end
 
       #
-      # Private: Update the file context table
+      # Public: Set the context of a single file or directory.
       #
-      def self.matchpathcon_update
-        new_files_mtimes = Hash.new
-        Dir.glob(Selinux.selinux_file_context_path + '*').each do |f|
-          new_files_mtimes[f] = File.stat(f).mtime
-        end
-
-        if new_files_mtimes != @@matchpathcon_files_mtimes
-          if not @@matchpathcon_files_mtimes.empty?
-            Selinux.matchpathcon_fini
+      # Where a portion of the context is not provided on the command
+      # line, it will be determined from the file context database or
+      # the file itself.
+      #
+      def self.chcon(path, label=nil, type=nil, role=nil, user=nil)
+        matchpathcon_update
+        mode = File.lstat(path).mode & 07777
+        old_context = Selinux.lgetfilecon(path)
+        context = Selinux.matchpathcon(path, mode)
+        if context == -1
+          if old_context == -1
+            err = "Could not read or determine the file context for #{path}"
+            NodeLogger.logger.error(err)
+            raise Errno::EINVAL.new(err)
+          else
+            context = old_context
           end
-          Selinux.matchpathcon_init(nil)
-          @@matchpathcon_files_mtimes = new_files_mtimes
+        end
+        context = Selinux.context_new(context[1])
+        Selinux.context_range_set(context, label) unless label.nil?
+        Selinux.context_type_set(context, type)   unless type.nil?
+        Selinux.context_role_set(context, role)   unless role.nil?
+        Selinux.context_user_set(context, user)   unless user.nil?
+        context = Selinux.context_str(context)
+        if context != old_context[1]
+          if Selinux.lsetfilecon(path, context) == -1
+            err = "Could not set the file context #{context} on #{path}"
+            NodeLogger.logger.error(err)
+            raise Errno::EINVAL.new(err)
+          end
         end
       end
 
@@ -118,19 +137,9 @@ module OpenShift
       # Globs must be dereferenced but can be provided as an argument.
       # Ex: set_mcs_label("s0:c1,c2", Dir.glob("/path/to/gear/*"))
       #
-      # If a block is provided, it will yield a function to call in a
-      # set of paths to properly set the MCS label.  This allows
-      # efficient caching of the file context table with efficient use
-      # of enumerators like Find.
-      #
       def self.set_mcs_label(label, *paths)
-        matchpathcon_update
-
         paths.flatten.each do |path|
-          set_mcs_label_single(label, path)
-        end
-        if block_given?
-          yield(lambda { |passed_path| set_mcs_label_single(label, passed_path) })
+          chcon(path, label)
         end
       end
 
@@ -145,11 +154,9 @@ module OpenShift
       # Ex: set_mcs_label_R("s0:c1,c2", Dir.glob("/path/to/gear/*"))
       #
       def self.set_mcs_label_R(label, *paths)
-        set_mcs_label(label) do |f|
-          paths.flatten.each do |top_path|
-            Find.find(top_path) do |path|
-              f.call(path)
-            end
+        paths.flatten.each do |path|
+          Find.find(path) do |fpath|
+            chcon(fpath, label)
           end
         end
       end
@@ -158,56 +165,54 @@ module OpenShift
       # Public: Clear the SELinux context of any MCS label.
       #
       def self.clear_mcs_label(*paths)
-        config = OpenShift::Config.new
-        mls_num   = (config.get("SELINUX_MLS_NUM")        || @@DEF_MLS_NUM).to_i
-        set_mcs_label("s#{mls_num}", *paths)
+        set_mcs_label(nil, *paths)
       end
 
       #
       # Public: Recursively clear the SELinux context of any MCS label.
       #
       def self.clear_mcs_label_R(*paths)
-        config = OpenShift::Config.new
-        mls_num   = (config.get("SELINUX_MLS_NUM")        || @@DEF_MLS_NUM).to_i
-        set_mcs_label_R("s#{mls_num}", *paths)
-      end
-
-      #
-      # Private: Single shot call to set mcs label for a specific
-      # file.
-      #
-      def self.set_mcs_label_single(label, path)
-        mode = File.lstat(path).mode & 07777
-        context = Selinux.matchpathcon(path, mode)
-        if context == -1
-          context = Selinux.lgetfilecon(path)
-        end
-        context = Selinux.context_new(context[1])
-        Selinux.context_range_set(context, label)
-        context = Selinux.context_str(context)
-        if Selinux.lsetfilecon(path, context) == -1
-          raise Errno::EINVAL.new(path)
-        end
+        set_mcs_label_R(nil, *paths)
       end
 
       #
       # Public: Create a context from defaults.
       #
       def self.context_from_defaults(label=nil, type=nil, role=nil, user=nil)
-        context = Selinux.context_new("#{@@DEF_RUN_USER}:#{@@DEF_RUN_ROLE}:#{@@DEF_RUN_TYPE}:#{@@DEF_RUN_LABEL}")
-        Selinux.context_range_set(context, label) unless label.nil?
-        Selinux.context_type_set(context, type) unless type.nil?
-        Selinux.context_role_set(context, role) unless role.nil?
-        Selinux.context_user_set(context, user) unless user.nil?
-        Selinux.context_str(context)
+        t_label = (label || @@DEF_RUN_LABEL).to_s
+        t_type  = (type  || @@DEF_RUN_TYPE).to_s
+        t_role  = (role  || @@DEF_RUN_ROLE).to_s
+        t_user  = (user  || @@DEF_RUN_USER).to_s
+        "#{t_user}:#{t_role}:#{t_type}:#{t_label}"
       end
-
 
       #
       # Public: Get the current context
       #
       def self.getcon
         Selinux.getcon[1]
+      end
+
+      private
+
+      #
+      # Private: Update the file context database cache
+      #
+      @@matchpathcon_files_mtimes = Hash.new
+      def self.matchpathcon_update
+        new_files_mtimes = Hash.new
+        Dir.glob(Selinux.selinux_file_context_path + '*').each do |f|
+          new_files_mtimes[f] = File.stat(f).mtime
+        end
+
+        if new_files_mtimes != @@matchpathcon_files_mtimes
+          if not @@matchpathcon_files_mtimes.empty?
+            Selinux.matchpathcon_fini
+          end
+          NodeLogger.logger.debug("The file context database is being reloaded.")
+          Selinux.matchpathcon_init(nil)
+          @@matchpathcon_files_mtimes = new_files_mtimes
+        end
       end
 
     end

@@ -4,11 +4,11 @@
 
 Summary:       Provides JBossEWS2.0 support
 Name:          openshift-origin-cartridge-jbossews-2.0
-Version: 1.4.4
+Version: 1.6.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract-jboss
 Requires:      rubygem(openshift-origin-node)
@@ -117,6 +117,38 @@ alternatives --set jbossews-2.0 /usr/share/tomcat7
 
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.5.6-1
+- Bug 960650: Integrate with mysql and postgresql cartridges by default
+  (ironcladlou@gmail.com)
+
+* Tue May 07 2013 Adam Miller <admiller@redhat.com> 1.5.5-1
+- Bug 958892 (bdecoste@gmail.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.5.4-1
+- Merge pull request #2345 from pmorie/bugs/957262
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2342 from BanzaiMan/dev/hasari/c288_followup
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 957262 (pmorie@gmail.com)
+- Merge pull request #2340 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- Add Cartridge-Vendor to manifest.yml in v1. (asari.ruby@gmail.com)
+- fix env / replacement (bdecoste@gmail.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.5.3-1
+- Bugs 958709, 958744, 958757 (dmcphers@redhat.com)
+
+* Mon Apr 29 2013 Adam Miller <admiller@redhat.com> 1.5.2-1
+- Bug 956651 (bdecoste@gmail.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.5.1-1
+- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
 * Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.4.4-1
 - SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
   ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)

@@ -17,21 +17,13 @@
 #
 # Test the OpenShift application_container model
 #
+require_relative '../test_helper'
+require 'fileutils'
+require 'yaml'
+
 module OpenShift
   ;
 end
-
-require 'test_helper'
-require 'openshift-origin-node/model/application_container'
-require 'openshift-origin-node/model/v2_cart_model'
-require 'openshift-origin-node/model/unix_user'
-require 'openshift-origin-node/utils/environ'
-require 'openshift-origin-node/utils/selinux'
-require 'openshift-origin-common'
-require 'test/unit'
-require 'fileutils'
-require 'yaml'
-require 'mocha'
 
 class ApplicationContainerTest < Test::Unit::TestCase
 
@@ -75,7 +67,7 @@ class ApplicationContainerTest < Test::Unit::TestCase
         Name: mock
         Cartridge-Short-Name: MOCK
         Cartridge-Version: 1.0
-        Cartridge-Vendor: Unit Test
+        Cartridge-Vendor: unit_test
         Display-Name: Mock
         Description: "A mock cartridge for development use only."
         Version: 0.1
@@ -136,7 +128,7 @@ class ApplicationContainerTest < Test::Unit::TestCase
 
     manifest = "/tmp/manifest-#{Process.pid}"
     IO.write(manifest, @mock_manifest, 0)
-    @mock_cartridge = OpenShift::Runtime::Cartridge.new(manifest)
+    @mock_cartridge = OpenShift::Runtime::Manifest.new(manifest)
     @container.cartridge_model.stubs(:get_cartridge).with("mock").returns(@mock_cartridge)
   end
 
@@ -225,6 +217,20 @@ class ApplicationContainerTest < Test::Unit::TestCase
   def test_force_stop
     FileUtils.mkpath("/tmp/#@user_uid/app-root/runtime")
     OpenShift::UnixUser.stubs(:kill_procs).with(@user_uid).returns(nil)
+    @container.state.expects(:value=).with(OpenShift::State::STOPPED)
+    @container.cartridge_model.expects(:create_stop_lock)
     @container.force_stop
+  end
+
+  def test_connector_execute
+    cart_name = 'mock-0.1'
+    pub_cart_name = 'mock-plugin-0.1'
+    connector_type = 'ENV:NET_TCP'
+    connector = 'set-db-connection-info'
+    args = 'foo'
+
+    @container.cartridge_model.expects(:connector_execute).with(cart_name, pub_cart_name, connector_type, connector, args)
+
+    @container.connector_execute(cart_name, pub_cart_name, connector_type, connector, args)
   end
 end

@@ -1,4 +1,3 @@
-
 class Rake::Task
   def abandon
     prerequisites.clear
@@ -6,19 +5,26 @@ class Rake::Task
   end
 end
 
+Rake::TestTask.new :test do |i|
+  i.test_files = FileList['test/**/*_test.rb']
+end
+task :test => 'test:prepare'
+
 namespace :test do
   namespace :prepare do
     task :ci_reporter do
-      # removed deletion of test cases
-      if Gem.loaded_specs['ci_reporter']
-        require 'ci/reporter/rake/test_unit'
-        path = File.join(Gem.loaded_specs["ci_reporter"].full_gem_path, 'lib', 'ci', 'reporter', 'rake', 'test_unit_loader.rb')
+      # define our own ci_reporter task to NOT delete test reports (can't run in parallel if we're deleting)
+      begin 
+        require 'ci/reporter/rake/minitest'
+        path = File.join(Gem.loaded_specs["ci_reporter"].full_gem_path, 'lib', 'ci', 'reporter', 'rake', 'minitest_loader.rb')
         test_loader = CI::Reporter.maybe_quote_filename path
         ENV["TESTOPTS"] = "#{ENV["TESTOPTS"]} #{test_loader}"
+      rescue Exception
+        # ci_reporter is optional in the gemfile
       end
     end
   end
-  task 'test:prepare' => 'test:prepare:ci_reporter'
+  task :prepare => 'test:prepare:ci_reporter'
 
   Rake::TestTask.new :restapi => 'test:prepare' do |t|
     t.libs << 'test'

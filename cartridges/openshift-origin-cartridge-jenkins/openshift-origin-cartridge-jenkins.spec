@@ -2,11 +2,11 @@
 
 Summary:       Provides jenkins-1.4 support
 Name:          openshift-origin-cartridge-jenkins
-Version: 1.7.6
+Version: 1.9.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      rubygem(openshift-origin-node)
 #https://issues.jenkins-ci.org/browse/JENKINS-15047
@@ -14,11 +14,10 @@ Requires:      java >= 1.6
 Requires:      jenkins
 Requires:      jenkins-plugin-openshift
 Requires:      openshift-origin-node-util
-BuildRequires: git
 BuildArch:     noarch
 
 %description
-Provides Jenkins cartridge to OpenShift
+Provides Jenkins cartridge to OpenShift. (Cartridge Format V2)
 
 
 %prep
@@ -26,32 +25,31 @@ Provides Jenkins cartridge to OpenShift
 
 
 %build
+%__rm %{name}.spec
 
 
 %post
 service jenkins stop
 chkconfig jenkins off
 
-%{_sbindir}/oo-admin-cartridge --action install --offline --source /usr/libexec/openshift/cartridges/v2/jenkins
+%{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
 
 %install
-rm -rf %{buildroot}
-mkdir -p %{buildroot}%{cartridgedir}
-cp -r * %{buildroot}%{cartridgedir}/
+%__rm -rf %{buildroot}
+%__mkdir -p %{buildroot}%{cartridgedir}
+%__cp -r * %{buildroot}%{cartridgedir}
 
 
 %clean
-rm -rf %{buildroot}
+%__rm -rf %{buildroot}
 
 
 %files
 %defattr(-,root,root,-)
 %dir %{cartridgedir}
-%dir %{cartridgedir}/metadata
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}
-%{cartridgedir}/metadata/manifest.yml
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
@@ -59,6 +57,38 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.8.4-1
+- moving templates to usr (dmcphers@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.8.3-1
+- Special file processing (fotios@redhat.com)
+
+* Mon Apr 29 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- Add health urls to each v2 cartridge. (rmillner@redhat.com)
+- Bug 957073 (dmcphers@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- 956570 (dmcphers@redhat.com)
+- fixing tests (dmcphers@redhat.com)
+- Merge pull request #2208 from ironcladlou/dev/v2carts/post-configure
+  (dmcphers+openshiftbot@redhat.com)
+- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
+- adding install and post install for jenkins (dmcphers@redhat.com)
+- more install/post-install scripts (dmcphers@redhat.com)
+- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
+- WIP Cartridge Refactor - Change environment variable files to contain just
+  value (jhonce@redhat.com)
+- Adding V2 Format to all v2 cartridges (calfonso@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- V2 cartridge documentation updates (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
+* Mon Apr 15 2013 Adam Miller <admiller@redhat.com> 1.7.7-1
+- V2 action hook cleanup (ironcladlou@gmail.com)
+
 * Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 1.7.6-1
 - Merge pull request #2065 from jwhonce/wip/manifest_scrub
   (dmcphers+openshiftbot@redhat.com)

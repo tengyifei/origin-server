@@ -78,7 +78,7 @@ class RestApplication < OpenShift::Model
   def initialize(app, domain, url, nolinks=false, applications=nil)
     self.embedded = {}
     app.requires(true).each do |feature|
-      cart = CartridgeCache.find_cartridge(feature)
+      cart = CartridgeCache.find_cartridge(feature, app)
       if cart.categories.include? "web_framework"
         self.framework = cart.name
       else
@@ -91,7 +91,7 @@ class RestApplication < OpenShift::Model
     self.uuid = app.uuid
     self.aliases = []
     app.aliases.each do |a|
-      self.aliases << RestAlias.new(app, domain, a, url, true)
+      self.aliases << RestAlias.new(app, domain, a, url, nolinks)
     end
     self.gear_count = app.num_gears
     self.domain_id = domain.namespace
@@ -110,7 +110,7 @@ class RestApplication < OpenShift::Model
     self.initial_git_url = app.init_git_url
 
     app.component_instances.each do |component_instance|
-      cart = CartridgeCache::find_cartridge(component_instance.cartridge_name)
+      cart = CartridgeCache::find_cartridge(component_instance.cartridge_name, app)
 
       # add the builder properties if this is a builder component
       if cart.categories.include?("ci_builder")
@@ -139,7 +139,7 @@ class RestApplication < OpenShift::Model
         apps = applications || domain.applications
         apps.each do |domain_app|
           domain_app.component_instances.each do |component_instance|
-            cart = CartridgeCache::find_cartridge(component_instance.cartridge_name)
+            cart = CartridgeCache::find_cartridge(component_instance.cartridge_name, domain_app)
             if cart.categories.include?("ci")
               self.building_app = domain_app.name
               break
@@ -151,7 +151,7 @@ class RestApplication < OpenShift::Model
     end
 
     unless nolinks
-      carts = CartridgeCache.find_cartridge_by_category("embedded").map{ |c| c.name }
+      carts = CartridgeCache.find_cartridge_by_category("embedded", app).map{ |c| c.name }
 
       self.links = {
         "GET" => Link.new("Get application", "GET", URI::join(url, "domains/#{@domain_id}/applications/#{@name}")),
@@ -202,7 +202,7 @@ class RestApplication < OpenShift::Model
           [OptionalParam.new("ssl_certificate", "string", "Content of SSL Certificate"), 
             OptionalParam.new("private_key", "string", "Private key for the certificate.  Required if adding a certificate"), 
             OptionalParam.new("pass_phrase", "string", "Optional passphrase for the private key")]),
-        "LIST_ALIASES" => Link.new("List applications", "GET", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/aliases")),
+        "LIST_ALIASES" => Link.new("List application aliases", "GET", URI::join(url, "domains/#{@domain_id}/applications/#{@name}/aliases")),
       }
     end
   end

@@ -1,18 +1,12 @@
 #!/bin/bash -e
 source $OPENSHIFT_CARTRIDGE_SDK_BASH
-source $OPENSHIFT_MONGODB_DIR/env/*
 export STOPTIMEOUT=20
-
-if whoami | grep -q root
-then
-    client_result "Please don't run script as root, try:"
-    client_result "runuser --shell /bin/sh $OPENSHIFT_GEAR_UUID ${OPENSHIFT_MONGODB_DIR}/bin/control"
-    exit 15
-fi
 
 function isrunning() {
     if [ -f $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid ]; then
+        set +e
         mongodb_pid=`cat $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid 2> /dev/null`
+        set -e
         myid=`id -u`
         if `ps --pid $mongodb_pid 2>&1 | grep mongod > /dev/null 2>&1` || `pgrep -x mongod -u $myid > /dev/null 2>&1`
         then
@@ -70,16 +64,22 @@ function start() {
 
 function stop() {
     if [ -f $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid ]; then
-        pid=$( /bin/cat $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid )
+        set +e
+        pid=$( /bin/cat $OPENSHIFT_MONGODB_DIR/pid/mongodb.pid 2>/dev/null )
+        set -e
     fi
 
     if [ -n "$pid" ]; then
-        /bin/kill $pid
+        set +e
+        /bin/kill $pid 2>/dev/null
+        set -e
         ret=$?
         if [ $ret -eq 0 ]; then
             TIMEOUT="$STOPTIMEOUT"
             while [ $TIMEOUT -gt 0 ] && [ -f "$OPENSHIFT_MONGODB_DIR/pid/mongodb.pid" ]; do
+                set +e
                 /bin/kill -0 "$pid" >/dev/null 2>&1 || break
+                set -e
                 sleep 1
                 let TIMEOUT=${TIMEOUT}-1
             done
@@ -95,42 +95,12 @@ function stop() {
      fi
 }
 
-function handle_setup_marker {
-  setup_marker_file=$OPENSHIFT_TMP_DIR/.setup_mongodb_invocation_marker
-
-  if [ -f $setup_marker_file ]; then
-    prepare_database
-    rm -f $setup_marker_file
-  fi
-}
-
-function prepare_database {
-  password=$OPENSHIFT_MONGODB_DB_PASSWORD
-  echo "use admin
-        db.addUser(\"admin\", \"${password}\")
-        db.auth(\"admin\", \"${password}\")
-        db.system.users.find()
-        use $OPENSHIFT_APP_NAME
-        db.openshift.save({application: \"$OPENSHIFT_APP_NAME\", dbhost: \"$OPENSHIFT_MONGODB_DB_HOST\" })
-        db.addUser(\"admin\", \"${password}\")
-        exit
-       "  | mongo $OPENSHIFT_MONGODB_DB_HOST
-  rm -f /tmp/.dbshell
-
-  cart_props "connection_url=mongodb://admin:${password}@$OPENSHIFT_MONGODB_DB_HOST:$OPENSHIFT_MONGODB_DB_PORT/"
-  cart_props "username=admin"
-  cart_props "password=${password}"
-  cart_props "database_name=$OPENSHIFT_APP_NAME"
-
-  set_app_info "Connection URL: mongodb://admin:${password}@$OPENSHIFT_MONGODB_DB_HOST:$OPENSHIFT_MONGODB_DB_PORT/"
-}
-
 function die() {
    exitcode=${1:-0}
    tag=${2:-"WARNING"}
    msg=${3:-"Mongo control snapshot/restore operation failed..."}
 
-   client_result "!$tag! $msg"
+   echo "!$tag! $msg" 1>&2
 
    exit $exitcode
 
@@ -179,11 +149,10 @@ function pre_restore {
 
 function cleanup_dump {
    /bin/rm -f $OPENSHIFT_DATA_DIR/mongodb_dump_snapshot.tar.gz
-   /bin/rm -f /tmp/mongodumpXXXXXXXX
 }
 
 function print_mongo_jira_warnings() {
-   client_result "
+   echo "
 ============================================================================
 WARNING: You may have possibly encountered the mongorestore bugs related to
          MongoDB JIRA issues 7181, 7262 and 7104. We tried working around
@@ -192,8 +161,9 @@ WARNING: You may have possibly encountered the mongorestore bugs related to
              https://jira.mongodb.org/browse/SERVER-7181
              https://jira.mongodb.org/browse/SERVER-7262
              https://jira.mongodb.org/browse/SERVER-7104
+             https://jira.mongodb.org/browse/SERVER-6947
 ============================================================================
-"
+" 1>&2
 
 }  #  End of function  print_mongo_jira_warnings.
 
@@ -249,7 +219,6 @@ function post_restore {
 case "$1" in
     start)
         start
-        handle_setup_marker
     ;;
     start-noauth)
         start --noauth

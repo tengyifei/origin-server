@@ -78,8 +78,8 @@ class Gear
     result_io
   end
   
-  def destroy_gear
-    result_io = get_proxy.destroy(self)
+  def destroy_gear(keep_uid=false)
+    result_io = get_proxy.destroy(self, keep_uid)
     app.process_commands(result_io)
     result_io
   end
@@ -123,6 +123,24 @@ class Gear
     component.process_properties(result_io)
     app.process_commands(result_io, component._id)
     raise OpenShift::NodeException.new("Unable to add component #{component.cartridge_name}::#{component.component_name}", result_io.exitcode, result_io) if result_io.exitcode != 0
+    result_io
+  end
+  
+  # Performs the post-configuration steps for the specified component on the gear.
+  #
+  # == Parameters:
+  # component::
+  #   {ComponentInstance} to configure.
+  # == Returns:
+  # A {ResultIO} object with with output or error messages from the Node.
+  # Exit codes:
+  #   success = 0
+  # @raise [OpenShift::NodeException] on failure
+  def post_configure_component(component, init_git_url=nil)
+    result_io = get_proxy.post_configure_cartridge(self, component.cartridge_name, init_git_url)
+    component.process_properties(result_io)
+    app.process_commands(result_io, component._id)
+    raise OpenShift::NodeException.new("Unable to post-configure component #{component.cartridge_name}::#{component.component_name}", result_io.exitcode, result_io) if result_io.exitcode != 0
     result_io
   end
   
@@ -237,25 +255,6 @@ class Gear
     RemoteJob.add_parallel_job(remote_job_handle, "addtl-fs-gb", self, get_proxy.get_update_gear_quota_job(self, total_fs_gb, ""))
   end
 
-  def update_namespace(args)
-    old_ns = args["old_namespace"]
-    new_ns = args["new_namespace"]
-    cart = args["cartridge"]
-
-    dns = OpenShift::DnsService.instance
-    begin
-      dns.deregister_application(self.name, old_ns)
-      dns.register_application(self.name, new_ns, public_hostname)
-      dns.publish
-    ensure
-      dns.close
-    end  
-
-    result = ResultIO.new
-    result.append get_proxy.update_namespace(self, cart, new_ns, old_ns)
-    self.app.process_commands(result)
-  end
-  
   def server_identities
     identities = self.group_instance.gears.map{|gear| gear.server_identity}
     identities.uniq!

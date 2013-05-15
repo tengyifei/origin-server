@@ -1,18 +1,15 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/v2/python
-%global frameworkdir %{_libexecdir}/openshift/cartridges/v2/python
 
 Name: openshift-origin-cartridge-python
-Version: 0.2.7
+Version: 0.4.1
 Release: 1%{?dist}
 Summary: Python cartridge
 Group: Development/Languages
 License: ASL 2.0
-URL: https://openshift.redhat.com
+URL: https://www.openshift.com
 Source0: http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{version}.tar.gz
-Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
 Requires:      openshift-origin-node-util
-Requires:      mod_bw
 Requires:      python
 Requires:      mod_wsgi >= 3.2
 Requires:      mod_wsgi < 3.4
@@ -33,48 +30,92 @@ Requires:      gcc-gfortran
 Requires:      freetype-devel
 Requires:      atlas-devel
 Requires:      lapack-devel
-BuildRequires: git
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
 
 %description
-Python cartridge for openshift.
+Python cartridge for OpenShift. (Cartridge Format V2)
 
 
 %prep
 %setup -q
 
 %build
+%__rm %{name}.spec
+
 
 %install
-rm -rf %{buildroot}
-mkdir -p %{buildroot}%{cartridgedir}
-mkdir -p %{buildroot}/%{_sysconfdir}/openshift/cartridges
-cp -r * %{buildroot}%{cartridgedir}/
+%__rm -rf %{buildroot}
+%__mkdir -p %{buildroot}%{cartridgedir}
+%__cp -r * %{buildroot}%{cartridgedir}
 
 
 %clean
-rm -rf %{buildroot}
+%__rm -rf %{buildroot}
+
 
 %post
-%{_sbindir}/oo-admin-cartridge --action install --offline --source /usr/libexec/openshift/cartridges/v2/python
+%{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
 %files
 %defattr(-,root,root,-)
 %dir %{cartridgedir}
-%dir %{cartridgedir}/bin
-%dir %{cartridgedir}/hooks
-%dir %{cartridgedir}/env
-%dir %{cartridgedir}/metadata
-%dir %{cartridgedir}/versions
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}/hooks/
-%attr(0755,-,-) %{frameworkdir}
-%{cartridgedir}/metadata/manifest.yml
+%attr(0755,-,-) %{cartridgedir}
 %doc %{cartridgedir}/README.md
-
+%doc %{cartridgedir}/COPYRIGHT
+%doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.4.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Tue May 07 2013 Adam Miller <admiller@redhat.com> 0.3.6-1
+- fix missing target for cp (rchopra@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 0.3.5-1
+- fix tests (dmcphers@redhat.com)
+- Special file processing (fotios@redhat.com)
+
+* Wed May 01 2013 Adam Miller <admiller@redhat.com> 0.3.4-1
+- Card online_runtime_266 - Support for LD_LIBRARY_PATH (jhonce@redhat.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 0.3.3-1
+- Env var WIP. (mrunalp@gmail.com)
+- Merge pull request #2201 from BanzaiMan/dev/hasari/c276
+  (dmcphers+openshiftbot@redhat.com)
+- Card 276 (asari.ruby@gmail.com)
+
+* Mon Apr 29 2013 Adam Miller <admiller@redhat.com> 0.3.2-1
+- Add health urls to each v2 cartridge. (rmillner@redhat.com)
+- Bug 957073 (dmcphers@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 0.3.1-1
+- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
+- more install/post-install scripts (dmcphers@redhat.com)
+- Merge pull request #2192 from mrunalp/bugs/952660
+  (dmcphers+openshiftbot@redhat.com)
+- Add jenkins support for 2.7/3.3 (mrunalp@gmail.com)
+- Implement hot deployment for V2 cartridges (ironcladlou@gmail.com)
+- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
+- WIP Cartridge Refactor - Change environment variable files to contain just
+  value (jhonce@redhat.com)
+- Adding V2 Format to all v2 cartridges (calfonso@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- V2 documentation refactoring (ironcladlou@gmail.com)
+- V2 cartridge documentation updates (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
+* Tue Apr 16 2013 Troy Dawson <tdawson@redhat.com> 0.2.9-1
+- Merge pull request #2090 from mrunalp/dev/python_cleanup
+  (dmcphers@redhat.com)
+- Cleanup python cart. (mrunalp@gmail.com)
+- Setting mongodb connection hooks to use the generic nosqldb name
+  (calfonso@redhat.com)
+
+* Mon Apr 15 2013 Adam Miller <admiller@redhat.com> 0.2.8-1
+- V2 action hook cleanup (ironcladlou@gmail.com)
+
 * Sun Apr 14 2013 Krishna Raman <kraman@gmail.com> 0.2.7-1
 - WIP Cartridge Refactor - Move PATH to /etc/openshift/env (jhonce@redhat.com)
 - Merge pull request #2065 from jwhonce/wip/manifest_scrub

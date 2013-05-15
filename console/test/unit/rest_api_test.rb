@@ -7,7 +7,7 @@ require File.expand_path('../../test_helper', __FILE__)
 class RestApiTest < ActiveSupport::TestCase
 
   uses_http_mock
-  setup{ Rails.cache.clear }
+  with_clean_cache
 
   def setup
     ActiveResource::HttpMock.reset!
@@ -121,6 +121,13 @@ class RestApiTest < ActiveSupport::TestCase
     assert !d.has_exit_code?(1, :on => :foobar)
   end
 
+  def test_raise_server_unavailable
+    ActiveResource::HttpMock.respond_to do |mock|
+      mock.post '/broker/rest/domains.json', json_header(true), {:messages => [{:field => 'foo', :exit_code => 1, 'text' => 'bar'}], :data => nil}.to_json, 503
+    end
+    assert_raise(RestApi::ServerUnavailable){ Domain.new(:id => 'a', :as => @user).save! }
+  end
+
   def response(contents)
     object = mock
     body = mock
@@ -207,6 +214,11 @@ class RestApiTest < ActiveSupport::TestCase
     assert errors = RestApi::Base.remote_errors_for(response)
     assert_equal 1, errors.length
     assert_equal [125, 'test', 'hello'], errors[0]
+  end
+
+  def test_save_handles_invalid_error
+    Key.any_instance.expects(:save_without_change_tracking).raises(ActiveResource::ConnectionError.new(stub(:response => '')))
+    assert_raises(ActiveResource::ConnectionError){ Key.new(:name => 'test', :raw_content => 'bar', :as => @user).save }
   end
 
   def test_serialization
@@ -365,10 +377,24 @@ class RestApiTest < ActiveSupport::TestCase
     self.site = "http://localhost"
   end
 
-  def test_create_safe_reflected_name
+  def test_dont_reflect_code
     base = ReflectedTest.new
     r = base.send("find_or_create_resource_for", 'mysql-5.1')
-    assert_equal 'RestApiTest::ReflectedTest::Mysql51', r.name, r.pretty_inspect
+    assert_nil r
+  end
+
+  def test_load_ignores_classes
+    args = {:foo => 1, :bar => 2, :arr => [], :arr2 => [{:a => 1}], :arr3 => [1], :obj => {:b => 1}}
+    o = RestApi::Base.new(args)
+    assert_equal 1, o.foo
+    assert_equal 2, o.bar
+    assert_same args[:arr], o.arr
+    #assert_not_same args[:arr], o.arr # HashWithIndifferentAccess dup's all arrays and hashes, not ideal
+    assert_same args[:arr2], o.arr2
+    assert_same args[:arr3], o.arr3
+    assert o.arr2[0].is_a? Hash
+    assert_same args[:arr2][0], o.arr2[0]
+    assert_same args[:obj], o.obj
   end
 
   def test_create_cookie
@@ -981,6 +1007,26 @@ class RestApiTest < ActiveSupport::TestCase
     assert_equal '2', d.id
   end
 
+  def test_cartridge_type_url_basename
+    assert_nil CartridgeType.new.url_basename
+    {
+      'http://foo.bar' => 'http://foo.bar',
+      'http://foo.bar/' => 'http://foo.bar/',
+      'http://foo.bar/test' => 'test',
+      'http://foo.bar/test/' => 'test',
+      'http://foo.bar?name=other' => 'other',
+      'http://foo.bar/?name=other' => 'other',
+      'http://foo.bar/test?name=other' => 'other',
+      'http://foo.bar?name=other#wow' => 'wow',
+    }.each do |k,v|
+      c = CartridgeType.for_url(k)
+      assert_equal v, c.url_basename
+      assert_equal v, c.display_name
+    end
+    assert_equal 'http://foo.com', CartridgeType.new(:name => 'test', :url => 'http://foo.com').display_name
+    assert_equal 'test', CartridgeType.new(:name => 'test', :url => 'http://foo.com', :display_name => 'test').display_name
+  end
+
   def test_cartridge_usage_rates_default
     type = CartridgeType.new :name => 'nodejs-0.6', :display_name => 'Node.js', :website => 'test'
 
@@ -1265,11 +1311,11 @@ class RestApiTest < ActiveSupport::TestCase
   end
 
   def test_application_types_usage_rates_empty
-    assert_false ApplicationType.new(:display_name => 'test_app2', :usage_rates => []).usage_rates?
+    assert !ApplicationType.new(:display_name => 'test_app2', :usage_rates => []).usage_rates?
   end
 
   def test_application_types_usage_rates_nil
-    assert_false ApplicationType.new.usage_rates?
+    assert !ApplicationType.new.usage_rates?
   end
 
   def test_application_job_url
@@ -1429,6 +1475,16 @@ class RestApiTest < ActiveSupport::TestCase
     ]}
   end
 
+  def mock_cartridges
+    ActiveResource::HttpMock.respond_to(false) do |mock|
+      mock.get '/broker/rest/cartridges.json', anonymous_json_header, [
+        {:name => 'haproxy-1.4', :type => 'standalone'}, # type is blacklisted in cartridge_types.yml
+        {:name => 'php-5.3', :type => 'standalone', :tags => [:framework]},
+        {:name => 'blacklist', :type => 'standalone', :tags => [:framework, :blacklist]},
+      ].to_json
+    end
+  end
+
   def mock_quickstart(additional_tags=[])
     Quickstart.reset!
     RestApi.reset!
@@ -1487,6 +1543,20 @@ class RestApiTest < ActiveSupport::TestCase
     assert_equal [], ApplicationType.new(:cartridges_spec => '').cartridge_specs
     assert_raise(ApplicationType::CartridgeSpecInvalid){ ApplicationType.new(:cartridges_spec => "[{").cartridge_specs }
     assert_raise(ApplicationType::CartridgeSpecInvalid){ ApplicationType.new(:cartridges_spec => '[{name:"php"}]').cartridge_specs }
+  end
+
+  def test_application_type_matching
+    mock_cartridges
+    php = CartridgeType.cached.find('php-5.3')
+    assert_equal [{}, ['b']],               ApplicationType.matching_cartridges([{'name' => 'b'}])
+    assert_equal [{'php-5.3' => php}, []],  ApplicationType.matching_cartridges([{'name' => 'php-5.3'}])
+    assert_equal [{'php-5.3' => php}, []],  ApplicationType.matching_cartridges([{'name' => 'php-5.3', 'url' => 'a'}])
+    assert_equal [{}, ['php-5.']],          ApplicationType.matching_cartridges([{'name' => 'php-5.'}])
+    assert_equal [{'a' => CartridgeType.for_url('a')}, []], ApplicationType.matching_cartridges([{'url' => 'a'}])
+    
+    assert_equal [{}, ['-- Unknown']], ApplicationType.matching_cartridges([{}])
+    assert_equal [{}, ['-- Unknown']], ApplicationType.matching_cartridges([{'url' => ''}])
+    assert_equal [{}, ['-- Unknown']], ApplicationType.matching_cartridges([{'name' => ''}])
   end
 
   def test_quickstart_search

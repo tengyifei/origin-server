@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 
 source $OPENSHIFT_CARTRIDGE_SDK_BASH
 
@@ -51,26 +51,28 @@ function touch_mysqld {
 }
 
 function stop {
-  pidfile=$OPENSHIFT_MYSQL_DIR/pid/mysql.pid
+  if is_running; then
+    pidfile=$OPENSHIFT_MYSQL_DIR/pid/mysql.pid
 
-  if [ -f $pidfile ]; then
-    pid=$( /bin/cat $pidfile )
-    /bin/kill $pid
-    ret=$?
-    if [ $ret -eq 0 ]; then
-      TIMEOUT="$STOPTIMEOUT"
-      while [ $TIMEOUT -gt 0 ] && [ -f "$pidfile" ]
-      do
-        /bin/kill -0 "$pid" >/dev/null 2>&1 || break
-        sleep 1
-        let TIMEOUT=${TIMEOUT}-1
-      done
-    fi
-  else
-    if `pgrep -x mysqld_safe > /dev/null 2>&1`; then
-      echo "Warning: MySQL process exists without a pid file.  Use force-stop to kill." 1>&2
+    if [ -f $pidfile ]; then
+      pid=$( /bin/cat $pidfile )
+      /bin/kill $pid
+      ret=$?
+      if [ $ret -eq 0 ]; then
+        TIMEOUT="$STOPTIMEOUT"
+        while [ $TIMEOUT -gt 0 ] && [ -f "$pidfile" ]
+        do
+          /bin/kill -0 "$pid" >/dev/null 2>&1 || break
+          sleep 1
+          let TIMEOUT=${TIMEOUT}-1
+        done
+      fi
     else
-        echo "MySQL already stopped" 1>&2
+      if `pgrep -x mysqld_safe > /dev/null 2>&1`; then
+        echo "Warning: MySQL process exists without a pid file.  Use force-stop to kill." 1>&2
+      else
+          echo "MySQL already stopped" 1>&2
+      fi
     fi
   fi
 }
@@ -83,33 +85,6 @@ function status {
   fi
 
   exit 0
-}
-
-function handle_setup_marker {
-  setup_marker_file=$OPENSHIFT_TMP_DIR/.mysql_setup_invocation_marker
-
-  if [ -f $setup_marker_file ]; then
-    prepare_database
-    rm -f $setup_marker_file   
-  fi
-}
-
-function prepare_database {
-  dbname=$OPENSHIFT_APP_NAME
-  socket_file=$OPENSHIFT_MYSQL_DB_SOCKET
-  username=$OPENSHIFT_MYSQL_DB_USERNAME
-  password=$OPENSHIFT_MYSQL_DB_PASSWORD
-
-  echo 'Setup marker detected, reconfiguring mysqld'
-
-  echo "drop database test;
-  create database \`${dbname}\` DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;" | mysql -u root -S "$socket_file" > /dev/null || error 'Failed to create database', 188
-
-  echo "                                  
-  delete from user;
-  grant all on *.* to '$username'@'$OPENSHIFT_MYSQL_DB_HOST' identified by '$password' with grant option;
-  grant all on *.* to '$username'@'localhost' identified by '$password' with grant option;
-  flush privileges;" | mysql -u root -S "$socket_file" mysql > /dev/null || error "Failed to setup initial root user" 187
 }
 
 function pre_snapshot {
@@ -204,7 +179,6 @@ function cleanup_dump {
 case "$1" in
   start)
     start
-    handle_setup_marker
   ;;
   stop)
     stop

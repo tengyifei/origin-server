@@ -13,67 +13,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #++
+require_relative '../test_helper'
 
-require 'test_helper'
-require 'openshift-origin-node/model/node'
-require 'openshift-origin-node/model/cartridge_repository'
-require 'test/unit'
-require 'mocha'
-
-class NodeTest < Test::Unit::TestCase
+class NodeTest < OpenShift::V2SdkTestCase
 
   # Called before every test method runs. Can be used
   # to set up fixture information.
   def setup
+    super
+
     YAML.stubs(:load_file).
         returns(YAML.load(MANIFESTS[0]))
+    File.stubs(:exist?).returns(true)
 
     OpenShift::CartridgeRepository.
         any_instance.
         stubs(:find_manifests).
-        multiple_yields(["#{@path}/redhat-CRTest/1.2/metadata/manifest.yml"])
+        multiple_yields(["#{@path}/redhat-crtest/1.2/metadata/manifest.yml"])
 
     OpenShift::CartridgeRepository.instance.clear
     OpenShift::CartridgeRepository.instance.load
-
-    OpenShift::Utils::Sdk.stubs(:node_default_model).returns(:v2)
-  end
-
-  def teardown
-    # Do nothing
   end
 
   def test_get_cartridge_list
     buffer = OpenShift::Node.get_cartridge_list(true, true, true)
     refute_nil buffer
 
-    assert_equal %Q(CLIENT_RESULT: [\"---\\nName: CRTest-0.1\\nDisplay-Name: CRTest Unit Test\\nVersion: '0.1'\\nGroup-Overrides:\\n- components:\\n  - CRTest-0.1\\n  - web_proxy\\n\",\"---\\nName: CRTest-0.2\\nDisplay-Name: CRTest Unit Test\\nVersion: '0.2'\\nGroup-Overrides:\\n- components:\\n  - CRTest-0.2\\n  - web_proxy\\n\",\"---\\nName: CRTest-0.3\\nDisplay-Name: CRTest Unit Test\\nVersion: '0.3'\\nGroup-Overrides:\\n- components:\\n  - CRTest-0.2\\n  - web_proxy\\n\"]),
+    assert_equal %Q(CLIENT_RESULT: [\"---\\nName: crtest-0.1\\nDisplay-Name: crtest Unit Test\\nVersion: '0.1'\\nVersions:\\n- '0.1'\\n- '0.2'\\n- '0.3'\\nCartridge-Vendor: redhat\\nGroup-Overrides:\\n- components:\\n  - crtest-0.1\\n  - web_proxy\\n\",\"---\\nName: crtest-0.2\\nDisplay-Name: crtest Unit Test\\nVersion: '0.2'\\nVersions:\\n- '0.1'\\n- '0.2'\\n- '0.3'\\nCartridge-Vendor: redhat\\nGroup-Overrides:\\n- components:\\n  - crtest-0.2\\n  - web_proxy\\n\",\"---\\nName: crtest-0.3\\nDisplay-Name: crtest Unit Test\\nVersion: '0.3'\\nVersions:\\n- '0.1'\\n- '0.2'\\n- '0.3'\\nCartridge-Vendor: redhat\\nGroup-Overrides:\\n- components:\\n  - crtest-0.2\\n  - web_proxy\\n\"]),
                  buffer
   end
 
   MANIFESTS = [
       %q{#
-        Name: CRTest
-        Display-Name: CRTest Unit Test
+        Name: crtest
+        Display-Name: crtest Unit Test
         Cartridge-Short-Name: CRTEST
         Version: '0.3'
         Versions: ['0.1', '0.2', '0.3']
         Cartridge-Version: '1.2'
-        Cartridge-Vendor: Red Hat
+        Cartridge-Vendor: redhat
         Group-Overrides:
           - components:
-            - CRTest-0.3
+            - crtest-0.3
             - web_proxy
         Version-Overrides:
           '0.1':
             Group-Overrides:
               - components:
-                - CRTest-0.1
+                - crtest-0.1
                 - web_proxy
           '0.2':
             Group-Overrides:
               - components:
-                - CRTest-0.2
+                - crtest-0.2
                 - web_proxy
       },
   ]

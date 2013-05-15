@@ -72,7 +72,6 @@ end
 Given /^a new ([^ ]+) application, verify its availability$/ do |cart_name|
   steps %{
     Given the libra client tools
-    And an accepted node
     When 1 #{cart_name} applications are created
     Then the applications should be accessible
     Then the applications should be accessible via node-web-proxy
@@ -155,8 +154,10 @@ Given /^an existing ([^ ]+) application, verify it can be snapshotted and restor
     Given an existing #{cart_name} application    
     When I snapshot the application
     Then the application should be accessible
+    When a new file is added and pushed to the client-created application repo
     When I restore the application
     Then the application should be accessible
+    And the new file will not be present in the gear app-root repo
   }
 end
 
@@ -233,14 +234,14 @@ Given /^a new ([^ ]+) application, with ([^ ]+) and ([^ ]+), verify that they ar
     And the application is made publicly accessible
 
     When I stop the application using ctl_all via rhcsh
-    Then a #{proc_name} process for #{cart_name} will not be running
+    Then a #{proc_name} process for #{cart_name.gsub(/-.*/,'')} will not be running
     And a #{db_proc_name} process will not be running 
-    And a httpd process for #{management_app} will not be running
+    And a httpd process for #{management_app.gsub(/-.*/,'')} will not be running
 
     When I start the application using ctl_all via rhcsh
-    Then a #{proc_name} process for #{cart_name} will be running
+    Then a #{proc_name} process for #{cart_name.gsub(/-.*/,'')} will be running
     And a #{db_proc_name} process will be running
-    And a httpd process for #{management_app} will be running
+    And a httpd process for #{management_app.gsub(/-.*/,'')} will be running
   }
 end
 
@@ -375,7 +376,8 @@ end
 # Verifies the existence of an exported source tree associated with
 # the current application.
 Then /^the application source tree will( not)? exist$/ do | negate |
-  app_root = "#{$home_root}/#{@gear.uuid}/#{@cart.name}"
+  cartridge = @gear.carts[@cart.name]
+  app_root = "#{$home_root}/#{@gear.uuid}/#{cartridge.directory}"
 
   # TODO - need to check permissions and SELinux labels
 
@@ -391,7 +393,8 @@ end
 # Verifies the existence of application log files associated with the
 # current application.
 Then /^the application log files will( not)? exist$/ do | negate |
-  log_dir_path = "#{$home_root}/#{@gear.uuid}/#{@cart.name}/logs"
+  cartridge = @gear.carts[@cart.name]
+  log_dir_path = "#{$home_root}/#{@gear.uuid}/#{cartridge.directory}/logs"
 
   $logger.info("Checking for log dir at #{log_dir_path}")
 
@@ -412,7 +415,8 @@ end
 
 # Ensures that the root directory exists for the given embedded cartridge.
 Then /^the embedded ([^ ]+) cartridge directory will( not)? exist$/ do | cart_name, negate |
-  user_root = "#{$home_root}/#{@gear.uuid}/#{cart_name}"
+  cartridge = @gear.carts[cart_name]
+  user_root = "#{$home_root}/#{@gear.uuid}/#{cartridge.directory}"
 
   $logger.info("Checking for #{negate} cartridge root dir at #{user_root}")
   if negate
@@ -426,7 +430,8 @@ end
 # Ensures that more than zero log files exist in the given embedded cartridge
 # log directory.
 Then /^the embedded ([^ ]+) cartridge log files will( not)? exist$/ do | cart_name, negate |
-  log_dir_path = "#{$home_root}/#{@gear.uuid}/#{cart_name}/logs"
+  cartridge = @gear.carts[cart_name]
+  log_dir_path = "#{$home_root}/#{@gear.uuid}/#{cartridge.directory}/logs"
 
   $logger.info("Checking for #{negate} cartridge log dir at #{log_dir_path}")
   if negate
@@ -439,7 +444,8 @@ end
 
 # Simple verification of arbitrary cartridge directory existence.
 Then /^the embedded ([^ ]+) cartridge subdirectory named ([^ ]+) will( not)? exist$/ do | cart_name, dir_name, negate |
-  dir_path = "#{$home_root}/#{@gear.uuid}/#{cart_name}/#{dir_name}"
+  cartridge = @gear.carts[cart_name]
+  dir_path = "#{$home_root}/#{@gear.uuid}/#{cartridge.directory}/#{dir_name}"
 
   $logger.info("Checking for #{negate} cartridge subdirectory at #{dir_path}")
   if negate
@@ -802,7 +808,7 @@ def cart_env_var_common(cart_name, var_name, expected = nil, negate = false)
     assert((File.stat(var_file_path).size > 0), "#{var_file_path} is empty")
     if expected
       file_content = File.read(var_file_path).chomp
-      assert_match /#{var_name}='#{expected}'/, file_content
+      assert_match /#{expected}/, file_content
     end
   end
 end
@@ -816,9 +822,8 @@ When /^I (start|stop|status|restart|tidy|reload) the newfangled application$/ do
   end
 end
 
-
 Given /^a v2 default node$/ do
-  assert_file_exists '/var/lib/openshift/.settings/v2_cartridge_format'
+  assert_file_not_exists '/var/lib/openshift/.settings/v1_cartridge_format'
   $v2_node = true
 end
 
@@ -869,7 +874,6 @@ Then /^the platform-created default environment variables will exist$/ do
   app_env_var_will_exist('TMP_DIR')
   app_env_var_will_exist('HOMEDIR')
   app_env_var_will_exist('HISTFILE', false)
-  app_env_var_will_exist('PATH', false)
 end
 
 Then /^the ([^ ]+) cartridge private endpoints will be (exposed|concealed)$/ do |cart_name, action|
@@ -916,4 +920,21 @@ Then /^the application stoplock should( not)? be present$/ do |negate|
   else
     assert_file_exists stop_lock
   end 
+end
+
+When /^the application hot deploy marker is (added|removed)$/ do |verb|
+  record_measure("Runtime Benchmark: #{verb} hot deploy marker app repo at #{@app.git_repo}") do
+    Dir.chdir(@app.git_repo) do
+      if verb == "added"
+        run "mkdir -p .openshift/markers && touch .openshift/markers/hot_deploy"
+        run "git add ."
+      else
+        run "git rm .openshift/markers/hot_deploy"
+      end
+
+      run "git commit -m '#{verb} hot deploy marker'"
+      push_output = `git push`
+      $logger.info("Push output:\n#{push_output}")
+    end
+  end
 end

@@ -1,4 +1,3 @@
-#@runtime_other3
 @runtime
 @runtime3
 Feature: Trap User Shell

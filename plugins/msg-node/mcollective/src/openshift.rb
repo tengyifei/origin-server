@@ -22,8 +22,9 @@ module MCollective
 
       activate_when do
         @cartridge_repository = ::OpenShift::CartridgeRepository.instance
+        @cartridge_repository.load
         Log.instance.info(
-            "#{@cartridge_repository.size} cartridge(s) installed in #{@cartridge_repository.path}")
+            "#{@cartridge_repository.count} cartridge(s) installed in #{@cartridge_repository.path}")
         true
       end
 
@@ -43,7 +44,7 @@ module MCollective
         Log.instance.info("cartridge_do_action validation = #{request[:cartridge]} #{request[:action]} #{request[:args]}")
         validate :cartridge, /\A[a-zA-Z0-9\.\-\/]+\z/
         validate :cartridge, :shellsafe
-        validate :action, /\A(app-create|app-destroy|env-var-add|env-var-remove|broker-auth-key-add|broker-auth-key-remove|authorized-ssh-key-add|authorized-ssh-key-remove|ssl-cert-add|ssl-cert-remove|configure|deconfigure|update-namespace|tidy|deploy-httpd-proxy|remove-httpd-proxy|restart-httpd-proxy|info|post-install|post-remove|pre-install|reload|restart|start|status|stop|force-stop|add-alias|remove-alias|threaddump|cartridge-list|expose-port|frontend-backup|frontend-restore|frontend-create|frontend-destroy|frontend-update-name|frontend-update-namespace|frontend-connect|frontend-disconnect|frontend-connections|frontend-idle|frontend-unidle|frontend-check-idle|frontend-sts|frontend-no-sts|frontend-get-sts|aliases|ssl-cert-add|ssl-cert-remove|ssl-certs|frontend-to-hash|system-messages|connector-execute|get-quota|set-quota)\Z/
+        validate :action, /\A(app-create|app-destroy|env-var-add|env-var-remove|broker-auth-key-add|broker-auth-key-remove|authorized-ssh-key-add|authorized-ssh-key-remove|ssl-cert-add|ssl-cert-remove|configure|post-configure|deconfigure|unsubscribe|tidy|deploy-httpd-proxy|remove-httpd-proxy|restart-httpd-proxy|info|post-install|post-remove|pre-install|reload|restart|start|status|stop|force-stop|add-alias|remove-alias|threaddump|cartridge-list|expose-port|frontend-backup|frontend-restore|frontend-create|frontend-destroy|frontend-update-name|frontend-connect|frontend-disconnect|frontend-connections|frontend-idle|frontend-unidle|frontend-check-idle|frontend-sts|frontend-no-sts|frontend-get-sts|aliases|ssl-cert-add|ssl-cert-remove|ssl-certs|frontend-to-hash|system-messages|connector-execute|get-quota|set-quota)\Z/
         validate :action, :shellsafe
         cartridge                  = request[:cartridge]
         action                     = request[:action]
@@ -148,6 +149,24 @@ module MCollective
                                             namespace, quota_blocks, quota_files, Log.instance)
       end
 
+      def with_container_from_args(args)
+        container = get_app_container_from_args(args)
+
+        output = ''
+        begin
+          container = get_app_container_from_args(args)
+          yield(container, output)
+        rescue OpenShift::Utils::ShellExecutionException => e
+          return e.rc, "#{e.message}\n#{e.stdout}\n#{e.stderr}"
+        rescue Exception => e
+          Log.instance.error e.message
+          Log.instance.error e.backtrace.join("\n")
+          return -1, e.message
+        else
+          return 0, output
+        end
+      end
+
       def oo_app_create(args)
         output = ""
         begin
@@ -188,15 +207,8 @@ module MCollective
         key_type = args['--with-ssh-key-type']
         comment  = args['--with-ssh-key-comment']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.user.add_ssh_key(ssh_key, key_type, comment)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
@@ -204,9 +216,17 @@ module MCollective
         ssh_key = args['--with-ssh-key']
         comment = args['--with-ssh-comment']
 
+        with_container_from_args(args) do |container|
+          container.user.remove_ssh_key(ssh_key, comment)
+        end
+      end
+
+      def oo_authorized_ssh_keys_replace(args)
+        ssh_keys  = args['--with-ssh-keys'] || []
+
         begin
           container = get_app_container_from_args(args)
-          container.user.remove_ssh_key(ssh_key, comment)
+          container.user.replace_ssh_keys(ssh_keys)
         rescue Exception => e
           Log.instance.info e.message
           Log.instance.info e.backtrace
@@ -220,28 +240,14 @@ module MCollective
         iv    = args['--with-iv']
         token = args['--with-token']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.user.add_broker_auth(iv, token)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
       def oo_broker_auth_key_remove(args)
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.user.remove_broker_auth
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
@@ -249,30 +255,16 @@ module MCollective
         key   = args['--with-key']
         value = args['--with-value']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.user.add_env_var(key, value)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
       def oo_env_var_remove(args)
         key = args['--with-key']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.user.remove_env_var(key)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
@@ -296,16 +288,8 @@ module MCollective
         container_uuid = args['--with-container-uuid'].to_s if args['--with-container-uuid']
         app_uuid = args['--with-app-uuid'].to_s if args['--with-app-uuid']
 
-        output = ""
-        begin
-          container = get_app_container_from_args(args)
-          output    = container.state.value
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, output
+        with_container_from_args(args) do |container, output|
+          output << container.state.value
         end
       end
 
@@ -345,15 +329,8 @@ module MCollective
         container_uuid = args['--with-container-uuid'].to_s if args['--with-container-uuid']
         app_uuid = args['--with-app-uuid'].to_s if args['--with-app-uuid']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.force_stop
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
@@ -421,13 +398,6 @@ module MCollective
         new_container_name = args['--with-new-container-name']
         with_frontend_from_args(args) do |f, o|
           f.update_name(new_container_name)
-        end
-      end
-
-      def oo_frontend_update_namespace(args)
-        new_namespace = args['--with-new-namespace']
-        with_frontend_from_args(args) do |f, o|
-          f.update_namespace(new_namespace)
         end
       end
 
@@ -566,161 +536,96 @@ module MCollective
       end
 
       def oo_tidy(args)
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.tidy
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
       def oo_expose_port(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.create_public_endpoints(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
       def oo_conceal_port(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.delete_public_endpoints(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
       def oo_connector_execute(args)
-        cart_name  = args['--cart-name']
-        hook_name  = args['--hook-name']
-        input_args = args['--input-args']
+        cart_name        = args['--cart-name']
+        pub_cart_name    = args['--publishing-cart-name']
+        hook_name        = args['--hook-name']
+        connection_type  = args['--connection-type']
+        input_args       = args['--input-args']
 
-        output = ""
-        begin
-          container = get_app_container_from_args(args)
-          output    = container.connector_execute(cart_name, hook_name, input_args)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, output
-        end
-      end
-
-      def oo_update_namespace(args)
-        cart_name = args['--cart-name']
-        old_ns    = args['--with-old-namespace']
-        new_ns    = args['--with-new-namespace']
-
-        output = ""
-        begin
-          container = get_app_container_from_args(args)
-          output    = container.update_namespace(cart_name, old_ns, new_ns)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, output
+        with_container_from_args(args) do |container, output|
+          output << container.connector_execute(cart_name, pub_cart_name, connection_type, hook_name, input_args)
         end
       end
 
       def oo_configure(args)
         cart_name        = args['--cart-name']
         template_git_url = args['--with-template-git-url']
+        manifest         = args['--with-cartridge-manifest']
+        
+        with_container_from_args(args) do |container, output|
+          output << container.configure(cart_name, template_git_url, manifest)
+        end
+      end
 
-        output = ""
-        begin
-          container = get_app_container_from_args(args)
-          output    = container.configure(cart_name, template_git_url)
-        rescue ::OpenShift::Utils::ShellExecutionException => e
-          return e.rc, "#{e.message}\n#{e.stdout}"
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, output
+      def oo_post_configure(args)
+        cart_name = args['--cart-name']
+        template_git_url = args['--with-template-git-url']
+
+        with_container_from_args(args) do |container, output|
+          output << container.post_configure(cart_name, template_git_url)
         end
       end
 
       def oo_deconfigure(args)
         cart_name = args['--cart-name']
+        
+        with_container_from_args(args) do |container, output|
+          output << container.deconfigure(cart_name)
+        end
+      end
 
-        output = ""
-        begin
-          container = get_app_container_from_args(args)
-          output    = container.deconfigure(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, output
+      def oo_unsubscribe(args)
+        cart_name     = args['--cart-name']
+        pub_cart_name = args['--publishing-cart-name']
+
+        with_container_from_args(args) do |container, output|
+          output << container.unsubscribe(cart_name, pub_cart_name).to_s
         end
       end
 
       def oo_deploy_httpd_proxy(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.deploy_httpd_proxy(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
       def oo_remove_httpd_proxy(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.remove_httpd_proxy(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
       def oo_restart_httpd_proxy(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
+        with_container_from_args(args) do |container|
           container.restart_httpd_proxy(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
         end
       end
 
@@ -742,76 +647,40 @@ module MCollective
       def oo_start(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
-          container.start(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
+        with_container_from_args(args) do |container, output|
+          output << container.start(cart_name)
         end
       end
 
       def oo_stop(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
-          container.stop(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
+        with_container_from_args(args) do |container, output|
+          output << container.stop(cart_name)
         end
       end
 
       def oo_restart(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
-          container.restart(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
+        with_container_from_args(args) do |container, output|
+          output << container.restart(cart_name)
         end
       end
 
       def oo_reload(args)
         cart_name = args['--cart-name']
 
-        begin
-          container = get_app_container_from_args(args)
-          container.reload(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, ""
+        with_container_from_args(args) do |container, output|
+          output << container.reload(cart_name)
         end
       end
 
       def oo_status(args)
         cart_name = args['--cart-name']
-
-        output = ""
-        begin
-          container = get_app_container_from_args(args)
-          output    = container.status(cart_name)
-        rescue Exception => e
-          Log.instance.info e.message
-          Log.instance.info e.backtrace
-          return -1, e.message
-        else
-          return 0, output
+        
+        with_container_from_args(args) do |container, output|
+          output << container.status(cart_name)
         end
       end
 
@@ -824,7 +693,7 @@ module MCollective
           output    = container.threaddump(cart_name)
         rescue OpenShift::Utils::ShellExecutionException => e
           Log.instance.info "#{e.message}\n#{e.backtrace}\n#{e.stderr}"
-          return -1, "CLIENT_ERROR: action 'threaddump' failed #{e.message} #{e.stderr}"
+          return e.rc, "CLIENT_ERROR: action 'threaddump' failed #{e.message} #{e.stderr}"
         rescue Exception => e
           Log.instance.info "#{e.message}\n#{e.backtrace}"
           return -1, e.message

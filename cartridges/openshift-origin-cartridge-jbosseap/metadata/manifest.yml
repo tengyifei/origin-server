@@ -16,7 +16,7 @@ Categories:
   - jee_full_profile
 Website: http://www.redhat.com/products/jbossenterprisemiddleware/application-platform/
 Help-Topics:
-  "Developer Center": https://openshift.redhat.com/community/developers
+  "Developer Center": https://www.openshift.com/developers
 Cart-Data:
   - Key: OPENSHIFT_JBOSSEAP_LOG_DIR
     Type: environment
@@ -67,10 +67,10 @@ Publishes:
     Type: "NET_TCP:jbosseap-remoting-info"
 Subscribes:
   set-db-connection-info:
-    Type: "NET_TCP:db:connection-info"
+    Type: "ENV:NET_TCP:db:connection-info"
     Required: false
-  set-mongodb-connection-info:
-    Type: "NET_TCP:mongodb:connection-info"
+  set-nosql-db-connection-info:
+    Type: "ENV:NET_TCP:nosqldb:connection-info"
     Required: false
   set-mysql-connection-info:
     Type: "NET_TCP:db:mysql"
@@ -101,6 +101,9 @@ Endpoints:
       - Frontend:      ""
         Backend:       ""
         Options:       { "websocket": 1}
+      - Frontend:      "/health"
+        Backend:       ""
+        Options:       { "health": 1}
   - Private-IP-Name:   IP
     Private-Port-Name: CLUSTER_PORT
     Private-Port:      7600
@@ -119,3 +122,4 @@ Endpoints:
     Public-Port-Name:  REMOTING_PROXY_PORT
 Additional-Control-Actions:
     - threaddump
+Install-Build-Required: false

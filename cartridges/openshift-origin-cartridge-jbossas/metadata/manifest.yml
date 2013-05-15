@@ -1,8 +1,8 @@
 Name: jbossas
 Cartridge-Short-Name: JBOSSAS
-Display-Name: JBoss Application Server 7.1
+Display-Name: JBoss Application Server 7
 Description: "The leading open source Java EE6 application server for enterprise Java applications. Popular development frameworks include Seam, CDI, Weld, and Spring."
-Version: '7.1'
+Version: '7'
 License: LGPL
 License-Url: http://www.gnu.org/copyleft/lesser.txt
 Vendor: Red Hat
@@ -16,7 +16,7 @@ Categories:
   - jee_full_profile
 Website: http://www.jboss.org
 Help-Topics:
-  "Developer Center": https://openshift.redhat.com/community/developers
+  "Developer Center": https://www.openshift.com/developers
 Cart-Data:
   - Key: OPENSHIFT_JBOSSAS_LOG_DIR
     Type: environment
@@ -49,13 +49,13 @@ Cart-Data:
     Type: environment
     Description: "Unique ID which identified the gear. This value changes between gears."
 Provides:
-  - jbossas-7.1
+  - jbossas-7
   - "jbossas"
   - "jbossas(version) = 7.1"
   - "jbossas(version) >= 7.1"
-  - "jboss-as7.1"
+  - "jboss-as7"
   - jbossas-standalone
-  - jboss-as7.1-standalone
+  - jboss-as7-standalone
 Publishes:
   publish-http-url:
     Type: "NET_TCP:httpd-proxy-info"
@@ -67,7 +67,7 @@ Publishes:
     Type: "NET_TCP:jbossas-remoting-info"
 Subscribes:
   set-db-connection-info:
-    Type: "NET_TCP:db:connection-info"
+    Type: "ENV:NET_TCP:db:connection-info"
     Required: false
     Required: false
   set-mysql-connection-info:
@@ -76,8 +76,8 @@ Subscribes:
   set-postgres-connection-info:
     Type: "NET_TCP:db:postgres"
     Required : false
-  set-mongodb-connection-info:
-    Type: "NET_TCP:mongodb:connection-info"
+  set-nosql-db-connection-info:
+    Type: "ENV:NET_TCP:nosqldb:connection-info"
     Required : false
   set-doc-url:
     Type: "STRING:urlpath"
@@ -91,17 +91,22 @@ Scaling:
   Max: -1
 Group-Overrides:
   - components:
-    - jbossas-7.1
+    - jbossas-7
     - web_proxy
 Endpoints:
-  - Private-IP-Name:   IP
-    Private-Port-Name: HTTP_PORT
-    Private-Port:      8080
-    Public-Port-Name:  HTTP_PROXY_PORT
+  - Private-IP-Name:     IP
+    Private-Port-Name:   HTTP_PORT
+    Private-Port:        8080
+    Public-Port-Name:    HTTP_PROXY_PORT
+    WebSocket-Port-Name: WEBSOCKET_PORT
+    WebSocket-Port:      8676
     Mappings:
       - Frontend:      ""
         Backend:       ""
         Options:       { "websocket": 1}
+      - Frontend:      "/health"
+        Backend:       ""
+        Options:       { health: true }
   - Private-IP-Name:   IP
     Private-Port-Name: CLUSTER_PORT
     Private-Port:      7600
@@ -120,3 +125,4 @@ Endpoints:
     Public-Port-Name:  REMOTING_PROXY_PORT
 Additional-Control-Actions:
     - threaddump
+Install-Build-Required: false

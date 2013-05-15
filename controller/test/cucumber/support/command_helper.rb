@@ -6,11 +6,35 @@ require 'benchmark'
 
 module CommandHelper
   def getenv(uuid, var, cart=nil)
-    if $v2_node && cart
-      run_stdout("source /var/lib/openshift/#{uuid}/#{cart}/env/#{var};echo $#{var}").chomp!
+    result = ''
+
+    if $v2_node
+      if cart
+        result = IO.read("/var/lib/openshift/#{uuid}/#{cart}/env/#{var}").chomp
+      else
+        result = IO.read("/var/lib/openshift/#{uuid}/.env/#{var}").chomp
+      end
     else
-      run_stdout("source /var/lib/openshift/#{uuid}/.env/#{var};echo $#{var}").chomp!
+      result = run_stdout("source /var/lib/openshift/#{uuid}/.env/#{var};echo $#{var}").chomp
     end
+
+    result
+  end
+
+  def getenv_uservar(uuid, var, cart_name)
+    path = if $v2_node
+      "/var/lib/openshift/#{uuid}/.env/#{cart_name}/#{var}"
+    else
+      "/var/lib/openshift/#{uuid}/.env/.uservars/#{var}"
+    end
+
+    $logger.info("Reading #{path}")
+
+    result = IO.read(path).chomp
+
+    $logger.info("Result: #{result}")
+
+    result
   end
 
   def run_stdout(cmd)
@@ -210,6 +234,15 @@ module CommandHelper
     end
   end
 
+  def rhc_reload(app)
+    rhc_do('rhc_reload') do
+      time = Benchmark.realtime do
+        run("#{$rhc_script} app reload -a #{app.name} #{default_args(app)}").should == 0
+      end
+      log_event "#{time} RELOAD_APP #{app.name} #{app.login}"
+    end
+  end
+
   def rhc_create_app(app, use_hosts=true, misc_opts='')
     rhc_sshkey_upload app
 
@@ -268,15 +301,23 @@ module CommandHelper
         # directory to get the actual values to attach to the app.
 
         # Source the env var values from the gear directory
-        app.mysql_hostname = getenv(app.uid, 'OPENSHIFT_MYSQL_DB_HOST')
-        app.mysql_user     = getenv(app.uid, 'OPENSHIFT_MYSQL_DB_USERNAME', 'mysql')
-        app.mysql_password = getenv(app.uid, 'OPENSHIFT_MYSQL_DB_PASSWORD', 'mysql')
+
+        if app.scalable
+          app.mysql_hostname = getenv_uservar(app.uid, 'OPENSHIFT_MYSQL_DB_HOST', 'mysql-5.1')
+          app.mysql_user     = getenv_uservar(app.uid, 'OPENSHIFT_MYSQL_DB_USERNAME', 'mysql-5.1')
+          app.mysql_password = getenv_uservar(app.uid, 'OPENSHIFT_MYSQL_DB_PASSWORD', 'mysql-5.1')
+        else
+          app.mysql_hostname = getenv(app.uid, 'OPENSHIFT_MYSQL_DB_HOST')
+          app.mysql_user     = getenv(app.uid, 'OPENSHIFT_MYSQL_DB_USERNAME', 'mysql')
+          app.mysql_password = getenv(app.uid, 'OPENSHIFT_MYSQL_DB_PASSWORD', 'mysql')
+        end
+        
         app.mysql_database = getenv(app.uid, 'OPENSHIFT_APP_NAME')
 
-        app.mysql_hostname.should_not be_nil
-        app.mysql_user.should_not be_nil
-        app.mysql_password.should_not be_nil
-        app.mysql_database.should_not be_nil
+        app.mysql_hostname.should_not be_nil, 'mysql hostname should not be nil'
+        app.mysql_user.should_not be_nil, 'mysql username should not be nil'
+        app.mysql_password.should_not be_nil, 'mysql password should not be nil'
+        app.mysql_database.should_not be_nil, 'mysql database should not be nil'
       end
 
       app.embed.push(type)

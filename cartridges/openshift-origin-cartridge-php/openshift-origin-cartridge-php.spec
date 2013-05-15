@@ -1,15 +1,15 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/v2/php
-%global frameworkdir %{_libexecdir}/openshift/cartridges/v2/php
 
 Name: openshift-origin-cartridge-php
-Version: 0.2.5
+Version: 0.4.1
 Release: 1%{?dist}
 Summary: Php cartridge
 Group: Development/Languages
 License: ASL 2.0
-URL: https://openshift.redhat.com
+URL: https://www.openshift.com
 Source0: http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      rubygem(openshift-origin-node)
+Requires:      openshift-origin-node-util
 %if 0%{?fedora}%{?rhel} <= 6
 Requires:      php >= 5.3.2
 Requires:      php < 5.4
@@ -21,7 +21,6 @@ Requires:      php < 5.5
 Requires:      httpd < 2.5
 %endif
 Requires:      php
-Requires:      mod_bw
 Requires:      rubygem-builder
 Requires:      php-devel
 Requires:      php-pdo
@@ -40,61 +39,96 @@ Requires:      php-bcmath
 Requires:      php-process
 Requires:      php-pecl-imagick
 Requires:      php-pecl-xdebug
-Requires:      openshift-origin-node-util
 
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
 
 %description
-PHP cartridge for openshift.
+PHP cartridge for openshift. (Cartridge Format V2)
 
 
 %prep
 %setup -q
 
 %build
+%__rm %{name}.spec
 
 %install
-rm -rf %{buildroot}
-mkdir -p %{buildroot}%{cartridgedir}
-mkdir -p %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2
-cp -r * %{buildroot}%{cartridgedir}/
+%__rm -rf %{buildroot}
+%__mkdir -p %{buildroot}%{cartridgedir}
+%__cp -r * %{buildroot}%{cartridgedir}
+
 %if 0%{?fedora}%{?rhel} <= 6
-mv %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-2.2/* %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
-rm -rf %{buildroot}%{cartridgedir}/versions/5.4
-mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
-rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora
+%__mv %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-2.2/* %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
+%__rm -rf %{buildroot}%{cartridgedir}/versions/5.4
+%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%__rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora
 %endif
 %if 0%{?fedora} >= 18
-mv %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-2.4/* %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
-rm -rf %{buildroot}%{cartridgedir}/versions/5.3
-mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora %{buildroot}%{cartridgedir}/metadata/manifest.yml
-rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel
+%__mv %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-2.4/* %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
+%__rm -rf %{buildroot}%{cartridgedir}/versions/5.3
+%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%__rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel
 sed -i 's/#DefaultRuntimeDir/DefaultRuntimeDir/g' %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf.d/openshift.conf.erb
 %endif
-rm -rf %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-*
+%__rm -rf %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-*
 
 %clean
-rm -rf %{buildroot}
+%__rm -rf %{buildroot}
 
 %post
-%{_sbindir}/oo-admin-cartridge --action install --offline --source /usr/libexec/openshift/cartridges/v2/php
+%{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
 %files
 %defattr(-,root,root,-)
 %dir %{cartridgedir}
-%dir %{cartridgedir}/bin
-%dir %{cartridgedir}/hooks
-%dir %{cartridgedir}/metadata
-%dir %{cartridgedir}/versions
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}/hooks/
-%attr(0755,-,-) %{frameworkdir}
-%{cartridgedir}/metadata/manifest.yml
+%attr(0755,-,-) %{cartridgedir}
 %doc %{cartridgedir}/README.md
-
+%doc %{cartridgedir}/COPYRIGHT
+%doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.4.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 0.3.4-1
+- moving templates to usr (dmcphers@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 0.3.3-1
+- fix tests (dmcphers@redhat.com)
+- Special file processing (fotios@redhat.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 0.3.2-1
+- Merge pull request #2280 from mrunalp/dev/auto_env_vars
+  (dmcphers+openshiftbot@redhat.com)
+- Env var WIP. (mrunalp@gmail.com)
+- Merge pull request #2274 from rmillner/v2_misc_fixes
+  (dmcphers+openshiftbot@redhat.com)
+- Add /health url to php cartridges. (rmillner@redhat.com)
+- Card 276 (asari.ruby@gmail.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 0.3.1-1
+- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
+- more install/post-install scripts (dmcphers@redhat.com)
+- Implement hot deployment for V2 cartridges (ironcladlou@gmail.com)
+- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
+- WIP Cartridge Refactor - Change environment variable files to contain just
+  value (jhonce@redhat.com)
+- Adding V2 Format to all v2 cartridges (calfonso@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- V2 documentation refactoring (ironcladlou@gmail.com)
+- V2 cartridge documentation updates (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
+* Tue Apr 16 2013 Troy Dawson <tdawson@redhat.com> 0.2.7-1
+- Setting mongodb connection hooks to use the generic nosqldb name
+  (calfonso@redhat.com)
+
+* Mon Apr 15 2013 Adam Miller <admiller@redhat.com> 0.2.6-1
+- Bug 952041 - Add support for tidy to DIY and PHP cartridges
+  (jhonce@redhat.com)
+
 * Sun Apr 14 2013 Krishna Raman <kraman@gmail.com> 0.2.5-1
 - Fixing F18 build of PHP v2 cartridge (kraman@gmail.com)
 - WIP Cartridge Refactor - Move PATH to /etc/openshift/env (jhonce@redhat.com)
@@ -145,7 +179,7 @@ rm -rf %{buildroot}
 - Merge pull request #1801 from VojtechVitek/php5_standard
   (dmcphers+openshiftbot@redhat.com)
 - HAProxy WIP. (mrunalp@gmail.com)
-- Fix health_check.php to conform PHP 5 standards (vvitek@redhat.com)
+- Fix health_check.php to confo%__rm PHP 5 standards (vvitek@redhat.com)
 
 * Tue Mar 26 2013 Adam Miller <admiller@redhat.com> 0.1.6-1
 - getting jenkins working (dmcphers@redhat.com)

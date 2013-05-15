@@ -1,14 +1,14 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/jbossas-7
-%global jbossver 7.1.0.Final
-%global oldjbossver 7.0.2.Final
+%global jbossver 7.1.1.Final
+%global oldjbossver 7.1.0.Final
 
 Summary:       Provides JBossAS7 support
 Name:          openshift-origin-cartridge-jbossas-7
-Version: 1.7.5
+Version: 1.10.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract-jboss
 Requires:      rubygem(openshift-origin-node)
@@ -95,7 +95,7 @@ ln -s %{cartridgedir}/../abstract-jboss/info/hooks/configure %{buildroot}%{cartr
 alternatives --install /etc/alternatives/maven-3.0 maven-3.0 /usr/share/java/apache-maven-3.0.3 100
 alternatives --set maven-3.0 /usr/share/java/apache-maven-3.0.3
 
-alternatives --remove jbossas-7.0 /opt/jboss-as-%{oldjbossver}
+alternatives --remove jbossas-7 /opt/jboss-as-%{oldjbossver}
 alternatives --install /etc/alternatives/jbossas-7 jbossas-7 /opt/jboss-as-%{jbossver} 102
 alternatives --set jbossas-7 /opt/jboss-as-%{jbossver}
 %endif
@@ -138,6 +138,27 @@ cp -p %{cartridgedir}/info/configuration/postgresql_module.xml /etc/alternatives
 %config %{cartridgedir}/info/bin/standalone.conf
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.10.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.9.3-1
+- Add Cartridge-Vendor to manifest.yml in v1. (asari.ruby@gmail.com)
+
+* Thu May 02 2013 Adam Miller <admiller@redhat.com> 1.9.2-1
+- update as v2 spec for as7.1.1 (bdecoste@gmail.com)
+
+* Wed May 01 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- switchyard update and as 7.1.1 upgrade (bdecoste@gmail.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- Bug 956497: Fix port bindings for jboss carts (ironcladlou@gmail.com)
+- Bug 955492: Fix rsync command to correct hot deployment
+  (ironcladlou@gmail.com)
+- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- V2 cartridge documentation updates (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
 * Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.5-1
 - SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
   ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)

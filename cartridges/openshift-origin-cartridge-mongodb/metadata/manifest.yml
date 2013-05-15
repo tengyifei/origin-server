@@ -17,7 +17,7 @@ Categories:
   - embedded
 Website: http://www.10gen.com
 Help-Topics:
-  - "Building with MongoDB" : https://openshift.redhat.com/community/developers/mongodb
+  - "Building with MongoDB" : https://www.openshift.com/developers/mongodb
 Cart-Data:
   - Key: "username"
     Type: cart_data
@@ -40,8 +40,8 @@ Provides:
   - "mongodb(version) = 2.2.0"
   - mongodb-basic-mode
 Publishes:
-  publish-mongodb-connection-info:
-    Type: "NET_TCP:mongodb:connection-info"
+  publish-nosql-db-connection-info:
+    Type: "ENV:NET_TCP:nosqldb:connection-info"
 Scaling:
   Min: 1
   Max: 1
@@ -50,3 +50,4 @@ Endpoints:
     Private-Port-Name: DB_PORT
     Private-Port:      27017
     Public-Port-Name:  DB_PROXY_PORT
+Install-Build-Required: false

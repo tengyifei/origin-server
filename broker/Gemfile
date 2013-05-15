@@ -3,7 +3,7 @@ source 'http://rubygems.org'
 gem 'rails', '~> 3.2.8'
 gem 'json'
 gem 'json_pure'
-gem 'parseconfig'
+gem 'parseconfig', '~> 1.0.2'
 gem 'xml-simple'
 gem 'rack'
 gem 'regin'
@@ -13,12 +13,24 @@ gem 'mongoid'
 gem 'bson'
 gem 'bson_ext'
 gem 'pry', :require => 'pry' if ENV['PRY']
-gem 'minitest', '3.2.0'
+gem 'minitest'
 
-if ENV['SOURCE']
+# For performance reasons, the following scripts will not be
+# refactored to use mongoid exclusively:
+#  * broker-util/oo-admin-chk
+#  * broker-util/oo-admin-fix-sshkeys
+#  * broker-util/oo-stats
+# These scripts use the OpenShift::DataStore API, and thus depend on
+# the mongo rubygem:
+gem 'mongo'
+
+if ENV['BROKER_SOURCE']
   gem 'openshift-origin-common', :path => '../common'
   gem 'openshift-origin-controller', :path => '../controller'
   gem 'netrc' # rest-client has an undeclared prereq on netrc
+
+  # Optionally load plugins from source
+  eval((IO.read(File.expand_path('~/.openshift/broker_plugins.rb')) rescue ''))
 else
   gem 'openshift-origin-controller'
 end
@@ -51,7 +63,7 @@ Dir["/etc/openshift/plugins.d/*.conf"].delete_if{ |x| x.end_with? "-dev.conf" }.
 group :development, :test do
   # The require part from http://tinyurl.com/3pf68ho
   gem 'rest-client', '>= 1.6.1', '<= 1.6.7', :require => 'rest-client'
-  gem 'mocha', '0.12.1', :require => nil
+  gem 'mocha', '0.12.10', :require => nil
   gem 'rake', '>= 0.8.7', '<= 0.9.6'
   gem 'simplecov'
   gem 'cucumber'

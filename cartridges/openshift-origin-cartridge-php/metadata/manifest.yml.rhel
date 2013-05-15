@@ -14,7 +14,7 @@ Categories:
   - web_framework
 Website: http://www.php.net
 Help-Topics:
-  "Developer Center": https://openshift.redhat.com/community/developers
+  "Developer Center": https://www.openshift.com/developers
 Cart-Data:
   - Key: OPENSHIFT_TMP_DIR
     Type: environment
@@ -55,7 +55,7 @@ Publishes:
     Type: "NET_TCP:gear-endpoint-info"
 Subscribes:
   set-db-connection-info:
-    Type: "NET_TCP:db:connection-info"
+    Type: "ENV:NET_TCP:db:connection-info"
     Required: false
   set-mysql-connection-info:
     Type: "NET_TCP:db:mysql"
@@ -63,8 +63,8 @@ Subscribes:
   set-postgres-connection-info:
     Type: "NET_TCP:db:postgres"
     Required : false
-  set-mongodb-connection-info:
-    Type: "NET_TCP:mongodb:connection-info"
+  set-nosql-db-connection-info:
+    Type: "ENV:NET_TCP:nosqldb:connection-info"
     Required : false
   set-doc-url:
     Type: "STRING:urlpath"
@@ -86,3 +86,7 @@ Endpoints:
       - Frontend:      ""
         Backend:       ""
         Options:       { websocket: true }
+      - Frontend:      "/health"
+        Backend:       ""
+        Options:       { health: true }
+Install-Build-Required: false

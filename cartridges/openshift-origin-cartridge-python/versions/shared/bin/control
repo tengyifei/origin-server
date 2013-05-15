@@ -78,7 +78,7 @@ function _restart_service() {
 
 
 function status() {
-   if output=$(wget -q http://$OPENSHIFT_PYTHON_IP:$OPENSHIFT_PYTHON_PORT/)
+   if output=$(curl http://$OPENSHIFT_PYTHON_IP:$OPENSHIFT_PYTHON_PORT/ &> /dev/null)
    then
       echo "Application is running"
       echo $output
@@ -95,8 +95,11 @@ function deploy() {
    $OPENSHIFT_PYTHON_DIR/versions/$OPENSHIFT_PYTHON_VERSION/bin/deploy
 }
 
+# Clean up any log files
 function tidy() {
-    rm -rf ${OPENSHIFT_PYTHON_LOG_DIR}/* ${OPENSHIFT_PYTHON_LOG_DIR}/.[^.]*
+  client_message "Emptying log dir: $OPENSHIFT_PYTHON_LOG_DIR"
+  shopt -s dotglob
+  rm -rf $OPENSHIFT_PYTHON_LOG_DIR/*
 }
 
 case "$1" in

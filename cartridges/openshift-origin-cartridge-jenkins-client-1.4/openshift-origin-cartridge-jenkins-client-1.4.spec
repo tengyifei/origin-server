@@ -8,11 +8,11 @@
 
 Summary:       Embedded jenkins client support for OpenShift 
 Name:          openshift-origin-cartridge-jenkins-client-1.4
-Version: 1.6.3
+Version: 1.8.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
-URL:           https://openshift.redhat.com
+URL:           https://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
@@ -66,6 +66,16 @@ ln -s %{cartridgedir} %{buildroot}/%{frameworkdir}
 
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Add Cartridge-Vendor to manifest.yml in v1. (asari.ruby@gmail.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
 * Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.6.3-1
 - SELinux, ApplicationContainer and UnixUser model changes to support oo-admin-
   ctl-gears operating on v1 and v2 cartridges. (rmillner@redhat.com)

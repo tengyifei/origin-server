@@ -1,62 +1,98 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/v2/diy
-%global frameworkdir %{_libexecdir}/openshift/cartridges/v2/diy
 
 Name: openshift-origin-cartridge-diy
-Version: 0.2.5
+Version: 0.4.1
 Release: 1%{?dist}
 Summary: DIY cartridge
 Group: Development/Languages
 License: ASL 2.0
-URL: https://openshift.redhat.com
+URL: https://www.openshift.com
 Source0: http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{version}.tar.gz
-Requires:      openshift-origin-cartridge-abstract
 Requires:      rubygem(openshift-origin-node)
 Requires:      openshift-origin-node-util
-
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
 
 %description
-DIY cartridge for openshift.
+DIY cartridge for openshift. (Cartridge Format V2)
 
 
 %prep
 %setup -q
 
 %build
+%__rm %{name}.spec
 
 %install
-rm -rf %{buildroot}
-mkdir -p %{buildroot}%{cartridgedir}
-mkdir -p %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2
-cp -r * %{buildroot}%{cartridgedir}/
-ln -s %{cartridgedir}/conf/ %{buildroot}/%{_sysconfdir}/openshift/cartridges/v2/%{name}
+%__rm -rf %{buildroot}
+%__mkdir -p %{buildroot}%{cartridgedir}
+%__cp -r * %{buildroot}%{cartridgedir}
 
 
 %clean
-rm -rf %{buildroot}
+%__rm -rf %{buildroot}
 
 
 %post
-%{_sbindir}/oo-admin-cartridge --action install --offline --source /usr/libexec/openshift/cartridges/v2/diy
+%{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
 %files
 %defattr(-,root,root,-)
 %dir %{cartridgedir}
-%dir %{cartridgedir}/bin
-%dir %{cartridgedir}/env
-%dir %{cartridgedir}/metadata
-%dir %{cartridgedir}/versions
+%attr(0755,-,-) %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%attr(0755,-,-) %{frameworkdir}
-%{_sysconfdir}/openshift/cartridges/v2/%{name}
-%{cartridgedir}/metadata/manifest.yml
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.4.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+- removing version logic from diy (dmcphers@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 0.3.6-1
+- moving templates to usr (dmcphers@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 0.3.5-1
+- Special file processing (fotios@redhat.com)
+
+* Wed May 01 2013 Adam Miller <admiller@redhat.com> 0.3.4-1
+- Merge pull request #2297 from ironcladlou/bz/955482
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 955482: Remove unnecessary symlink from RPM spec (ironcladlou@gmail.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 0.3.3-1
+- Env var WIP. (mrunalp@gmail.com)
+
+* Mon Apr 29 2013 Adam Miller <admiller@redhat.com> 0.3.2-1
+- Add health urls to each v2 cartridge. (rmillner@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 0.3.1-1
+- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
+- more install/post-install scripts (dmcphers@redhat.com)
+- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
+- WIP Cartridge Refactor - Change environment variable files to contain just
+  value (jhonce@redhat.com)
+- Adding V2 Format to all v2 cartridges (calfonso@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- Merge pull request #2145 from sosiouxme/fixdeps
+  (dmcphers+openshiftbot@redhat.com)
+- <v2 carts> remove abstract cartridge from v2 requires (lmeyer@redhat.com)
+- Bug 947010: Exclude grep when checking for existing process
+  (ironcladlou@gmail.com)
+- V2 documentation refactoring (ironcladlou@gmail.com)
+- V2 cartridge documentation updates (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
+* Tue Apr 16 2013 Troy Dawson <tdawson@redhat.com> 0.2.7-1
+- Setting mongodb connection hooks to use the generic nosqldb name
+  (calfonso@redhat.com)
+
+* Mon Apr 15 2013 Adam Miller <admiller@redhat.com> 0.2.6-1
+- Bug 952041 - Add support for tidy to DIY and PHP cartridges
+  (jhonce@redhat.com)
+- V2 action hook cleanup (ironcladlou@gmail.com)
+
 * Sun Apr 14 2013 Krishna Raman <kraman@gmail.com> 0.2.5-1
 - WIP Cartridge Refactor - Move PATH to /etc/openshift/env (jhonce@redhat.com)
 - Merge pull request #2065 from jwhonce/wip/manifest_scrub

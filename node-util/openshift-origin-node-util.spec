@@ -1,10 +1,10 @@
 Summary:       Utility scripts for the OpenShift Origin broker
 Name:          openshift-origin-node-util
-Version: 1.7.4
+Version: 1.9.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      oddjob
 Requires:      rng-tools
@@ -50,6 +50,7 @@ mkdir -p %{buildroot}%{_mandir}/man8/
 cp conf/oddjob/openshift-restorer.conf %{buildroot}%{_sysconfdir}/dbus-1/system.d/
 cp conf/oddjob/oddjobd-restorer.conf %{buildroot}%{_sysconfdir}/oddjobd.conf.d/
 cp www/html/restorer.php %{buildroot}/%{_localstatedir}/www/html/
+cp www/html/health.txt %{buildroot}/%{_localstatedir}/www/html/
 
 cp man8/*.8 %{buildroot}%{_mandir}/man8/
 
@@ -65,7 +66,6 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 %files
 %attr(0750,-,-) %{_sbindir}/oo-accept-node
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-gears
-%attr(0750,-,-) %{_sbindir}/oo-admin-ctl-gears.rb
 %attr(0750,-,-) %{_sbindir}/oo-app-idle
 %attr(0750,-,-) %{_sbindir}/oo-autoidler
 %attr(0750,-,-) %{_sbindir}/oo-idler
@@ -108,6 +108,7 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 %attr(0644,-,-) %config(noreplace) %{_sysconfdir}/dbus-1/system.d/openshift-restorer.conf
 
 %{_localstatedir}/www/html/restorer.php
+%{_localstatedir}/www/html/health.txt
 
 %if 0%{?fedora}%{?rhel} <= 6
 %attr(0750,-,-) %{_initddir}/openshift-gears
@@ -119,6 +120,100 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 /sbin/restorecon /usr/sbin/oo-restorer* || :
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.8-1
+- Bug 959095 - Fixes to oo-accept-node and add the command line argument
+  --devbuild to inhibit tests which should only run in prod.
+  (rmillner@redhat.com)
+- Time to reintroduce this test. (rmillner@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.8.7-1
+- WIP Cartridge Refactor - Install cartridges without mco client
+  (jhonce@redhat.com)
+- Merge pull request #2343 from rmillner/BZ958355
+  (dmcphers+openshiftbot@redhat.com)
+- Add logger lines back. (rmillner@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.8.6-1
+- <oo-cart-version> fix toggling broker restart logic (lmeyer@redhat.com)
+- Merge pull request #2333 from ironcladlou/bz/949232
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 949232: Make rhc-list-port compatible with both v1/v2 cartridges
+  (ironcladlou@gmail.com)
+- Bug 957453 - properly account for unidle being called on a gear which was
+  already started but did not have its frontend unidled. (rmillner@redhat.com)
+
+* Wed May 01 2013 Adam Miller <admiller@redhat.com> 1.8.5-1
+- Bug 957478 - Refactored oo-last-acess and oo-accept-node for V2
+  (jhonce@redhat.com)
+- Merge pull request #2302 from rmillner/ctl_gears
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 956366 - v1 status cleanup and fix v2 status exceptions.
+  (rmillner@redhat.com)
+- Merge pull request #2289 from sosiouxme/ooacceptnode
+  (dmcphers+openshiftbot@redhat.com)
+- <oo-accept-node> make conf file parsing consistent (lmeyer@redhat.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 1.8.4-1
+- Merge pull request #2263 from sosiouxme/bz957818
+  (dmcphers+openshiftbot@redhat.com)
+- <cache> bug 957818 - clear-cache script, oo-cart-version uses it
+  (lmeyer@redhat.com)
+
+* Mon Apr 29 2013 Adam Miller <admiller@redhat.com> 1.8.3-1
+- Temporarily disable check_system_httpd_configs. (rmillner@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- Merge pull request #2249 from rmillner/online_runtime_264
+  (dmcphers+openshiftbot@redhat.com)
+- Add health check option to front-end for v2 carts. (rmillner@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- Bug 928621 - Detect whether the gear is missing a frontend configuration.
+  (rmillner@redhat.com)
+- Feature complete v2 oo-admin-ctl-gears script with integrated idler.
+  (rmillner@redhat.com)
+- Switch back to native SELinux calls. (rmillner@redhat.com)
+- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
+- Merge pull request #2189 from rmillner/accept-node
+  (dmcphers+openshiftbot@redhat.com)
+- Resolve fqdn to uuid when reporting frontend issues and check the selinux
+  context of mcollective. (rmillner@redhat.com)
+- Fixes for oo-cart-version (pmorie@gmail.com)
+- Merge pull request #2094 from BanzaiMan/dev/hasari/bz928675
+  (dmcphers@redhat.com)
+- Merge pull request #2144 from sosiouxme/fixcartvers
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- <oo-cart-version> remove online-specifics so works in origin
+  (lmeyer@redhat.com)
+- Adding the ability to detect gear processes missing from cgroups
+  (kwoodson@redhat.com)
+- <oo-cart-version> add ability to set version rather than toggle
+  (lmeyer@redhat.com)
+- Fixed path to restorecon. (rmillner@redhat.com)
+- The .ssh directory was not getting the correct MCS label.
+  (rmillner@redhat.com)
+- Bug 928654 - Check if a gear exists before trying to stop or start.
+  (rmillner@redhat.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
+* Tue Apr 16 2013 Troy Dawson <tdawson@redhat.com> 1.7.6-1
+- Merge pull request #2093 from rmillner/BZ952247
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 952247 - Check the new front-end Apache configuration for missing/deleted
+  gears. (rmillner@redhat.com)
+- Bug 950711 - Apps taking longer than 120s fail to restore; bump to 200s to
+  cover the few apps affected. (rmillner@redhat.com)
+- <oo-restore> Bug 949251 - forgot to add actual oo-restore fix
+  (jolamb@redhat.com)
+
+* Mon Apr 15 2013 Adam Miller <admiller@redhat.com> 1.7.5-1
+- Ruby admin-ctl-gears-script to more efficiently manage dependency loading.
+  (rmillner@redhat.com)
+
 * Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 1.7.4-1
 - Merge pull request #2066 from sosiouxme/nodescripts20130413
   (dmcphers+openshiftbot@redhat.com)

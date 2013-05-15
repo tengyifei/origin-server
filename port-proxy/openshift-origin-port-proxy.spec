@@ -6,10 +6,10 @@
 
 Summary:       Script to configure HAProxy to do port forwarding for OpenShift
 Name:          openshift-origin-port-proxy
-Version: 1.5.1
+Version: 1.6.1
 Release:       1%{?dist}
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 # The haproxy daemon is used as the functioning tcp proxy
 Requires:      haproxy
@@ -85,6 +85,12 @@ fi
 %config(noreplace) %{_sysconfdir}/openshift/port-proxy.cfg
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.6.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.5.2-1
+- Bug 928675 (asari.ruby@gmail.com)
+
 * Thu Mar 28 2013 Adam Miller <admiller@redhat.com> 1.5.1-1
 - bump_minor_versions for sprint 26 (admiller@redhat.com)
 

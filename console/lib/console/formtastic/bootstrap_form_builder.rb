@@ -127,7 +127,7 @@ module Console
 
       def error_list(errors, options = {}) #:nodoc:
         error_class = options[:error_class] || default_inline_error_class
-        template.content_tag(:p, errors.join(' ').untaint, :class => error_class)
+        template.content_tag(:p, errors.join('. ').untaint, :class => error_class)
       end
 
       def inputs(*args, &block)
@@ -135,6 +135,11 @@ module Console
         html_options = args.extract_options!
         html_options[:class] ||= "inputs"
         html_options[:name] = title
+
+        if html_options[:autocomplete]
+          @old_autocomplete_section = @autocomplete_section
+          @autocomplete_section = html_options[:autocomplete]
+        end
 
         if html_options[:for] # Nested form
           inputs_for_nested_attributes(*(args << html_options), &block)
@@ -161,6 +166,9 @@ module Console
 
           field_set_and_list_wrapping(*((args << html_options) << contents))
         end
+
+      ensure
+        @autocomplete_section = @old_autocomplete_section
       end
 
       def inline_fields_and_wrapping(*args, &block)
@@ -207,6 +215,14 @@ module Console
         options[:required] = method_required?(method) unless options.key?(:required)
         options[:as]     ||= default_input_type(method, options)
 
+        if (field = options[:autocomplete])
+          if (section = @autocomplete_section)
+            field = "#{section} #{field}"
+          end
+          options[:input_html] ||= {}
+          options[:input_html][:autocomplete] = field
+        end
+
         html_class = [ 
           options[:as], 
           options[:required] ? :required : :optional, 
@@ -219,6 +235,10 @@ module Console
           html_class << 'error'
 
           wrapper_html[:"data-server-error"] = "server-error"
+          
+          options[:input_html] ||= {}
+          options[:input_html][:class] ||= ""
+          options[:input_html][:class] << " error"
         end
         wrapper_html[:id]  ||= generate_html_id(method)
         wrapper_html[:class] = (html_class << wrapper_html[:class]).flatten.compact.join(' ')

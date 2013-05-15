@@ -20,14 +20,13 @@ Version:       1.5.2
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      httpd
 # TODO: We need to audit these requirements.  Some of these are likely not hard
 # requirements.
 Requires:      mod_ssl
 Requires:      %{?scl:%scl_prefix}mod_passenger
-Requires:      mongodb-server
 %if 0%{?scl:1}
 Requires:      openshift-origin-util-scl
 %else
@@ -37,10 +36,12 @@ Requires:      policycoreutils-python
 Requires:      rubygem(openshift-origin-controller)
 Requires:      %{?scl:%scl_prefix}mod_passenger
 Requires:      %{?scl:%scl_prefix}rubygem(bson_ext)
-Requires:      %{?scl:%scl_prefix}rubygem(cucumber)
 Requires:      %{?scl:%scl_prefix}rubygem(json)
 Requires:      %{?scl:%scl_prefix}rubygem(json_pure)
 Requires:      %{?scl:%scl_prefix}rubygem(minitest)
+# This gem is required by oo-admin-chk, oo-admin-fix-sshkeys, and
+# oo-stats, for OpenShift::DataStore API support
+Requires:      %{?scl:%scl_prefix}rubygem(mongo)
 # The mongoid gem doesn't exist in Fedora yet
 %if 0%{?scl:1}
 Requires:      %{?scl:%scl_prefix}rubygem(mongoid)
@@ -93,6 +94,7 @@ mkdir -p %{buildroot}%{brokerdir}/tmp/sockets
 mkdir -p %{buildroot}%{_sysconfdir}/httpd/conf.d
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 mkdir -p %{buildroot}%{_sysconfdir}/openshift
+mkdir -p %{buildroot}%{_sysconfdir}/openshift/plugins.d
 
 cp -r . %{buildroot}%{brokerdir}
 %if %{with_systemd}
@@ -109,13 +111,14 @@ mv %{buildroot}%{brokerdir}/httpd/000002_openshift_origin_broker_proxy.conf %{bu
 mv %{buildroot}%{brokerdir}/httpd/000002_openshift_origin_broker_servername.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/
 
 mkdir -p %{buildroot}%{_var}/log/openshift/broker/httpd
-touch %{buildroot}%{_var}/log/openshift/user_action.log
+touch %{buildroot}%{_var}/log/openshift/broker/user_action.log
 touch %{buildroot}%{_var}/log/openshift/broker/production.log
 touch %{buildroot}%{_var}/log/openshift/broker/development.log
 
 cp conf/broker.conf %{buildroot}%{_sysconfdir}/openshift/broker.conf
 cp conf/broker.conf %{buildroot}%{_sysconfdir}/openshift/broker-dev.conf
 cp conf/quickstarts.json %{buildroot}%{_sysconfdir}/openshift/quickstarts.json
+cp conf/plugins.d/README %{buildroot}%{_sysconfdir}/openshift/plugins.d/README
 
 %if 0%{?fedora} >= 18
 mv %{buildroot}%{brokerdir}/httpd/httpd.conf.apache-2.4 %{buildroot}%{brokerdir}/httpd/httpd.conf
@@ -137,7 +140,7 @@ rm %{buildroot}%{brokerdir}/httpd/broker-scl-ruby193.conf
 %attr(0750,-,-) %{_var}/log/openshift/broker/httpd
 %attr(0640,-,-) %ghost %{_var}/log/openshift/broker/production.log
 %attr(0640,-,-) %ghost %{_var}/log/openshift/broker/development.log
-%attr(0640,-,-) %ghost %{_var}/log/openshift/user_action.log
+%attr(0640,-,-) %ghost %{_var}/log/openshift/broker/user_action.log
 %attr(0750,-,-) %{brokerdir}/script
 %attr(0750,-,-) %{brokerdir}/tmp
 %attr(0750,-,-) %{brokerdir}/tmp/cache
@@ -152,6 +155,8 @@ rm %{buildroot}%{brokerdir}/httpd/broker-scl-ruby193.conf
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/000002_openshift_origin_broker_proxy.conf
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/000002_openshift_origin_broker_servername.conf
 %config(noreplace) %{_sysconfdir}/openshift/broker.conf
+%doc %{_sysconfdir}/openshift/plugins.d/README
+%dir %{_sysconfdir}/openshift/plugins.d
 %config(noreplace) %{_sysconfdir}/openshift/quickstarts.json
 %{_sysconfdir}/openshift/broker-dev.conf
 
@@ -180,7 +185,7 @@ systemctl --system daemon-reload
 # command line tools that will load the Rails environment and create the logs
 # as root.  We need the files labeled %ghost because we don't want these log
 # files overwritten on RPM upgrade.
-for l in %{_var}/log/openshift/user_action.log %{_var}/log/openshift/broker/{development,production}.log; do
+for l in %{_var}/log/openshift/broker/{development,production,user_action}.log; do
   if [ ! -f $l ]; then
     touch $l
   fi
@@ -197,7 +202,6 @@ boolean -m --on httpd_enable_homedirs
 fcontext -a -t httpd_var_run_t '%{brokerdir}/httpd/run(/.*)?'
 fcontext -a -t httpd_tmp_t '%{brokerdir}/tmp(/.*)?'
 fcontext -a -t httpd_log_t '%{_var}/log/openshift/broker(/.*)?'
-fcontext -a -t httpd_log_t '%{_var}/log/openshift/user_action.log'
 _EOF
 
 chcon -R -t httpd_log_t %{_var}/log/openshift/broker
@@ -208,7 +212,7 @@ chcon -R -t httpd_var_run_t %{brokerdir}/httpd/run
 /sbin/restorecon -R -v /var/run
 #/sbin/restorecon -rv %{_datarootdir}/rubygems/gems/passenger-*
 /sbin/restorecon -rv %{brokerdir}/tmp
-/sbin/restorecon -v '%{_var}/log/openshift/user_action.log'
+/sbin/restorecon -v '%{_var}/log/openshift/broker/user_action.log'
 
 %postun
 /sbin/fixfiles -R %{?scl:%scl_prefix}rubygem-passenger restore

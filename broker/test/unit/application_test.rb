@@ -51,11 +51,11 @@ class ApplicationsTest < ActionDispatch::IntegrationTest #ActiveSupport::TestCas
     app.start
     app.tidy
     assert_raise(OpenShift::UserException){app.threaddump}
-    app.add_alias("www.example.com")
-    app.remove_alias("www.example.com")
-    # updating the application namespace is no longer supported
-    #@domain.update_namespace("new_namespace")
-    #@domain.update_namespace(@namespace)
+
+    as = "as#{gen_uuid[0..9]}"
+    app.add_alias(as)
+    app.remove_alias(as)
+
     app.destroy_app
   end
   
@@ -72,7 +72,7 @@ class ApplicationsTest < ActionDispatch::IntegrationTest #ActiveSupport::TestCas
     app = Application.create_app(@appname, ["php-5.3", "mysql-5.1"], @domain, "small", true)
     app = Application.find_by(name: @appname, domain_id: @domain._id) rescue nil
 
-    @user.capabilities["max_storage_per_gear"] = 10
+    @user.capabilities["max_untracked_addtl_storage_per_gear"] = 5
     @user.save
     app.reload
     component_instance = app.component_instances.find_by(cartridge_name: "php-5.3")

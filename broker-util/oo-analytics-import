@@ -30,23 +30,29 @@ if not File.directory?("/tmp/tmp/analytics")
   exit
 end
 
-`mongoimport --file /tmp/tmp/analytics/analytics.apps.json --db analytics --collection applications --upsert`
-`mongoimport --file /tmp/tmp/analytics/analytics.domains.json --db analytics --collection domains --upsert`
-`mongoimport --file /tmp/tmp/analytics/analytics.usage.json --db analytics --collection usage --upsert`
-`mongoimport --file /tmp/tmp/analytics/analytics.users.json --db analytics --collection cloud_users --upsert`
+files = [['analytics.apps.json', 'applications'], ['analytics.domains.json','domains'], ['analytics.usage.json', 'usage'], ['analytics.users.json', 'cloud_users']]
+
+files.each do |file, collection|
+    puts
+    puts "Running mongoimport on file [#{file}] on collection [#{collection}]"
+    cmd = "mongoimport --username #{u} --password #{p} --host #{hp} --file /tmp/tmp/analytics/#{file} --db analytics --collection #{collection} --upsert"
+    system(cmd)
+end
 
 `rm -rf /tmp/tmp/analytics`
 
 def analytics_db(read_preference=:secondary, session_name='default')
   config = Mongoid::Config.sessions[session_name]
   hosts = config['hosts']
+  ssl = config['options']['ssl']
   if hosts.length > 1
-    con = Mongo::ReplSetConnection.new(hosts, {:read => read_preference})
+    con = MongoReplicaSetClient.new(hosts, :read => read_preference, :ssl => ssl)
   else
     host_port = hosts[0].split(':')
-    con = Mongo::Connection.new(host_port[0], host_port[1].to_i)
+    con = MongoClient.new(host_port[0], host_port[1].to_i, :ssl => ssl)
   end
   adb = con.db('analytics')
+  adb.authenticate(config['username'], config['password'])
   adb
 end
 
@@ -62,19 +68,24 @@ puts
 puts "Post processing.."
 $coll = analytics_db.collection("applications")
 mongofind("applications", { }, { :fields => ["_id","component_instances","group_instances"], :timeout => false }) do |app|
-  new_gis = []
-  app["group_instances"].each { |gi|
-    new_gears = []
-    gi["gears"].each { |gear|
-      new_gears << { "_id" => gear["_id"].dup }
-    }
-    new_gis << { "gears" => new_gears }
-  }
-  new_cis = []
-  app["component_instances"].each { |ci|
-    new_cis << { "cartridge_name" => ci["cartridge_name"].dup }
-  }
-  $coll.update({"_id" => app["_id"]}, {"$set" => {"group_instances" => new_gis, "component_instances" => new_cis}} ) if app["_id"]
+  begin
+    new_gis = []
+    app["group_instances"].each { |gi|
+      new_gears = []
+      gi["gears"].each { |gear|
+        new_gears << { "_id" => gear["_id"].dup }
+      } if gi["gears"]
+      new_gis << { "gears" => new_gears }
+    } if app["group_instances"]
+    new_cis = []
+    app["component_instances"].each { |ci|
+      new_cis << { "cartridge_name" => ci["cartridge_name"].dup }
+    } if app["component_instances"]
+    $coll.update({"_id" => app["_id"]}, {"$set" => {"group_instances" => new_gis, "component_instances" => new_cis}} ) if app["_id"]
+  rescue Exception => e
+    puts e.message
+    puts e.backtrace
+  end
 end
 
 puts "Import complete!"

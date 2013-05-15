@@ -22,22 +22,27 @@ class ComponentInstance
   end
   
   def is_plugin?
-    cart = CartridgeCache.find_cartridge(cartridge_name)
+    cart = CartridgeCache.find_cartridge(cartridge_name, self.application)
     cart.is_plugin?
   end
   
   def is_embeddable?
-    cart = CartridgeCache.find_cartridge(cartridge_name)
+    cart = CartridgeCache.find_cartridge(cartridge_name, self.application)
     cart.is_embeddable?
   end
   
   def is_web_proxy?
-    cart = CartridgeCache.find_cartridge(cartridge_name)
+    cart = CartridgeCache.find_cartridge(cartridge_name, self.application)
     cart.is_web_proxy?
   end
   
+  def is_web_framework?
+    cart = CartridgeCache.find_cartridge(cartridge_name, self.application)
+    cart.is_web_framework?
+  end
+
   def get_additional_control_actions
-    cart = CartridgeCache.find_cartridge(cartridge_name)
+    cart = CartridgeCache.find_cartridge(cartridge_name, self.application)
     cart.additional_control_actions
   end
 
@@ -67,7 +72,7 @@ class ComponentInstance
   end
 
   def get_cartridge
-    CartridgeCache.find_cartridge(cartridge_name)
+    CartridgeCache.find_cartridge(cartridge_name, self.application)
   end
 
   def get_component
@@ -77,13 +82,5 @@ class ComponentInstance
   # @return [Hash] a simplified hash representing this {ComponentInstance} object which is used by {Application#compute_diffs}
   def to_hash
     {"cart" => cartridge_name, "comp" => component_name}
-  end
-
-  def complete_update_namespace(args)
-    old_ns = args["old_namespace"]
-    new_ns = args["new_namespace"]
-    self.component_properties.each do |prop_key, prop_value|
-      self.component_properties[prop_key] = prop_value.gsub(/-#{old_ns}.#{Rails.configuration.openshift[:domain_suffix]}/, "-#{new_ns}.#{Rails.configuration.openshift[:domain_suffix]}")
-    end
   end
 end

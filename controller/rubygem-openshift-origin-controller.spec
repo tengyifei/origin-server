@@ -9,11 +9,11 @@
 
 Summary:       Cloud Development Controller
 Name:          rubygem-%{gem_name}
-Version: 1.7.7
+Version: 1.9.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
 %if 0%{?fedora} >= 19
 Requires:      ruby(release)
@@ -22,6 +22,7 @@ Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
 %endif
 Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      %{?scl:%scl_prefix}rubygem(state_machine)
+Requires:      %{?scl:%scl_prefix}rubygem(dnsruby)
 Requires:      rubygem(openshift-origin-common)
 %if 0%{?fedora}%{?rhel} <= 6
 BuildRequires: %{?scl:%scl_prefix}build
@@ -83,6 +84,197 @@ mkdir -p %{buildroot}/etc/openshift/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+- Merge pull request #2341 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bugs 958653, 959676, 959214 and Cleaned up UserException (lnader@redhat.com)
+
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.10-1
+- Merge pull request #2385 from pravisankar/dev/ravi/misc-bug958249
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2393 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Fix 'max_storage_per_gear' capability in rest user model. (rpenta@redhat.com)
+- Bug 958249 : oo-admin-move will allow different node profile for non-scalable
+  apps (rpenta@redhat.com)
+- cleanup download url flow for embedded cart (rchopra@redhat.com)
+
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.9-1
+- fix bz959826 - fqdn for secondary gears (rchopra@redhat.com)
+
+* Tue May 07 2013 Adam Miller <admiller@redhat.com> 1.8.8-1
+- Merge pull request #2366 from rajatchopra/url_carts_fixes
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2362 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- fix the rest models/controllers for applications based on downloadable carts
+  (rchopra@redhat.com)
+- fix embedded cartridges controller to cleanly understand json input structure
+  (rchopra@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.8.7-1
+- renaming and fix bug#958970 (rchopra@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.8.6-1
+- fix version mismatch between broker/node for personal carts; some more safety
+  for yaml downloads (rchopra@redhat.com)
+
+* Thu May 02 2013 Adam Miller <admiller@redhat.com> 1.8.5-1
+- nomenclature cleanup and fix for bz958342 (rchopra@redhat.com)
+- Merge pull request #2232 from smarterclayton/support_external_cartridges
+  (dmcphers+openshiftbot@redhat.com)
+- Remove last external reference (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into support_external_cartridges
+  (ccoleman@redhat.com)
+- Rename "external cartridge" to "downloaded cartridge".  UI should call them
+  "personal" cartridges (ccoleman@redhat.com)
+- 'or true' results in external always being enabled (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into support_external_cartridges
+  (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into support_external_cartridges
+  (ccoleman@redhat.com)
+- Add broker config for external cartridges (ccoleman@redhat.com)
+
+* Wed May 01 2013 Adam Miller <admiller@redhat.com> 1.8.4-1
+- Merge pull request #2300 from pravisankar/dev/ravi/card21
+  (dmcphers+openshiftbot@redhat.com)
+- Broker changes for supporting unsubscribe connection event. Details: When one
+  of the component is removed from the app and if it has published some content
+  to other components located on different gears, we issue unsubscribe event on
+  all the subscribing gears to cleanup the published content.
+  (rpenta@redhat.com)
+- Merge pull request #2307 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- embedding and versions support for community carts (rchopra@redhat.com)
+- Merge pull request #2284 from lnader/551 (dmcphers+openshiftbot@redhat.com)
+- fixed broker extended by increasing timeout (lnader@redhat.com)
+- Merge pull request #2301 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- fix bug#958320 - no singleton cart's hook for scaled gears
+  (rchopra@redhat.com)
+- fixed issue with features with dashes (lnader@redhat.com)
+- Card 551 (lnader@redhat.com)
+- Card online_runtime_266 - Support for JAVA_HOME (jhonce@redhat.com)
+- Merge pull request #2287 from brenton/oo-accept-systems2
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2282 from rajatchopra/url_story
+  (dmcphers+openshiftbot@redhat.com)
+- Adding a cucumber test for oo-accept-systems (bleanhar@redhat.com)
+- support for external cartridge through urls (rchopra@redhat.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 1.8.3-1
+- Merge pull request #2280 from mrunalp/dev/auto_env_vars
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2230 from pravisankar/dev/ravi/card559
+  (dmcphers+openshiftbot@redhat.com)
+- Env var WIP. (mrunalp@gmail.com)
+- Merge pull request #2273 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- fix for bug#956117 - cartname is required for start/stop and not comp_name
+  (rchopra@redhat.com)
+- Removed 'setmaxstorage' option for oo-admin-ctl-user script. Added
+  'setmaxtrackedstorage' and 'setmaxuntrackedstorage' options for oo-admin-ctl-
+  user script. Updated oo-admin-ctl-user man page. Max allowed additional fs
+  storage for user will be 'max_untracked_addtl_storage_per_gear' capability +
+  'max_tracked_addtl_storage_per_gear' capability. Don't record usage for
+  additional fs storage if it is less than
+  'max_untracked_addtl_storage_per_gear' limit. Fixed unit tests and models to
+  accommodate the above change. (rpenta@redhat.com)
+
+* Mon Apr 29 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- Merge pull request #2254 from ironcladlou/dev/v2carts/process-version
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2243 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Add process-version control action (ironcladlou@gmail.com)
+- Maintaining configure order among components for post-configure as well
+  (abhgupta@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- Merge pull request #2231 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- subscriber connection should know who is the publisher (rchopra@redhat.com)
+- Bug 956670 - Fix static references to small gear size (jdetiber@redhat.com)
+- Card online_runtime_266 - Cucumber test checking for removed file
+  (jhonce@redhat.com)
+- splitting up runtime_other tests (dmcphers@redhat.com)
+- Merge pull request #2220 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2217 from pmorie/dev/v2_mysql
+  (dmcphers+openshiftbot@redhat.com)
+- Splitting configure for cartridges into configure and post-configure
+  (abhgupta@redhat.com)
+- Merge pull request #2212 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #1918 from lnader/rest_api_improvments
+  (dmcphers+openshiftbot@redhat.com)
+- Trim execution time of runtime_other tests (pmorie@gmail.com)
+- Bug 955973 (dmcphers@redhat.com)
+- Postgres V2 fixes (fotios@redhat.com)
+- Creating fixer mechanism for replacing all ssh keys for an app
+  (abhgupta@redhat.com)
+- Merge pull request #2208 from ironcladlou/dev/v2carts/post-configure
+  (dmcphers+openshiftbot@redhat.com)
+- General REST API clean up - centralizing log tags and getting common objects
+  (lnader@redhat.com)
+- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
+- add connection type to connector calls (dmcphers@redhat.com)
+- Merge pull request #2196 from pmorie/dev/v2_mysql
+  (dmcphers+openshiftbot@redhat.com)
+- WIP: test mysql in scalable app (pmorie@gmail.com)
+- Merge pull request #2187 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- install and post setup tests (dmcphers@redhat.com)
+- Implement hot deployment for V2 cartridges (ironcladlou@gmail.com)
+- WIP Cartridge Refactor - Update extended tests for raw environment variables
+  (jhonce@redhat.com)
+- WIP Cartridge Refactor - Card#255 missed env var source in app_helper.rb
+  (jhonce@redhat.com)
+- WIP Cartridge Refactor - Change environment variable files to contain just
+  value (jhonce@redhat.com)
+- app_dns should belong to only one group instance (rchopra@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- Merge pull request #2155 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2152 from pravisankar/dev/ravi/plan_history_cleanup
+  (dmcphers+openshiftbot@redhat.com)
+- eventual consistency is alright in some cases (rchopra@redhat.com)
+- Merge pull request #2149 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Added pre_sync_usage, post_sync_usage operations in oo-admin-ctl-usage script
+  (rpenta@redhat.com)
+- Merge pull request #2146 from abhgupta/bug_953493
+  (dmcphers+openshiftbot@redhat.com)
+- disallow creation of scalable apps with framework carts that do not scale
+  (rchopra@redhat.com)
+- Merge pull request #2142 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Fix for bug 953493  - Providing better error message when creating a scalable
+  application with a framework cartridge that cannot be scaled  - Validating
+  against adding more than one framework cartridge to an application
+  (abhgupta@redhat.com)
+- refix unreserve_uid when destroying gear (rchopra@redhat.com)
+- Merge pull request #2120 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- unreserve should not happen twice over (rchopra@redhat.com)
+- Fix for bug 953035 Including the links for aliases embedded in application
+  response if nolinks was not specified (abhgupta@redhat.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+- Merge pull request #2099 from brenton/controller1
+  (dmcphers+openshiftbot@redhat.com)
+- controller dependency fixes (bleanhar@redhat.com)
+
+* Tue Apr 16 2013 Troy Dawson <tdawson@redhat.com> 1.7.8-1
+- Merge pull request #2083 from pmorie/bugs/927850
+  (dmcphers+openshiftbot@redhat.com)
+- WIP Cartridge Refactor - V2 support for reading .uservars (jhonce@redhat.com)
+- <controller/test/cucumber> Bug 949251 - fix jboss* snapshot/restore tests
+  (jolamb@redhat.com)
+- <runtime_steps.rb> Bug 949251 - Add file check to V1 snapshot/restore test
+  (jolamb@redhat.com)
+
 * Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 1.7.7-1
 - WIP: scalable snapshot/restore (pmorie@gmail.com)
 - Merge pull request #2040 from pmorie/dev/mock_cuke (dmcphers@redhat.com)

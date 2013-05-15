@@ -50,6 +50,8 @@ module RestApi
     end
   end
 
+  class ServerUnavailable < ActiveResource::ServerError ; end
+
   # The server did not return the response we were expecting, possibly a server bug
   class BadServerResponseError < StandardError ; end
 
@@ -118,6 +120,13 @@ The REST API could not be reached at #{Base.site}
 
   def self.application_domain_suffix
     @application_domain_suffix ||= Environment.cached.find(:one).domain_suffix
+  end
+
+  #
+  # Does the server support the 'url' parameter on app creation and on cartridge addition?
+  #
+  def self.download_cartridges_enabled?
+    @download_cartridges_enabled ||= Environment.cached.find(:one).download_cartridges_enabled
   end
 
   def self.site

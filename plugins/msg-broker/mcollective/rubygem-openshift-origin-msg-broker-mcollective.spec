@@ -9,11 +9,11 @@
 
 Summary:       OpenShift plugin for mcollective service
 Name:          rubygem-%{gem_name}
-Version: 1.7.3
+Version: 1.9.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
 %if 0%{?fedora} >= 19
 Requires:      ruby(release)
@@ -80,6 +80,54 @@ cp %{buildroot}/%{gem_dir}/gems/%{gem_name}-%{version}/conf/openshift-origin-msg
 %attr(0644,-,-) %ghost /etc/mcollective/client.cfg
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.6-1
+- Bug 958249 : oo-admin-move will allow different node profile for non-scalable
+  apps (rpenta@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.8.5-1
+- fix version mismatch between broker/node for personal carts; some more safety
+  for yaml downloads (rchopra@redhat.com)
+
+* Thu May 02 2013 Adam Miller <admiller@redhat.com> 1.8.4-1
+- nomenclature cleanup and fix for bz958342 (rchopra@redhat.com)
+
+* Wed May 01 2013 Adam Miller <admiller@redhat.com> 1.8.3-1
+- Broker changes for supporting unsubscribe connection event. Details: When one
+  of the component is removed from the app and if it has published some content
+  to other components located on different gears, we issue unsubscribe event on
+  all the subscribing gears to cleanup the published content.
+  (rpenta@redhat.com)
+- Merge pull request #2282 from rajatchopra/url_story
+  (dmcphers+openshiftbot@redhat.com)
+- support for external cartridge through urls (rchopra@redhat.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- Env var WIP. (mrunalp@gmail.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- subscriber connection should know who is the publisher (rchopra@redhat.com)
+- Splitting configure for cartridges into configure and post-configure
+  (abhgupta@redhat.com)
+- Creating fixer mechanism for replacing all ssh keys for an app
+  (abhgupta@redhat.com)
+- add connection type to connector calls (dmcphers@redhat.com)
+- Fix for bug 953673  - Fixing gear move within the same district when target
+  server is not specified (abhgupta@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- Fix Move gear: Based on district changed or not, we should reverse/unreserve
+  uid (rpenta@redhat.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
+* Tue Apr 16 2013 Troy Dawson <tdawson@redhat.com> 1.7.4-1
+- Merge pull request #2079 from pravisankar/dev/ravi/fix_move_gear
+  (dmcphers@redhat.com)
+- Fixing issue where app creation failure did not cleanup gears from node
+  (abhgupta@redhat.com)
+- Move gear within district should ignore its source server (rpenta@redhat.com)
+
 * Wed Apr 10 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
 - Change 'allow_change_district' to 'change_district' and remove warnings when
   target server or district is specified. Fix start/stop carts order in move

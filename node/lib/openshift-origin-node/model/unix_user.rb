@@ -17,7 +17,7 @@
 require 'rubygems'
 require 'openshift-origin-node/utils/shell_exec'
 require 'openshift-origin-node/utils/selinux'
-require 'openshift-origin-node/utils/path_utils'
+require 'openshift-origin-common/utils/path_utils'
 require 'openshift-origin-node/model/frontend_httpd.rb'
 require 'openshift-origin-node/utils/node_logger'
 require 'openshift-origin-common'
@@ -51,6 +51,7 @@ module OpenShift
     def initialize(application_uuid, container_uuid, user_uid=nil,
         app_name=nil, container_name=nil, namespace=nil, quota_blocks=nil, quota_files=nil, debug=false)
       @config = OpenShift::Config.new
+      @cartridge_format = Utils::Sdk.node_default_model(@config)
 
       @container_uuid = container_uuid
       @application_uuid = application_uuid
@@ -96,6 +97,7 @@ module OpenShift
       gecos    = @config.get("GEAR_GECOS")     || "OO application container"
       notify_observers(:before_unix_user_create)
       basedir = @config.get("GEAR_BASE_DIR")
+      supplementary_groups = @config.get("GEAR_SUPL_GRPS")
 
       # lock to prevent race condition between create and delete of gear
       uuid_lock_file = "/var/lock/oo-create.#{@uuid}"
@@ -125,6 +127,9 @@ module OpenShift
                   -m \
                   -k #{skel_dir} \
                   #{@uuid}}
+          if supplementary_groups != ""
+            cmd << %{ -G "#{supplementary_groups}"}
+          end
           out,err,rc = shellCmd(cmd)
           raise UserCreationException.new(
                   "ERROR: unable to create user account(#{rc}): #{cmd.squeeze(" ")} stdout: #{out} stderr: #{err}"
@@ -257,11 +262,7 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
       comment = "" unless comment
       self.class.notify_observers(:before_add_ssh_key, self, key)
 
-      key_type    = "ssh-rsa" if key_type.to_s.strip.length == 0
-      cloud_name  = "OPENSHIFT"
-      ssh_comment = "#{cloud_name}-#{@uuid}-#{comment}"
-      shell       = @config.get("GEAR_SHELL") || "/bin/bash"
-      cmd_entry   = "command=\"#{shell}\",no-X11-forwarding #{key_type} #{key} #{ssh_comment}"
+      ssh_comment, cmd_entry = get_ssh_key_cmd_entry(key, key_type, comment)
 
       modify_ssh_keys do |keys|
         keys[ssh_comment] = cmd_entry
@@ -292,6 +293,33 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
       self.class.notify_observers(:after_remove_ssh_key, self, key)
     end
 
+    # Public: Remove all existing SSH keys and add the new ones to a users authorized_keys file.
+    #
+    # ssh_keys - The Array of ssh keys.
+    #
+    # Examples
+    #
+    #   replace_ssh_keys([{'key' => AAAAB3NzaC1yc2EAAAADAQABAAABAQDE0DfenPIHn5Bq/...', 'type' => 'ssh-rsa', 'name' => 'key1'}])
+    #   # => nil
+    #
+    # Returns nil on Success or raises on Failure
+    def replace_ssh_keys(ssh_keys)
+      raise Exception.new('The provided ssh keys do not have the required attributes') unless validate_ssh_keys(ssh_keys)
+      
+      self.class.notify_observers(:before_replace_ssh_keys, self)
+
+      modify_ssh_keys do |keys|
+        keys.delete_if{ |k, v| true }
+        
+        ssh_keys.each do |key|
+          ssh_comment, cmd_entry = get_ssh_key_cmd_entry(key['key'], key['type'], key['comment'])
+          keys[ssh_comment] = cmd_entry
+        end
+      end
+
+      self.class.notify_observers(:after_replace_ssh_keys, self)
+    end
+
     # Public: Add an environment variable to a given gear.
     #
     # key - The String value of target environment variable.
@@ -306,16 +334,18 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
     # Returns the Integer value for how many bytes got written or raises on
     # failure.
     def add_env_var(key, value, prefix_cloud_name = false, &blk)
-      env_dir = File.join(@homedir,'.env/')
-      if prefix_cloud_name
-        key = "OPENSHIFT_#{key}"
-      end
+      env_dir = File.join(@homedir, '.env/')
+      key = "OPENSHIFT_#{key}" if prefix_cloud_name
+
       filename = File.join(env_dir, key)
-      File.open(filename,
-          File::WRONLY|File::TRUNC|File::CREAT) do |file|
-            file.write "export #{key}='#{value}'"
+      File.open(filename, File::WRONLY|File::TRUNC|File::CREAT) do |file|
+        if :v1 == @cartridge_format
+          file.write "export #{key}='#{value}'"
+        else
+          file.write value.to_s
         end
-        
+      end
+
       mcs_label = Utils::SELinux.get_mcs_label(uid)
       PathUtils.oo_chown(0, gid, filename)
       Utils::SELinux.set_mcs_label(mcs_label, filename)
@@ -432,18 +462,21 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
       notify_observers(:before_initialize_homedir)
       homedir = homedir.end_with?('/') ? homedir : homedir + '/'
 
-      tmp_dir = File.join(homedir, ".tmp")
       # Required for polyinstantiated tmp dirs to work
-      FileUtils.mkdir_p tmp_dir
-      FileUtils.chmod(0o0000, tmp_dir)
+      [".tmp", ".sandbox"].each do |poly_dir|
+        full_poly_dir = File.join(homedir, poly_dir)
+        FileUtils.mkdir_p full_poly_dir
+        FileUtils.chmod(0o0000, full_poly_dir)
+      end
 
-      sandbox_dir = File.join(homedir, ".sandbox")
-      FileUtils.mkdir_p sandbox_dir
-      FileUtils.chmod(0o0000, sandbox_dir)
-
-      sandbox_uuid_dir = File.join(sandbox_dir, @uuid)
+      # Polydir runs before the marker is created so set up sandbox by hand
+      sandbox_uuid_dir = File.join(homedir, ".sandbox", @uuid)
       FileUtils.mkdir_p sandbox_uuid_dir
-      FileUtils.chmod(0o1755, sandbox_uuid_dir)
+      if @cartridge_format == :v1
+        FileUtils.chmod(0o1755, sandbox_uuid_dir)
+      else
+        PathUtils.oo_chown(@uuid, nil, sandbox_uuid_dir)
+      end
 
       env_dir = File.join(homedir, ".env")
       FileUtils.mkdir_p(env_dir)
@@ -526,6 +559,7 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
       OpenShift::FrontendHttpServer.new(@container_uuid,@container_name,@namespace).create
 
       # Fix SELinux context for cart dirs
+      Utils::SELinux.clear_mcs_label_R(homedir)
       Utils::SELinux.set_mcs_label_R(Utils::SELinux.get_mcs_label(@uid), Dir.glob(File.join(homedir, '*')))
 
       notify_observers(:after_initialize_homedir)
@@ -690,6 +724,31 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
       keys
     end
 
+    # Generate the command entry for the ssh key to be written into the authorized keys file
+    def get_ssh_key_cmd_entry(key, key_type, comment)
+      key_type    = "ssh-rsa" if key_type.to_s.strip.length == 0
+      cloud_name  = "OPENSHIFT"
+      ssh_comment = "#{cloud_name}-#{@uuid}-#{comment}"
+      shell       = @config.get("GEAR_SHELL") || "/bin/bash"
+      cmd_entry   = "command=\"#{shell}\",no-X11-forwarding #{key_type} #{key} #{ssh_comment}"
+      
+      [ssh_comment, cmd_entry]
+    end
+
+    # validate the ssh keys to check for the required attributes
+    def validate_ssh_keys(ssh_keys)
+      ssh_keys.each do |key|
+        begin
+          if key['key'].nil? or key['type'].nil? and key['comment'].nil?
+            return false
+          end
+        rescue Exception => ex
+          return false
+        end
+      end
+      return true
+    end
+
     # Deterministically constructs an IP address for the given UID based on the given
     # host identifier (LSB of the IP). The host identifier must be a value between 1-127
     # inclusive.
@@ -758,7 +817,7 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
     #
     # Caveat: the quota information will not be populated.
     #
-    def self.all_users
+    def self.all
       Enumerator.new do |yielder|
         config = OpenShift::Config.new
         gecos = config.get("GEAR_GECOS") || "OO application container"
@@ -772,15 +831,17 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
 
         pwents.each do |pwent|
           if pwent.gecos == gecos
+            u = nil
             begin
               env = Utils::Environ.for_gear(pwent.dir)
               u = UnixUser.new(env["OPENSHIFT_APP_UUID"], pwent.name, pwent.uid,
                                env["OPENSHIFT_APP_NAME"], env["OPENSHIFT_GEAR_NAME"],
                                env['OPENSHIFT_GEAR_DNS'].sub(/\..*$/,"").sub(/^.*\-/,""))
-              yielder.yield(u)
             rescue => e
               NodeLogger.logger.error("Failed to instantiate UnixUser for #{pwent.uid}: #{e}")
               NodeLogger.logger.error("Backtrace: #{e.backtrace}")
+            else
+              yielder.yield(u)
             end
           end
         end

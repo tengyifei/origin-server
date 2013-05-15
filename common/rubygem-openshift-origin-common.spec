@@ -9,11 +9,11 @@
 
 Summary:       Cloud Development Common
 Name:          rubygem-%{gem_name}
-Version: 1.6.2
+Version: 1.8.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
-URL:           http://openshift.redhat.com
+URL:           http://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/rubygem-%{gem_name}-%{version}.tar.gz
 %if 0%{?fedora} >= 19
 Requires:      ruby(release)
@@ -85,6 +85,7 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %doc %{gem_instdir}/Rakefile
 %doc %{gem_instdir}/README.md
 %doc %{gem_instdir}/%{gem_name}.gemspec
+%{gem_instdir}
 %{gem_spec}
 %{gem_libdir}
 
@@ -95,6 +96,51 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %doc %{gem_docdir}
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+- Merge pull request #2341 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bugs 958653, 959676, 959214 and Cleaned up UserException (lnader@redhat.com)
+
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.7.6-1
+- Merge pull request #2392 from BanzaiMan/dev/hasari/bz959843
+  (dmcphers+openshiftbot@redhat.com)
+- Do not validate vendor and cartridge names when instantiating Manifest from
+  filesystem. (asari.ruby@gmail.com)
+- Bug 958694: Make .state gear scoped and refactor primary cart concept
+  (ironcladlou@gmail.com)
+- Merge pull request #2374 from BanzaiMan/dev/hasari/reserved_cartridge_names
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 960375: restrict vendor and cartridge names to 32 characters.
+  (asari.ruby@gmail.com)
+
+* Tue May 07 2013 Adam Miller <admiller@redhat.com> 1.7.5-1
+- Check cartridge name for reserved names ('app-root', 'git')
+  (asari.ruby@gmail.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.7.4-1
+- Merge pull request #2342 from BanzaiMan/dev/hasari/c288_followup
+  (dmcphers+openshiftbot@redhat.com)
+- Add Cartridge-Vendor to manifest.yml in v1. (asari.ruby@gmail.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.7.3-1
+- Special file processing (fotios@redhat.com)
+- Validate cartridge and vendor names under certain conditions
+  (asari.ruby@gmail.com)
+
+* Wed May 01 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Card 551 (lnader@redhat.com)
+- Move Runtime::Cartridge to openshift-origin-common (ironcladlou@gmail.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
+- Splitting configure for cartridges into configure and post-configure
+  (abhgupta@redhat.com)
+- Bug 928675 (asari.ruby@gmail.com)
+- Keep a separate cache for each config file. (rmillner@redhat.com)
+- Cache the node conf into a singleton instance so we do not constantly reload
+  and re-parse it. (rmillner@redhat.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+
 * Tue Apr 09 2013 Adam Miller <admiller@redhat.com> 1.6.2-1
 - Card 534 (lnader@redhat.com)
 

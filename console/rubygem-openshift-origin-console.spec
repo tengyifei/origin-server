@@ -9,7 +9,7 @@
 
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
-Version: 1.7.6
+Version: 1.9.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -38,6 +38,11 @@ Requires:      %{?scl:%scl_prefix}rubygem(simplecov)
 Requires:      %{?scl:%scl_prefix}rubygem(test-unit)
 Requires:      %{?scl:%scl_prefix}rubygem(uglifier)
 Requires:      %{?scl:%scl_prefix}rubygem(webmock)
+Requires:      %{?scl:%scl_prefix}rubygem(poltergeist)
+Requires:      %{?scl:%scl_prefix}rubygem(konacha)
+Requires:      %{?scl:%scl_prefix}rubygem(minitest)
+Requires:      %{?scl:%scl_prefix}rubygem(rspec-core)
+
 BuildRequires: %{?scl:%scl_prefix}build
 BuildRequires: scl-utils-build
 BuildRequires: %{?scl:%scl_prefix}rubygem(rails)
@@ -53,6 +58,11 @@ BuildRequires: %{?scl:%scl_prefix}rubygem(formtastic)
 BuildRequires: %{?scl:%scl_prefix}rubygem(net-http-persistent)
 BuildRequires: %{?scl:%scl_prefix}rubygem(haml)
 BuildRequires: %{?scl:%scl_prefix}rubygem(therubyracer)
+BuildRequires: %{?scl:%scl_prefix}rubygem(poltergeist)
+BuildRequires: %{?scl:%scl_prefix}rubygem(konacha)
+BuildRequires: %{?scl:%scl_prefix}rubygem(minitest)
+BuildRequires: %{?scl:%scl_prefix}rubygem(rspec-core)
+
 %endif
 BuildRequires: %{?scl:%scl_prefix}rubygems-devel
 %if 0%{?fedora} >= 19
@@ -101,6 +111,9 @@ rm -rf tmp/cache/*
 echo > %{buildroot}%{_var}/log/openshift/console/production.log
 popd
 
+find . -name .gitignore -delete
+find . -name .gitkeep -delete
+
 rm -rf %{buildroot}%{_var}/log/openshift/*
 
 rm -f Gemfile.lock
@@ -134,6 +147,177 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 28 (admiller@redhat.com)
+- Merge pull request #2399 from smarterclayton/allow_grids_to_be_pulled
+  (dmcphers+openshiftbot@redhat.com)
+- Allow spans to be pulled right responsively (ccoleman@redhat.com)
+
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.10-1
+- Merge pull request #2389 from liggitt/bug_959559_js_validation_errors
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 959559 - mark individual fields as having errors, limit js validation
+  to onsubmit (jliggitt@redhat.com)
+
+* Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.9-1
+- Merge pull request #2388 from detiber/bz959162
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2390 from ironcladlou/bz/958694
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 958694: Make .state gear scoped and refactor primary cart concept
+  (ironcladlou@gmail.com)
+- Merge pull request #2377 from smarterclayton/fix_cart_messaging
+  (dmcphers+openshiftbot@redhat.com)
+- <console> Bug 959162 - Fix display issues (jdetiber@redhat.com)
+- Merge pull request #2383 from smarterclayton/revert_a0a565ff_in_console
+  (dmcphers+openshiftbot@redhat.com)
+- Revert a0a565ff - changes need to go through styling review
+  (ccoleman@redhat.com)
+- Adjust the naming of downloaded cartridges to match decisions
+  (ccoleman@redhat.com)
+
+* Tue May 07 2013 Adam Miller <admiller@redhat.com> 1.8.8-1
+- Merge pull request #2369 from liggitt/date_helper
+  (dmcphers+openshiftbot@redhat.com)
+- Add collapse_dates helper method (jliggitt@redhat.com)
+- Merge pull request #2358 from detiber/bz959162
+  (dmcphers+openshiftbot@redhat.com)
+- <console> Bug 959162 - Fix display issues (jdetiber@redhat.com)
+
+* Mon May 06 2013 Adam Miller <admiller@redhat.com> 1.8.7-1
+- Bug 959904 - DIY cartridge is not listed on the create app page
+  (jforrest@redhat.com)
+- Add authorization controller tests in console (ccoleman@redhat.com)
+- Merge pull request #2331 from liggitt/cache_method
+  (dmcphers+openshiftbot@redhat.com)
+- Fix call to cache_key_for (jliggitt@redhat.com)
+
+* Fri May 03 2013 Adam Miller <admiller@redhat.com> 1.8.6-1
+- Merge pull request #2334 from smarterclayton/unify_footer_header_colors
+  (dmcphers+openshiftbot@redhat.com)
+- Make the H3 and A consistent in color in the footer (ccoleman@redhat.com)
+
+* Thu May 02 2013 Adam Miller <admiller@redhat.com> 1.8.5-1
+- Merge pull request #2319 from
+  smarterclayton/rest_api_defends_against_bad_exceptions
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2320 from liggitt/bug_958278_segfault_on_int_assetss
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2232 from smarterclayton/support_external_cartridges
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 958278 - only insert asset middleware when static asset serving is
+  enabled (jliggitt@redhat.com)
+- Rename "external cartridge" to "downloaded cartridge".  UI should call them
+  "personal" cartridges (ccoleman@redhat.com)
+- RestApi should defend against poorly formed response bodies (it's possible
+  for ActiveResource::ConnectionError#response to return a string)
+  (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into support_external_cartridges
+  (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into support_external_cartridges
+  (ccoleman@redhat.com)
+- Read the enabled state of the external cartridges feature from the broker
+  (ccoleman@redhat.com)
+- Add custom cartridges to existing apps (ccoleman@redhat.com)
+- Improve test performance by reusing cache for most tests
+  (ccoleman@redhat.com)
+- Support URL entry during app creation (ccoleman@redhat.com)
+- Extract form-important from #new-application (ccoleman@redhat.com)
+
+* Wed May 01 2013 Adam Miller <admiller@redhat.com> 1.8.4-1
+- Add host name as an option for asset generation (ccoleman@redhat.com)
+
+* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 1.8.3-1
+- Merge pull request #2281 from smarterclayton/add_link_block
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2230 from pravisankar/dev/ravi/card559
+  (dmcphers+openshiftbot@redhat.com)
+- Add a link-block class (ccoleman@redhat.com)
+- Removed 'setmaxstorage' option for oo-admin-ctl-user script. Added
+  'setmaxtrackedstorage' and 'setmaxuntrackedstorage' options for oo-admin-ctl-
+  user script. Updated oo-admin-ctl-user man page. Max allowed additional fs
+  storage for user will be 'max_untracked_addtl_storage_per_gear' capability +
+  'max_tracked_addtl_storage_per_gear' capability. Don't record usage for
+  additional fs storage if it is less than
+  'max_untracked_addtl_storage_per_gear' limit. Fixed unit tests and models to
+  accommodate the above change. (rpenta@redhat.com)
+
+* Mon Apr 29 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- Merge pull request #2206 from fabianofranz/master
+  (dmcphers+openshiftbot@redhat.com)
+- Fixed Maintenance mode message (ffranz@redhat.com)
+- Fixed tests for Maintenance mode (ffranz@redhat.com)
+- Using a dedicated exception to handle server unavailable so we don't have to
+  check status codes more than once (ffranz@redhat.com)
+- Handling a special ConnectionError so we can put the console in maintenance
+  mode (ffranz@redhat.com)
+- Maintenance mode, changed routing (ffranz@redhat.com)
+- Tests for Maintenance mode (ffranz@redhat.com)
+- Maintenance mode will now handle login/authorization properly
+  (ffranz@redhat.com)
+- Maintenance mode page, now handling nil responses on server error
+  (ffranz@redhat.com)
+- Maintenance mode for the web console (ffranz@redhat.com)
+
+* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- Merge pull request #2190 from smarterclayton/extract_form_important
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 951370 - update url for namespace user guide (jliggitt@redhat.com)
+- Merge pull request #2200 from mmahut/master
+  (dmcphers+openshiftbot@redhat.com)
+- Extract form-important from #new-application (ccoleman@redhat.com)
+- Fix find/delete command for openshift-console and console packages. Bug
+  888714. (kraman@gmail.com)
+- Merge pull request #2178 from smarterclayton/improve_memory_usage_of_rest_api
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2177 from smarterclayton/split_settings_page
+  (dmcphers+openshiftbot@redhat.com)
+- Improve console rest api memory usage by reducing copies
+  (ccoleman@redhat.com)
+- Send all settings interactions to the settings page, and fix tests.  Add a
+  few more tests around the settings page, specifically for new key and new
+  domain. (ccoleman@redhat.com)
+- Split the settings page from the my account page (ccoleman@redhat.com)
+- Using password field instead of plain text input for the certificate
+  passphrase. (mmahut@redhat.com)
+- Merge remote-tracking branch 'origin/master' into
+  separate_config_from_environments (ccoleman@redhat.com)
+- Bug 888714 - Remove .gitkeep and .gitignore (ccoleman@redhat.com)
+- Merge pull request #1770 from fotioslindiakos/plan_currency
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2112 from
+  smarterclayton/bug_953177_keys_with_periods_cannot_be_deleted
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2089 from smarterclayton/add_web_integration_tests
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 953177 - Keys with periods in their name cannot be deleted
+  (ccoleman@redhat.com)
+- Add a test case for configuration to ruby values (ccoleman@redhat.com)
+- Merge remote-tracking branch 'origin/master' into
+  separate_config_from_environments (ccoleman@redhat.com)
+- Merge pull request #2123 from smarterclayton/bug_953263_use_color_only_in_dev
+  (dmcphers+openshiftbot@redhat.com)
+- Rspec core should be in the test group (ccoleman@redhat.com)
+- Bug 953263 - Use ANSI color codes only in development (ccoleman@redhat.com)
+- Separate config from environments (ccoleman@redhat.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
+- Add additional flexibility for running community tests (ccoleman@redhat.com)
+- Add separators in the capybara log (ccoleman@redhat.com)
+- Demonstrate web integration testing (ccoleman@redhat.com)
+- Added :autocomplete option to inputs/input (fotios@redhat.com)
+
+* Tue Apr 16 2013 Dan McPherson <dmcphers@redhat.com> 1.7.8-1
+- Add buildrequires for new test packages (ccoleman@redhat.com)
+
+* Tue Apr 16 2013 Troy Dawson <tdawson@redhat.com> 1.7.7-1
+- Merge pull request #2087 from smarterclayton/move_to_minitest
+  (dmcphers+openshiftbot@redhat.com)
+- Move to minitest 3.5.0, webmock 1.8.11, and mocha 0.12.10
+  (ccoleman@redhat.com)
+- Fix bug 950866 - highlight errors in grouped fields correctly
+  (jliggitt@redhat.com)
+
 * Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.6-1
 - Bug 951367 (ffranz@redhat.com)
 - Merge pull request #2025 from smarterclayton/origin_ui_37_error_page

@@ -36,19 +36,19 @@ class AuthorizationsController < ConsoleController
     if @authorization.save
       redirect_to authorization_path(@authorization), :flash => {:success => 'Authorization updated'}
     else
-      render :new
+      render :edit
     end
   end
 
   def destroy
     @authorization = Authorization.find params[:id], :as => current_user
     @authorization.destroy
-    redirect_to account_settings_redirect, :flash => {:success => 'The authorization has been revoked'}
+    redirect_to settings_path, :flash => {:success => 'The authorization has been revoked'}
   end
 
   def destroy_all
     @authorization = Authorization.destroy_all :as => current_user
-    redirect_to account_settings_redirect, :flash => {:success => 'All authorizations revoked'}
+    redirect_to settings_path, :flash => {:success => 'All authorizations revoked'}
   end
 
   protected
@@ -61,6 +61,6 @@ class AuthorizationsController < ConsoleController
     end
 
     def active_tab
-      :account
+      :settings
     end
 end
