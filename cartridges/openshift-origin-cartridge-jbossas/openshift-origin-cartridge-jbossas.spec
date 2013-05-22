@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossAS7 support
 Name:          openshift-origin-cartridge-jbossas
-Version: 1.2.1
+Version:       1.2.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -42,12 +42,8 @@ Provides JBossAS support to OpenShift. (Cartridge Format V2)
 
 
 %install
-%__rm -rf %{buildroot}
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
-
-%clean
-%__rm -rf %{buildroot}
 
 
 %post
@@ -66,9 +62,9 @@ alternatives --remove maven-3.0 /usr/share/java/apache-maven-3.0.3
 alternatives --install /etc/alternatives/maven-3.0 maven-3.0 /usr/share/maven 102
 alternatives --set maven-3.0 /usr/share/maven
 
-alternatives --remove jbossas-7 /usr/share/jbossas
-alternatives --install /etc/alternatives/jbossas-7 jbossas-7 /usr/share/jbossas 102
-alternatives --set jbossas-7 /usr/share/jbossas
+alternatives --remove jbossas-7 /usr/share/jboss-as
+alternatives --install /etc/alternatives/jbossas-7 jbossas-7 /usr/share/jboss-as 102
+alternatives --set jbossas-7 /usr/share/jboss-as
 %endif
 
 #
@@ -82,16 +78,35 @@ cp -p %{cartridgedir}/versions/7/modules/postgresql_module.xml /etc/alternatives
 
 
 %files
-%defattr(-,root,root,-)
 %dir %{cartridgedir}
-%attr(0755,-,-) %{cartridgedir}
-%attr(0755,-,-) %{cartridgedir}/bin
+%attr(0755,-,-) %{cartridgedir}/bin/
+%attr(0755,-,-) %{cartridgedir}/hooks/
+%{cartridgedir}
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 
 %changelog
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 1.2.3-1
+- spec file cleanup (tdawson@redhat.com)
+- Make jboss cluster variables cartridge-scoped (ironcladlou@gmail.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 1.2.2-1
+- process-version -> update-configuration (dmcphers@redhat.com)
+- Bug 963156 (dmcphers@redhat.com)
+- locking fixes and adjustments (dmcphers@redhat.com)
+- Merge pull request #2454 from fotioslindiakos/locked_files
+  (dmcphers+openshiftbot@redhat.com)
+- Add erb processing to managed_files.yml Also fixed and added some test cases
+  (fotios@redhat.com)
+- messaging_scheduled_thread_pool_max_size=5 (bdecoste@gmail.com)
+- WIP Cartridge Refactor -- Cleanup spec files (jhonce@redhat.com)
+- fix module path (bdecoste@gmail.com)
+- Merge pull request #2411 from bdecoste/master
+  (dmcphers+openshiftbot@redhat.com)
+- fix clustering for non-scaled AS/EAP (bdecoste@gmail.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.2.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 - Bug 956572 (bdecoste@gmail.com)

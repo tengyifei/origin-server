@@ -78,7 +78,7 @@ class CartridgeCache
       return cart if cart.name == requested_feature
     end if app
     
-    matching_carts = self.find_all_cartridges(requested_feature)
+    matching_carts = CacheHelper.get_cached("carts_by_feature_#{requested_feature}", :expires_in => 1.day) { self.find_all_cartridges(requested_feature) }
     
     return nil if matching_carts.empty?
     
@@ -119,10 +119,30 @@ class CartridgeCache
     max_dl_time = (Rails.application.config.downloaded_cartridges[:max_download_time] rescue 10) || 10
     max_file_size = (Rails.application.config.downloaded_cartridges[:max_cart_size] rescue 20480) || 20480
     max_redirs = (Rails.application.config.downloaded_cartridges[:max_download_redirects] rescue 2) || 2
+    rate_limit = (Rails.application.config.downloaded_cartridges[:max_download_rate] rescue "100k") || "100k" 
     manifest = ""
+    
     uri_obj = URI.parse(url)
     if uri_obj.kind_of? URI::HTTP or uri_obj.kind_of? URI::FTP
-      manifest = `curl --max-time #{max_dl_time} --connect-timeout 2 --location --max-redirs #{max_redirs} --max-filesize #{max_file_size} -k #{url}`
+      rout,wout = IO.pipe
+      rerr,werr = IO.pipe
+      pid = Process.spawn("curl", "--max-time", max_dl_time.to_s, "--limit-rate", rate_limit.to_s, "--connect-timeout", "2", "--location", "--max-redirs", max_redirs.to_s, "--max-filesize", max_file_size.to_s, "-k", url, :out => wout, :err => werr)
+      begin
+        Timeout::timeout(max_dl_time) {
+          p,status = Process.waitpid2(pid)
+          wout.close
+          werr.close
+          if status.exitstatus==0
+            manifest = rout.read
+          end
+          rout.close
+          rerr.close
+        }
+      rescue Timeout::Error
+        Process.kill('SIGKILL', pid)
+      end
+
+      # manifest = `curl --max-time #{max_dl_time} --limit-rate #{rate_limit} --connect-timeout 2 --location --max-redirs #{max_redirs} --max-filesize #{max_file_size} -k #{url}`
     end
     manifest
   end
@@ -142,9 +162,9 @@ class CartridgeCache
 
   def self.validate_yaml(url, str)
     raise OpenShift::UserException.new("Invalid cartridge, error downloading from url '#{url}' ", 109)  if str.nil? or str.length==0
-    raise OpenShift::UserException.new("Invalid manifest file from url '#{url}' - no structural directives allowed.") if str.include?("---")
+    # raise OpenShift::UserException.new("Invalid manifest file from url '#{url}' - no structural directives allowed.") if str.include?("---")
     begin
-      chash = YAML.load(str) #, options: {:safe => true})
+      chash = OpenShift::Runtime::Manifest.manifest_from_yaml(str) 
     rescue Exception=>e
       raise OpenShift::UserException.new("Invalid manifest file from url '#{url}'")
     end

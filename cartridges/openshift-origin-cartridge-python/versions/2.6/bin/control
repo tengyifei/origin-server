@@ -1,5 +1,6 @@
 #!/bin/bash -e
 
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
 HTTPD_CFG_FILE=$OPENSHIFT_PYTHON_DIR/etc/conf/httpd_nolog.conf
 
 # For backwards compatibility
@@ -7,6 +8,7 @@ export APPDIR=$OPENSHIFT_PYTHON_DIR
 
 function start() {
     echo "Starting PYTHON cart"
+    update_httpd_passenv $HTTPD_CFG_FILE
     /usr/sbin/httpd -C "Include $OPENSHIFT_PYTHON_DIR/etc/conf.d/*.conf" -f $HTTPD_CFG_FILE -k start
 }
 
@@ -17,16 +19,17 @@ function stop() {
 
 function restart() {
    echo "Restarting PYTHON cart"
+   update_httpd_passenv $HTTPD_CFG_FILE
     /usr/sbin/httpd -C "Include $OPENSHIFT_PYTHON_DIR/etc/conf.d/*.conf" -f $HTTPD_CFG_FILE -k restart
 }
 
 function status() {
    if output=$(curl http://$OPENSHIFT_PYTHON_IP:$OPENSHIFT_PYTHON_PORT/server-status?auto 2>&1 )
    then
-      echo "Application is running"
-      echo $output
+      client_result "Application is running"
+      client_result $output
    else
-      echo "Application is either stopped or inaccessible"
+      client_result "Application is either stopped or inaccessible"
    fi
 }
 

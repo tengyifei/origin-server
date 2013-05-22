@@ -13,9 +13,6 @@ Feature: V2 SDK Mock Cartridge
     And the mock install_called marker will exist
     And the mock install_version marker will exist
     And the mock install_failure marker will not exist
-    And the mock post_setup_called marker will exist
-    And the mock post_setup_version marker will exist
-    And the mock post_setup_failure marker will not exist
     And the mock post_install_called marker will exist
     And the mock post_install_version marker will exist
     And the mock post_install_failure marker will not exist
@@ -65,7 +62,7 @@ Feature: V2 SDK Mock Cartridge
     And a simple update is pushed to the application repo
     Then the mock control_stop marker will exist
     And the mock control_pre_receive marker will exist
-    And the mock control_process_version marker will exist
+    And the mock control_update_configuration marker will exist
     And the mock control_pre_build marker will exist
     And the mock control_build marker will exist
     And the mock control_deploy marker will exist

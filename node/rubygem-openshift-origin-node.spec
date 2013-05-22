@@ -16,7 +16,7 @@
 
 Summary:       Cloud Development Node
 Name:          rubygem-%{gem_name}
-Version: 1.9.1
+Version: 1.9.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -27,31 +27,34 @@ Requires:      ruby(release)
 %else
 Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
 %endif
-Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      %{?scl:%scl_prefix}rubygem(commander)
 Requires:      %{?scl:%scl_prefix}rubygem(json)
-Requires:      %{?scl:%scl_prefix}rubygem(parseconfig)
 Requires:      %{?scl:%scl_prefix}rubygem(mocha)
+Requires:      %{?scl:%scl_prefix}rubygem(parseconfig)
 Requires:      %{?scl:%scl_prefix}rubygem(rspec)
-Requires:      rubygem(openshift-origin-common)
-# non-scl open4 required for oo-cgroup-read bug 924556 until selinux fix for bug 912215 is available
-Requires:      rubygem(open4)
+Requires:      %{?scl:%scl_prefix}rubygem(safe_yaml)
+Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      %{?scl:%scl_prefix}ruby(selinux)
-Requires:      python
+Requires:      cronie
+Requires:      crontabs
+Requires:      git
+Requires:      httpd
+Requires:      libcgroup-pam
 Requires:      libselinux-python
 Requires:      mercurial
-Requires:      httpd
+Requires:      mod_ssl
+Requires:      openshift-origin-node-proxy
+Requires:      pam_openshift
+Requires:      python
+Requires:      quota
+# non-scl open4 required for oo-cgroup-read bug 924556 until selinux fix for bug 912215 is available
+Requires:      rubygem(open4)
+Requires:      rubygem(openshift-origin-common)
 %if 0%{?fedora}%{?rhel} <= 6
 Requires:      libcgroup
 %else
 Requires:      libcgroup-tools
 %endif
-Requires:      libcgroup-pam
-Requires:      pam_openshift
-Requires:      quota
-Requires:      cronie
-Requires:      crontabs
-Requires:      openshift-origin-node-proxy
 %if 0%{?fedora} >= 18
 Requires:      httpd-tools
 BuildRequires: httpd-tools
@@ -131,6 +134,8 @@ mv %{buildroot}%{gem_instdir}/conf/* %{buildroot}/etc/openshift
 mkdir -p %{buildroot}/usr/libexec/openshift/lib
 mv %{buildroot}%{gem_instdir}/misc/libexec/lib/teardown_pam_fs_limits.sh %{buildroot}/usr/libexec/openshift/lib
 mv %{buildroot}%{gem_instdir}/misc/libexec/lib/setup_pam_fs_limits.sh %{buildroot}/usr/libexec/openshift/lib
+mv %{buildroot}%{gem_instdir}/misc/libexec/lib/quota_attrs.sh %{buildroot}/usr/libexec/openshift/lib
+mv %{buildroot}%{gem_instdir}/misc/libexec/lib/deploy_git_submodules.sh %{buildroot}/usr/libexec/openshift/lib
 
 # Install the cartridge SDK files and environment variables for each
 mkdir -p %{buildroot}/usr/lib/openshift/cartridge_sdk
@@ -234,6 +239,8 @@ fi
 %attr(0755,-,-) /usr/bin/*
 /usr/libexec/openshift/lib/setup_pam_fs_limits.sh
 /usr/libexec/openshift/lib/teardown_pam_fs_limits.sh
+/usr/libexec/openshift/lib/quota_attrs.sh
+/usr/libexec/openshift/lib/deploy_git_submodules.sh
 %attr(0755,-,-) /usr/lib/openshift/cartridge_sdk
 %attr(0755,-,-) /usr/lib/openshift/cartridge_sdk/bash
 %attr(0744,-,-) /usr/lib/openshift/cartridge_sdk/bash/*
@@ -287,6 +294,94 @@ fi
 %attr(0755,-,-) /etc/cron.monthly/openshift-origin-cron-monthly
 
 %changelog
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 1.9.3-1
+- WIP Cartridge Refactor - Update documentation (jhonce@redhat.com)
+- WIP Cartridge Refactor - V2 -> V2 Migration (jhonce@redhat.com)
+- Merge pull request #2543 from rmillner/BZ957257
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2539 from ironcladlou/bz/963646
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2535 from abhgupta/abhgupta_dev_2
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 957257 - add login message about running tidy. (rmillner@redhat.com)
+- Merge pull request #2533 from ironcladlou/bz/964265
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 963646: Quote env var contents to avoid undesirable array evals
+  (ironcladlou@gmail.com)
+- Preventing failures in deletion of partially created gears
+  (abhgupta@redhat.com)
+- online_runtime_296 - Change the nproc limit to soft per request but still
+  allow gear teardown to set a hard limit of 0 (rmillner@redhat.com)
+- Bug 964265: Ignore symlinks when detecting cart dirs in a gear
+  (ironcladlou@gmail.com)
+- WIP Cartridge Refactor - Allow CartridgeRepository#instantiate_cartridge
+  overlay existing cartridge (jhonce@redhat.com)
+- Merge pull request #2528 from pmorie/bugs/963286
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 963286: remove uservars from v2 (pmorie@gmail.com)
+- Bug 961785 - Cartridge URL install failed (jhonce@redhat.com)
+- Merge pull request #2520 from jwhonce/wip/rm_post_setup
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2518 from ironcladlou/bz/963637
+  (dmcphers+openshiftbot@redhat.com)
+- WIP Cartridge Refactor - remove post-setup support (jhonce@redhat.com)
+- Remove defunct test (ironcladlou@gmail.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 1.9.2-1
+- Sorting the rubygem-openshift-origin-node deps (bleanhar@redhat.com)
+- Bug 963593 - rubygem-openshift-origin-node depends on git
+  (bleanhar@redhat.com)
+- Merge pull request #2503 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2501 from ironcladlou/dev/v2carts/gearscript
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2491 from ironcladlou/dev/v2carts/private-endpoints-fix
+  (dmcphers+openshiftbot@redhat.com)
+- process-version -> update-configuration (dmcphers@redhat.com)
+- Add trace option to gear script for nicer error messages
+  (ironcladlou@gmail.com)
+- Bug 963156 (dmcphers@redhat.com)
+- Merge pull request #2485 from dobbymoodge/BZ962938-broker-proxytimeout
+  (dmcphers+openshiftbot@redhat.com)
+- Escape early from endpoint creation when there are none to create
+  (ironcladlou@gmail.com)
+- <node/httpd conf> Bug 962938 - Set ProxyTimeout for node HTTPD config
+  (jolamb@redhat.com)
+- <rubygem-openshift-origin-node spec file> Bug 963336 - Add 'Requires' of
+  mod_ssl to fix httpd failing to start on node servers due to missing ssl
+  module required by 000001_openshift_origin_node.conf (tbielawa@redhat.com)
+- fixup tests (dmcphers@redhat.com)
+- locking fixes and adjustments (dmcphers@redhat.com)
+- Merge pull request #2454 from fotioslindiakos/locked_files
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 962934 (pmorie@gmail.com)
+- Add erb processing to managed_files.yml Also fixed and added some test cases
+  (fotios@redhat.com)
+- Fix problem in v2_cart_model_test that invalidates accept-node
+  (pmorie@gmail.com)
+- Fix bug 958977 (pmorie@gmail.com)
+- Merge pull request #2452 from jwhonce/bug/960525
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2451 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2426 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 960525 - Improve error message display (jhonce@redhat.com)
+- Disabling v1 operations when in v2 mode (dmcphers@redhat.com)
+- Add unit test coverage for v2_cart_model#unlock_gear (pmorie@gmail.com)
+- Switching v2 to be the default (dmcphers@redhat.com)
+- Merge pull request #2431 from calfonso/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2108 from getupcloud/patch-1
+  (dmcphers+openshiftbot@redhat.com)
+- Removing code dealing with namespace updates for applications
+  (abhgupta@redhat.com)
+- Adding a rewrite to allow X-OpenShift-Host override the HTTP_HOST
+  (calfonso@redhat.com)
+- WIP Cartridge Refactor - Fixed PATH when using mutliple cartridges
+  (jhonce@redhat.com)
+- Passing down X-Forwarded-Port (getup@getupcloud.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 
