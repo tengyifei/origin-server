@@ -163,11 +163,11 @@ module Console::HelpHelper
   end
 
   def scaling_help_url
-    community_base_url 'developers/scaling'
+    community_base_url 'entries/23026993'
   end
 
   def storage_help_url
-    community_base_url 'faq/what-is-add-on-storage'
+    community_base_url 'entries/23852512'
   end
 
   def user_guide_url
