@@ -37,6 +37,14 @@ module Account
 
       redirect_to account_path, :flash => flash rescue redirect_to account_path
     end
+    
+    def update
+    end
+    
+    def save
+        authentication = Registration.new ???????
+        redirect_to applications_path
+    end
   end
 end
 
