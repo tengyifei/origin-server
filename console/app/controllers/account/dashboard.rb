@@ -8,6 +8,7 @@ module Account
       user_default_domain rescue nil
       @keys = Key.all :as => @user
       @authorizations = Authorization.all :as => @user
+      @billing = user_capabilities :refresh => true
     end
 
     def password
@@ -36,7 +37,7 @@ module Account
       end
 
       redirect_to account_path, :flash => flash rescue redirect_to account_path
-    end    
+    end
   end
 end
 

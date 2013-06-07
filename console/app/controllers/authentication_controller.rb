@@ -1,5 +1,5 @@
 class AuthenticationController < Console.config.parent_controller.constantize
-  layout false
+  layout 'authentication'
 
   def signin
   end

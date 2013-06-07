@@ -1,0 +1,12 @@
+= div_for user do
+  %h2 Billing Information
+
+  %p
+    You have #{billing.gears_free} gears available of #{billing.max_gears} authorized. #{link_to "Click here to get more", new_billing_path}.
+  //- else
+  //  %p Currently you do not have gears available. You can add gears 
+
+  .btn-toolbar
+    = link_to "Add gears...", new_billing_path, :class => 'btn btn-small btn-danger'
+    - if billing.max_gears > 0
+      = link_to "Usage history...", new_billing_path, :class => 'btn btn-small btn-danger'

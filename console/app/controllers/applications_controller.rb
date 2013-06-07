@@ -129,7 +129,8 @@ class ApplicationsController < ConsoleController
 
     #@cartridges, @missing_cartridges = ApplicationType.matching_cartridges(@application.cartridge_names.presence || @application_type.cartridges)
 
-    flash.now[:error] = "You have no free gears.  You'll need to scale down or delete another application first." unless @capabilities.gears_free?
+    #flash.now[:error] = "You have no free gears.  You'll need to scale down or delete another application first." unless @capabilities.gears_free?
+    flash.now[:error] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{new_billing_path}">Click here to get more</a>.].html_safe unless @capabilities.gears_free?
     @disabled = @missing_cartridges.present? || @cartridges.blank?
 
     # opened bug 789763 to track simplifying this block - with domain_name submission we would

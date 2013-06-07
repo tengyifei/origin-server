@@ -4,7 +4,14 @@ class ApplicationTypesController < ConsoleController
 
   def index
     @capabilities = user_capabilities
-    flash.now[:warning] = "Currently you do not have enough free gears available to create a new application. You can either scale down or delete existing applications to free up resources." unless @capabilities.gears_free?
+
+    unless @capabilities.gears_free?
+      flash.clear
+      flash.now[:warning] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{new_billing_path}">Click here to get more</a>.].html_safe
+    #   flash.now[:warning] = %Q[Currently you do not have enough free gears available to create a new application. You can either scale down or delete existing applications to free up resources. To add gears <a href="#{new_billing_path}">click here</a>."].html_safe unless 
+    # else
+    #   flash.now[:warning] = %Q[Currently you do not have any gears. You can add gears <a href="#{new_billing_path}">clicking here</a>.].html_safe
+    end
 
     @browse_tags = [
       ['Java', :java],
@@ -73,7 +80,8 @@ class ApplicationTypesController < ConsoleController
       flash.now[:error] = "The cartridges defined for this type are not valid.  The #{@application_type.source} may not be correct."
     end
 
-    flash.now[:error] = "There are not enough free gears available to create a new application. You will either need to scale down or delete existing applications to free up resources." unless @capabilities.gears_free?
+    #flash.now[:error] = "There are not enough free gears available to create a new application. You will either need to scale down or delete existing applications to free up resources." unless @capabilities.gears_free?
+    flash.now[:error] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{new_billing_path}">Click here to get more</a>.].html_safe unless @capabilities.gears_free?
     @disabled = @missing_cartridges.present? || @cartridges.blank?
 
     user_default_domain rescue nil
