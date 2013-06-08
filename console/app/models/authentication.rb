@@ -1,11 +1,14 @@
 class Authentication < ActiveResource::Base
-  include Console::BillingHelper
+  include Console::GetupAdminHelper
 
   schema do
     string :id, :login, :password
   end
 
-  def initialize(login, password)
+  def initialize
+  end
+
+  def generate(login, password)
     @login = login
     generate_token password
   end
@@ -38,6 +41,7 @@ class Authentication < ActiveResource::Base
   end
 
   def change_password(password, new_password)
+
     response = getup_admin_post @login + "/account/password/change/", :oldpassword => password, :password1 => new_password, :password2 => new_password
     response_code = response.code.to_i
 
@@ -46,11 +50,11 @@ class Authentication < ActiveResource::Base
     response
   end
 
-  def self.reset_password(email)
+  def reset_password(email)
     getup_admin_post "/account/password/reset/", :email => email
   end
 
-  def self.update_password(password, token)
+  def update_password(password, token)
     response = getup_admin_post "/account/password/reset/key/" + token + "/", :password1 => password, :password2 => password
     response_code = response.code.to_i
 
