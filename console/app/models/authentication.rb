@@ -38,7 +38,7 @@ class Authentication < ActiveResource::Base
   end
 
   def change_password(password, new_password)
-    response = getup_admin_post @login + "/account/password/change/", :old_password => password, :new_password1 => new_password, :new_password2 => new_password
+    response = getup_admin_post @login + "/account/password/change/", :oldpassword => password, :password1 => new_password, :password2 => new_password
     response_code = response.code.to_i
 
     generate_token new_password if response_code >= 200 and response_code < 400
