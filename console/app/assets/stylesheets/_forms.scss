@@ -750,12 +750,12 @@ textarea[readonly] {
 }
 
 // MESSAGE LOADER
-.message {
+#form-billing #message {
   margin: 25px 0 0;
   font-size: 12px;
   color: #999;
 }
 
-.message.right-position {
+#form-billing #message.right-position {
   float: right;
 }

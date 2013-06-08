@@ -8,5 +8,5 @@
 
   .btn-toolbar
     = link_to "Add gears...", new_billing_path, :class => 'btn btn-small btn-danger'
-    - if billing.max_gears > 0
-      = link_to "Usage history...", new_billing_path, :class => 'btn btn-small btn-danger'
+    - if false && billing.max_gears > 0
+      = link_to "Usage history...", billing_path, :class => 'btn btn-small btn-danger'

@@ -1,148 +1,402 @@
 (function($) {
 	'use strict';
 
+	/*
+	 * Contants
+	 */
+	var GEAR_HOURS = 750;
+	var APROVVED_MONTHS = 12;
+	var VALUE_LEFT_NUMBERS = 2;
+
+	/*
+	 * Gears Object
+	 *
+	 */
 	var Gears = {};
 
-	Gears.messages = {};
+	/*
+	 *
+	 */
+	Gears._data = null;
 
-	//Gears.data = {};
-	Gears.data = {};
-	Gears.number = 1;
-	Gears.limit = 1;
-	Gears.currency = null;
-	Gears.loading = false;
-	Gears.hourGear = 750;
+	/*
+	 * Gears.config
+	 *
+	 */
+	Gears.config = {}
 
-	Gears.leftNumbers = 3;
+	/*
+	 *
+	 */
+	Gears.config.currency = null;
 
-	Gears.elements = {};
+	/*
+	 *
+	 */
+	Gears.config.consumed_gears = 1;
 
-	Gears.elements.table = $('#gears');
-	Gears.elements.message = $('#loader');
-	Gears.elements.currency = $('button.currency');
+	/*
+	 *
+	 */
+	Gears.config.credits = 0;
 
-	Gears.elements.gears = $('#gears-number');
+	/*
+	 *
+	 */
+	Gears.config.max_gears = 0;
 
-	Gears.elements.table.gearsSize = $('#gears-size');
-	Gears.elements.table.gearsUniCost = $('#gears-unit-cost');
-	Gears.elements.table.gearsCost = $('#gears-cost');
-	Gears.elements.table.creditSize = $('#credit-size');
-	Gears.elements.table.creditUniCost = $('#credit-unit-cost');
-	Gears.elements.table.creditCost = $('#credit-cost');
-	Gears.elements.table.mensalCost = $('#total-month');
-	Gears.elements.table.totalApproved = $('#total-approved');
+	/*
+	 *
+	 */
+	Gears.current_gears = 0;
 
+	/*
+	 *
+	 */
+	Gears.View = {};
 
-	Gears.initialize = function() {
-		Gears.loading = true;
+	/*
+	 *
+	 */
+	Gears.View.elements = {};
 
-		Gears.limit = Gears.elements.table.attr('data-max-gears-limit');
+	/*
+	 *
+	 */
+	Gears.View.elements.body = $('body');
 
-		$.getJSON(Gears.elements.table.attr('data-source'), function(transport) {
-			Gears.data = transport;
+	/*
+	 *
+	 */
+	Gears.View.elements.message = $('#message');
 
-			Gears.message.hide();
-			Gears.clear();
+	/*
+	 *
+	 */
+	Gears.View.elements.gears = $('#gears-number');
 
-			Gears.loading = false;
+	/*
+	 *
+	 */
+	Gears.View.elements.buttons = {};
 
-		}).fail(function(transport) {
-            //console.log(transport);
-        });
+	/*
+	 *
+	 */
+	Gears.View.elements.buttons.add = $('#add-gear');
 
+	/*
+	 *
+	 */
+	Gears.View.elements.buttons.remove = $('#remove-gear');
 
-		$('#add-gear').click(Gears.add);
-		$('#remove-gear').click(Gears.remove);
+	/*
+	 *
+	 */
+	Gears.View.elements.buttons.currencies = $('button.currency');
 
-		Gears.elements.currency.click(function() {
-			if (Gears.loading) return;
+	/*
+	 *
+	 */
+	Gears.View.elements.table = $('#gears');
+
+	/*
+	 *
+	 */
+	Gears.View.elements.table.gears = $('#gears-size');
+
+	/*
+	 *
+	 */
+	Gears.View.elements.table.gears_unit_cost = $('#gears-unit-cost');
+
+	/*
+	 *
+	 */
+	Gears.View.elements.table.gears_cost = $('#gears-cost');
+
+	/*
+	 *
+	 */
+	Gears.View.elements.table.credit = $('#credit-size');
+
+	/*
+	 *
+	 */
+	Gears.View.elements.table.credit_unit_cost = $('#credit-unit-cost');
+
+	/*
+	 *
+	 */
+	Gears.View.elements.table.credit_cost = $('#credit-cost');
+
+	/*
+	 *
+	 */
+	Gears.View.elements.table.total_month = $('#total-month');
+
+	/*
+	 *
+	 */
+	Gears.View.elements.table.total_approved = $('#total-approved');	
+
+	/*
+	 *
+	 */
+	Gears.View.message = function(text) {
+		Gears.View.elements.message.text(text).fadeIn();
+	};
+
+	/*
+	 *
+	 */
+	Gears.View.message.hide = function() {
+		Gears.View.elements.message.fadeOut();
+	};
+
+	Gears.View.format_to_currency = function(value, left_numbers) {
+		return Gears.Billing.config.acronym + ' ' + parseFloat(value).toFixed(left_numbers || VALUE_LEFT_NUMBERS);
+	};
+
+	/*
+	 *
+	 */
+	Gears.View.update = function() {
+
+		Gears.View.elements.gears.val(Gears.current_gears);
+
+		Gears.View.elements.table.gears.text(Gears.Billing.gears.value + ' hours');
+		Gears.View.elements.table.gears_unit_cost.text(Gears.View.format_to_currency(Gears.Billing.gears.unit_cost, 3));
+		Gears.View.elements.table.gears_cost.text(Gears.View.format_to_currency(Gears.Billing.gears.cost));
+
+		Gears.View.elements.table.credit.text(Gears.Billing.credit.value + ' hours');
+		Gears.View.elements.table.credit_unit_cost.text(Gears.View.format_to_currency(Gears.Billing.credit.unit_cost, 3));
+		Gears.View.elements.table.credit_cost.text(Gears.View.format_to_currency(-Gears.Billing.credit.cost));
+		
+		Gears.View.elements.table.total_month.text(Gears.View.format_to_currency(Gears.Billing.month.total));
+		Gears.View.elements.table.total_approved.text(Gears.View.format_to_currency(Gears.Billing.approved.total));
+	};
+
+	/*
+	 *
+	 */
+	Gears.View.loading = false;
+
+	/*
+	 *
+	 */
+	Gears.View._load_attempts = 0;
+
+	/*
+	 *
+	 */
+	Gears.Billing = {
+		gears: { value: 0, unit_cost: 0, cost: 0 },
+		credit: { value: 0, unit_cost: 0, cost: 0 },
+		month: { total: 0 },
+		approved: { total: 0 }
+	};
+
+	/*
+	 *
+	 */
+	Gears.Billing.config = {};
+
+	/*
+	 *
+	 */
+	Gears.Billing.init = function() {
+
+		Gears.Billing.set_config(Gears.config.currency);
+		Gears.Billing.credit();
+
+		Gears.update();
+	};
+
+	/*
+	 *
+	 */
+	Gears.Billing.set_config = function(currency) {
+		Gears.Billing.config = Gears._data[currency].GEAR_USAGE;
+	};
+
+	Gears.Billing.credit = function() {
+		Gears.Billing.credit.value = Gears.config.credit;
+		Gears.Billing.credit.unit_cost = Gears.Billing.config.value;
+		Gears.Billing.credit.cost = Gears.Billing.credit.unit_cost * Gears.Billing.credit.value;
+	};
+
+	/*
+	 *
+	 */
+	Gears.Billing.update = function() {
+
+		Gears.Billing.gears.value = Gears.current_gears * GEAR_HOURS;
+		Gears.Billing.gears.unit_cost = Gears.Billing.config.value;
+		Gears.Billing.gears.cost = Gears.Billing.gears.value * Gears.Billing.gears.unit_cost;
+
+		Gears.Billing.month.total = Math.max(0, Gears.Billing.gears.cost - Gears.Billing.credit.cost);
+		Gears.Billing.approved.total = Gears.Billing._get_approved();
+	};	
+
+	/*
+	 *
+	 */
+	Gears.Billing._get_approved = function() {
+		return Math.min(APROVVED_MONTHS * Gears.Billing.month.total, Gears.Billing.config.limit);
+	};
+
+	/*
+	 *
+	 */
+	Gears.init = function() {
+		Gears.config.consumed_gears = parseInt(Gears.View.elements.table.gears.attr('data-consumed-gears'), 10) || 1;
+		Gears.config.max_gears = parseInt(Gears.View.elements.table.attr('data-max-gears-limit'), 10);
+		Gears.config.credit = parseInt(Gears.View.elements.table.credit.attr('data-hours'), 10);
+		Gears.config.currency = Gears.View.elements.table.attr('data-currency');
+
+		Gears.current_gears = parseInt(Gears.View.elements.table.gears.attr('data-gears'), 10) || 1;
+
+		Gears._load_getup_config();
+		Gears._bind_events();
+	};
+
+	/*
+	 *
+	 */
+	Gears._load_getup_config = function() {
+		Gears.View.loading = true;
+		Gears.View.message('Loading gears info...');
+
+		var source = Gears.View.elements.table.attr('data-source');
+
+		$.getJSON(source, function(transport) {
+			Gears._data = transport;
+
+			Gears.View.message.hide();
+			Gears.View.loading = false;
+
+			Gears.Billing.init();
+		});//.fail(function(transport) {});
+	};
+
+	/*
+	 *
+	 */
+	Gears._bind_events = function() {
+		Gears.View.elements.buttons.add.mousedown(function() {
+			Gears.add();
+
+			Gears.buttons.start_timer(Gears.add);
+		});
+
+		Gears.View.elements.buttons.remove.mousedown(function() {
+			Gears.remove();
+			
+			Gears.buttons.start_timer(Gears.remove);
+		});
+
+		Gears.View.elements.body.mouseup(function() {
+			Gears.buttons.stop_timer();
+		});
+
+		Gears.View.elements.buttons.currencies.click(function() {
+			if (Gears.View.loading) return;
 
 			var button = $(this);
 			if (button.hasClass('disabled')) return;
 
-			Gears.elements.currency.removeClass('disabled');
-			button.addClass('disabled');
+			Gears.View.elements.buttons.currencies.removeClass('disabled');
+			button.addClass('disabled');			
 
-			Gears.currency = button.attr('data-currency');
-			Gears.update();
+			Gears.set_currency(button.attr('data-currency'));
 		});
 	};
 
+	/*
+	 *
+	 */
+	Gears.buttons = {};
+
+	/*
+	 *
+	 */
+	Gears.buttons._timer = null;
+
+	/*
+	 *
+	 */
+	Gears.buttons.speed = 200;
+
+	/*
+	 *
+	 */
+	Gears.buttons.start_timer = function(method) {
+		clearTimeout(Gears.buttons._timer);
+		Gears.buttons.speed = 200;
+
+		var action = function() {
+			Gears.buttons._timer = setTimeout(function() {
+				method();
+				action();
+			}, Gears.buttons.speed);
+
+			Gears.buttons.speed -= 20;
+		};
+
+		action();
+	};
+
+	/*
+	 *
+	 */
+	Gears.buttons.stop_timer = function() {
+		clearTimeout(Gears.buttons._timer);
+	};
+
+	/*
+	 *
+	 */
 	Gears.add = function() {
-		if (Gears.number >= Gears.limit) return;
+		if (Gears.View.loading) return;
+		if (Gears.current_gears >= Gears.config.max_gears) return;
 
-		Gears.number++;
+		Gears.current_gears++;
 		Gears.update();
 	};
 
+	/*
+	 *
+	 */
 	Gears.remove = function() {
-		if (Gears.number < 2) return;
+		if (Gears.View.loading) return;
+		if (Gears.current_gears <= Gears.config.consumed_gears) return;
 
-		Gears.number--;
+		Gears.current_gears--;
 		Gears.update();
 	};
 
-	Gears.clear = function() {
-		Gears.currency = Gears.elements.table.attr('data-currency');
-		Gears.elements.gears.val(Gears.number);
+	/*
+	 *
+	 */
+	Gears.set_currency = function(currency) {
+		Gears.Billing.set_config(currency);
+		Gears.Billing.credit();
+
 		Gears.update();
 	};
 
-	Gears.message = function(text) {
-		Gears.elements.message.text(text).fadeIn();
-	};
-
-	Gears.message.hide = function() {
-		Gears.elements.message.fadeOut();
-	};
-
-	Gears.values = {};
-
-	Gears.values.maxGearsToApproved = 0;
-
-	Gears.values.setMaxCost = function(quantity, cost) {
-
-		if (cost > 4000) {
-			--quantity;
-		}
-	};
-
-	Gears.values.cost = function(quantity) {
-		 return parseFloat(quantity * Gears.data[Gears.currency].GEAR_USAGE.value);
-	};
-
-	Gears.values.total = function(gears, credit) {
-		return parseFloat((gears - credit));
-	};
-
-	Gears.values.formatedWithCurrency = function(value, leftNumber) {
-		return Gears.currency + ' ' + parseFloat(value).toFixed(leftNumber || Gears.leftNumbers);
-	};
-
+	/*
+	 *
+	 */
 	Gears.update = function() {
-
-		var gearHours = Gears.hourGear * Gears.number;
-		var creditGearHours = 0 * Gears.number;
-
-		var gearsCost = Gears.values.cost(gearHours);
-		var creditCost = Gears.values.cost(creditGearHours);
-		var totalCost = Gears.values.total(gearsCost, creditCost);
-
-		Gears.elements.gears.val(Gears.number);
-
-		Gears.elements.table.gearsSize.text(gearHours + ' hours');
-		Gears.elements.table.gearsUniCost.text(Gears.values.formatedWithCurrency(Gears.data[Gears.currency].GEAR_USAGE.value));
-		Gears.elements.table.gearsCost.text(Gears.values.formatedWithCurrency(gearsCost, 2));
-
-		Gears.elements.table.creditSize.text(0 + ' hours');
-		Gears.elements.table.creditUniCost.text(Gears.values.formatedWithCurrency(Gears.data[Gears.currency].GEAR_USAGE.value));
-		Gears.elements.table.creditCost.text(Gears.values.formatedWithCurrency(creditCost, 2));
-		
-		Gears.elements.table.mensalCost.text(Gears.values.formatedWithCurrency(totalCost, 2));
-		Gears.elements.table.totalApproved.text(Gears.values.formatedWithCurrency(totalCost * 12, 2));
+		Gears.Billing.update();
+		Gears.View.update();
 	};
 
-	// Initialize
-	Gears.initialize();
+	/*
+	 *
+	 */
+	Gears.init();
 
 }(jQuery));

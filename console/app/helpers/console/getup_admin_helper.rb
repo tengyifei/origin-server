@@ -1,4 +1,30 @@
 module Console::GetupAdminHelper
+
+  class GetupResponse
+    def initialize(response)
+      @code = response.code.to_i
+      @body = response.body
+      @message = response.message
+      @content = JSON.parse response.body, :symbolize_names => true
+    end
+
+    def code
+      @code
+    end
+
+    def body
+      @body
+    end
+
+    def message
+      @message
+    end 
+
+    def content
+      @content
+    end
+  end
+
   # 
   # 
   def getup_admin_post (path, params={})
@@ -7,7 +33,7 @@ module Console::GetupAdminHelper
 
     params[:csrfmiddlewaretoken] = 'getup'
 
-    uri = URI.parse "https://broker-dev.getupcloud.com:443/getup" + path[:address]
+    uri = URI.parse "https://broker-dev.getupcloud.com/getup" + path[:address]
 
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = true
@@ -19,17 +45,19 @@ module Console::GetupAdminHelper
 
     request.set_form_data(params)
 
+    print request.to_yaml
+
     response = http.request request
     response_code = response.code.to_i
 
-    response
+    GetupResponse.new response
   end
 
   def getup_admin_get (path, params={})
 
     path = format_path path
 
-    uri = URI.parse "https://broker-dev.getupcloud.com:443/getup" + path[:address]
+    uri = URI.parse "https://broker-dev.getupcloud.com/getup" + path[:address]
 
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = true
@@ -43,7 +71,7 @@ module Console::GetupAdminHelper
     response = http.request request
     response_code = response.code.to_i
 
-    response
+    GetupResponse.new response
   end
 
   private

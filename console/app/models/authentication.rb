@@ -37,7 +37,7 @@ class Authentication < ActiveResource::Base
   end
 
   def change_password(password, new_password)
-    uri = URI.parse "https://broker.getupcloud.com:443/getup/accounts/password_change/"
+    uri = URI.parse "https://broker.getupcloud.com/getup/accounts/password_change/"
 
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = true
@@ -56,7 +56,7 @@ class Authentication < ActiveResource::Base
   end
 
   def self.reset_password(email)
-    uri = URI.parse "https://broker.getupcloud.com:443/getup/accounts/password_reset/"
+    uri = URI.parse "https://broker.getupcloud.com/getup/accounts/password_reset/"
 
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = true
@@ -72,7 +72,7 @@ class Authentication < ActiveResource::Base
   end
 
   def self.update_password(password, token)
-    uri = URI.parse "http://broker.getupcloud.com:443/getup/accounts/password_reset/" + token + "/"
+    uri = URI.parse "http://broker.getupcloud.com/getup/accounts/password_reset/" + token + "/"
 
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = true

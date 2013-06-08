@@ -48,7 +48,7 @@ module ActionDispatch::Routing
 
       def openshift_billing_routes
         # Billing specific resources
-        resources :billing, :only => [:new, :show, :create]
+        resource :billing, :only => [:new, :show, :create]
       end
 
       def openshift_account_routes
