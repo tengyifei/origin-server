@@ -5,7 +5,7 @@ module Console::GetupAdminHelper
       @code = response.code.to_i
       @body = response.body
       @message = response.message
-      @content = JSON.parse response.body, :symbolize_names => true
+      @content = JSON.parse response.body, :symbolize_names => true rescue nil
     end
 
     def code
