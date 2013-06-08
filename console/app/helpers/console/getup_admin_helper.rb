@@ -45,8 +45,6 @@ module Console::GetupAdminHelper
 
     request.set_form_data(params)
 
-    print request.to_yaml
-
     response = http.request request
     response_code = response.code.to_i
 
