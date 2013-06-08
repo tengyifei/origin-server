@@ -12,7 +12,9 @@ class AuthenticationController < Console.config.parent_controller.constantize
 
   def auth
     authentication = Authentication.new
-    session[:authentication] = authentication.generate params[:login], params[:password]
+    authentication.generate params[:login], params[:password]
+    
+    session[:authentication] = authentication
 
   	redirect_to applications_path
   end
