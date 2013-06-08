@@ -33,7 +33,7 @@ module Console::GetupAdminHelper
 
     params[:csrfmiddlewaretoken] = 'getup'
 
-    uri = URI.parse "https://broker-dev.getupcloud.com/getup" + path[:address]
+    uri = URI.parse get_local_broker_url + "/getup" + path[:address]
 
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = true
@@ -57,7 +57,7 @@ module Console::GetupAdminHelper
 
     path = format_path path
 
-    uri = URI.parse "https://broker-dev.getupcloud.com/getup" + path[:address]
+    uri = URI.parse get_local_broker_url + "/getup" + path[:address]
 
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = true
@@ -75,6 +75,10 @@ module Console::GetupAdminHelper
   end
 
   private
+    def get_local_broker_url
+      Console.config.api[:broker]
+    end
+
     def format_path path
       if path[0] != '/'
         pipe_position = path.index '/'
