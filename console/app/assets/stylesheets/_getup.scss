@@ -1,10 +1,10 @@
 @font-face {
     font-family: 'roboto light';
-    src: url('http://getupcloud.com/fonts/roboto-light-webfont.eot');
-    src: url('http://getupcloud.com/fonts/roboto-light-webfont.eot?#iefix') format('embedded-opentype'),
-         url('http://getupcloud.com/fonts/roboto-light-webfont.woff') format('woff'),
-         url('http://getupcloud.com/fonts/roboto-light-webfont.ttf') format('truetype'),
-         url('http://getupcloud.com/fonts/roboto-light-webfont.svg#robotolight') format('svg');
+    src: url('http://static.getupcloud.com/static/fonts/roboto-light-webfont.eot');
+    src: url('http://static.getupcloud.com/static/fonts/roboto-light-webfont.eot?#iefix') format('embedded-opentype'),
+         url('http://static.getupcloud.com/static/fonts/roboto-light-webfont.woff') format('woff'),
+         url('http://static.getupcloud.com/static/fonts/roboto-light-webfont.ttf') format('truetype'),
+         url('http://static.getupcloud.com/static/fonts/roboto-light-webfont.svg#robotolight') format('svg');
     font-weight: normal;
     font-style: normal;
 }
@@ -12,11 +12,11 @@
 
 @font-face {
     font-family: 'roboto regular';
-    src: url('http://getupcloud.com/fonts/roboto-regular-webfont.eot');
-    src: url('http://getupcloud.com/fonts/roboto-regular-webfont.eot?#iefix') format('embedded-opentype'),
-         url('http://getupcloud.com/fonts/roboto-regular-webfont.woff') format('woff'),
-         url('http://getupcloud.com/fonts/roboto-regular-webfont.ttf') format('truetype'),
-         url('http://getupcloud.com/fonts/roboto-regular-webfont.svg#robotoregular') format('svg');
+    src: url('http://static.getupcloud.com/static/fonts/roboto-regular-webfont.eot');
+    src: url('http://static.getupcloud.com/static/fonts/roboto-regular-webfont.eot?#iefix') format('embedded-opentype'),
+         url('http://static.getupcloud.com/static/fonts/roboto-regular-webfont.woff') format('woff'),
+         url('http://static.getupcloud.com/static/fonts/roboto-regular-webfont.ttf') format('truetype'),
+         url('http://static.getupcloud.com/static/fonts/roboto-regular-webfont.svg#robotoregular') format('svg');
     font-weight: normal;
     font-style: normal;
 }
@@ -24,18 +24,18 @@
 
 @font-face {
     font-family: 'ostrich black';
-    src: url('http://getupcloud.com/fonts/ostrich-black-webfont.eot');
-    src: url('http://getupcloud.com/fonts/ostrich-black-webfont.eot?#iefix') format('embedded-opentype'),
-         url('http://getupcloud.com/fonts/ostrich-black-webfont.woff') format('woff'),
-         url('http://getupcloud.com/fonts/ostrich-black-webfont.ttf') format('truetype'),
-         url('http://getupcloud.com/fonts/ostrich-black-webfont.svg#ostrich_sansblack') format('svg');
+    src: url('http://static.getupcloud.com/static/fonts/ostrich-black-webfont.eot');
+    src: url('http://static.getupcloud.com/static/fonts/ostrich-black-webfont.eot?#iefix') format('embedded-opentype'),
+         url('http://static.getupcloud.com/static/fonts/ostrich-black-webfont.woff') format('woff'),
+         url('http://static.getupcloud.com/static/fonts/ostrich-black-webfont.ttf') format('truetype'),
+         url('http://static.getupcloud.com/static/fonts/ostrich-black-webfont.svg#ostrich_sansblack') format('svg');
     font-weight: normal;
     font-style: normal;
 }
 
-.getup-sprite { background: url(http://getupcloud.com/img/sprite.png) no-repeat; text-indent: -5000em; }
+.getup-sprite { background: url(http://static.getupcloud.com/static/img/sprite.png) no-repeat; text-indent: -5000em; }
 
-.getup { border-bottom: 5px solid #FF4C4D; min-height: 125px; background: #fff url('http://getupcloud.com/img/header.png') no-repeat top center; }
+.getup { border-bottom: 5px solid #FF4C4D; min-height: 125px; background: #fff url('http://static.getupcloud.com/static/img/header.png') no-repeat top center; }
 
 .getup .logo { width: 182px; height: 81px; margin: 0; border-top: 5px solid #FF4C4D; background-position: 0 0; }
 .getup .app { position: absolute; top: 49px; left: 161px; margin: 0; line-height: 34px; font-family: 'ostrich black'; font-size: 34px; color: #2D2D2D; }
