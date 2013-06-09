@@ -1,5 +1,5 @@
 class AuthenticationController < Console.config.parent_controller.constantize
-  layout false
+  layout 'authentication'
 
   def signin
   end
@@ -11,7 +11,9 @@ class AuthenticationController < Console.config.parent_controller.constantize
   end
 
   def auth
-    authentication = Authentication.new params[:login], params[:password]
+    authentication = Authentication.new
+    authentication.generate params[:login], params[:password]
+    
     session[:authentication] = authentication
 
   	redirect_to applications_path
@@ -29,7 +31,8 @@ class AuthenticationController < Console.config.parent_controller.constantize
       redirect_to signin
     end
 
-    updated = Authentication.update_password params[:password], session[:token]
+    authentication = Authentication.new
+    updated = authentication.update_password params[:password], session[:token]
 
     if updated
       flash[:success] = "New password saved."
@@ -41,7 +44,9 @@ class AuthenticationController < Console.config.parent_controller.constantize
   end
 
   def send_token
-    Authentication.reset_password params[:login]
+    authentication = Authentication.new
+    authentication.reset_password params[:login]
+
     flash[:success] = "Password reset requested."
 
     redirect_to signin_path

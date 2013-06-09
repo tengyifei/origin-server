@@ -5,6 +5,7 @@ module ActionDispatch::Routing
       opts = args.extract_options!
       openshift_console_routes
       openshift_authentication_routes
+      openshift_billing_routes
       openshift_account_routes unless (Array(opts[:skip]).include? :account || Console.config.disable_account)
       root :to => 'console_index#index', :via => :get, :as => :console
     end
@@ -43,6 +44,11 @@ module ActionDispatch::Routing
             get :get_started
           end
         end
+      end
+
+      def openshift_billing_routes
+        # Billing specific resources
+        resource :billing, :only => [:new, :show, :create]
       end
 
       def openshift_account_routes

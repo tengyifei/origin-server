@@ -1,10 +1,14 @@
 class Authentication < ActiveResource::Base
+  include Console::GetupAdminHelper
 
   schema do
     string :id, :login, :password
   end
 
-  def initialize(login, password)
+  def initialize
+  end
+
+  def generate(login, password)
     @login = login
     generate_token password
   end
@@ -37,17 +41,8 @@ class Authentication < ActiveResource::Base
   end
 
   def change_password(password, new_password)
-    uri = URI.parse "https://broker.getupcloud.com:443/getup/accounts/password_change/"
 
-    http = Net::HTTP.new uri.host, uri.port
-    http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-
-    request = Net::HTTP::Post.new uri.request_uri 
-    request["Cookie"] = "csrftoken=getup"
-    request.set_form_data({ :email => @login, :old_password => password, :new_password => new_password, :csrfmiddlewaretoken => 'getup' })
-
-    response = http.request request
+    response = getup_admin_post @login + "/account/password/change/", :oldpassword => password, :password1 => new_password, :password2 => new_password
     response_code = response.code.to_i
 
     generate_token new_password if response_code >= 200 and response_code < 400
@@ -55,34 +50,12 @@ class Authentication < ActiveResource::Base
     response
   end
 
-  def self.reset_password(email)
-    uri = URI.parse "https://broker.getupcloud.com:443/getup/accounts/password_reset/"
-
-    http = Net::HTTP.new uri.host, uri.port
-    http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-
-    request = Net::HTTP::Post.new uri.request_uri 
-    request["Cookie"] = "csrftoken=getup"
-    request.set_form_data({ :email => email, :csrfmiddlewaretoken => 'getup' })
-
-    response = http.request request
-
-    response
+  def reset_password(email)
+    getup_admin_post "/account/password/reset/", :email => email
   end
 
-  def self.update_password(password, token)
-    uri = URI.parse "http://broker.getupcloud.com:443/getup/accounts/password_reset/" + token + "/"
-
-    http = Net::HTTP.new uri.host, uri.port
-    http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-
-    request = Net::HTTP::Post.new uri.request_uri 
-    request["Cookie"] = "csrftoken=getup"
-    request.set_form_data({ :new_password => password, :csrfmiddlewaretoken => 'getup' })
-
-    response = http.request request
+  def update_password(password, token)
+    response = getup_admin_post "/account/password/reset/key/" + token + "/", :password1 => password, :password2 => password
     response_code = response.code.to_i
 
     response_code >= 200 and response_code < 400

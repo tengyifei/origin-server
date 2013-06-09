@@ -5,6 +5,9 @@
 .row
   .span7
     %section
+      = render :partial => 'billing', :locals => {:billing => @billing, :user => @user}
+
+    %section
       = render :partial => 'user', :locals => {:user => @user}
 
     %section

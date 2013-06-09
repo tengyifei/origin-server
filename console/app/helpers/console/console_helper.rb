@@ -17,10 +17,10 @@ module Console::ConsoleHelper
   end
 
   def product_branding
-    content_tag(:span, "<strong>Open</strong>Shift Origin".html_safe, :class => 'brand-text headline')
+    content_tag(:span, "<strong>Getup</strong> OpenShift Origin".html_safe, :class => 'brand-text headline')
   end
 
   def product_title
-    'OpenShift Origin'
+    'Getup OpenShift Origin'
   end
 end

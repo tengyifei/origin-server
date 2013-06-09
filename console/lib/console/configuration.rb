@@ -123,6 +123,7 @@ module Console
       def load(file)
         config = Console::ConfigFile.new(file)
         raise InvalidConfiguration, "BROKER_URL not specified in #{file}" unless config[:BROKER_URL]
+        raise InvalidConfiguration, "LOCAL_BROKER_BASE_URL not specified in #{file}" unless config[:LOCAL_BROKER_BASE_URL]
 
         freeze_api(api_config_from(config), file)
 
@@ -181,6 +182,7 @@ module Console
         end.merge({
           :url    => config[:BROKER_URL],
           :proxy  => config[:BROKER_PROXY_URL],
+          :broker => config[:LOCAL_BROKER_BASE_URL]
         })
       end
 

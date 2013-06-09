@@ -7,7 +7,7 @@
 # Required
 #
 BROKER_URL=https://localhost/broker/rest
-
+LOCAL_BROKER_BASE_URL=http://127.0.0.1:8080
 
 #
 # A proxy URL to use when connecting with the broker.
