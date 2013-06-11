@@ -20,7 +20,7 @@
   .input-prepend
     %label Currency
     %button.btn.btn-info.disabled.currency{:type => 'button', :'data-currency' => 'BRL'} R$
-    %button.btn.btn-info.currency{:type => 'button', :'data-currency' => 'USD'} US$
+    %button.btn.btn-info.currency{:type => 'button', :'data-currency' => 'USD'} US$&sup3;
 
   %span.right-position{:id => 'message'}
 
@@ -61,6 +61,9 @@
 
   %p
     %small 2. Total pre-approved: For security reasons, this pre-approval is valid for 12 months and the sum of all monthly charges cannot exceed R$ 3.996,00 or USD 1.998,00. When the value or validity of pre-approval is about to expire or be exceeded, we will ask you for another pre-approval operation.
+
+  %p
+    %small 3. Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime.
 
   %fieldset
     = link_to "Cancel", account_path, :class => 'btn'
