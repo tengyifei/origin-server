@@ -54,8 +54,8 @@ OpenshiftConsole::Application.configure do
   config.serve_static_assets = false
 
   config.assets.digest = true
-  config.assets.compile = false
-  config.assets.initialize_on_precompile = false
+  config.assets.compile = true
+  config.assets.initialize_on_precompile = true
   config.assets.compress = true
   config.assets.js_compressor = :uglifier
   config.assets.precompile += %w(common.css origin.css console.js modernizr.min.js auth.css auth.js auth_reset.js gears.js)
