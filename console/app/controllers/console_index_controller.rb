@@ -2,7 +2,9 @@ class ConsoleIndexController < ConsoleController
   skip_before_filter :authenticate_user!, :only => :unauthorized
 
   def index
-    redirect_to signin_path
+    redirect_to signin_path unless session[:authentication]
+
+    redirect_to applications_path
   end
   def unauthorized
     render 'console/unauthorized'
