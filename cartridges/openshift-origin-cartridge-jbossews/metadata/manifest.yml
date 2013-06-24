@@ -1,7 +1,7 @@
 Name: jbossews
 Cartridge-Short-Name: JBOSSEWS
 Cartridge-Vendor: redhat
-Cartridge-Version: 0.0.1
+Cartridge-Version: '0.0.2'
 Display-Name: Tomcat 7 (JBoss EWS 2.0)
 Description: "JBoss Enterprise Web Server is the enterprise-class Java web container for large-scale lightweight web applications based on Tomcat 7. Build and deploy JSPs and Servlets in the cloud."
 Version: '2.0'
@@ -20,7 +20,7 @@ Website: http://www.redhat.com/products/jbossenterprisemiddleware/web-server/
 Help-Topics:
   "Developer Center": https://www.openshift.com/developers
 Cart-Data:
-  - Key: OPENSHIFT_JBOSSEAP_LOG_DIR
+  - Key: OPENSHIFT_JBOSSEWS_LOG_DIR
     Type: environment
     Description: "Directory to store application log files."
   - Key: OPENSHIFT_TMP_DIR
@@ -29,10 +29,10 @@ Cart-Data:
   - Key: OPENSHIFT_REPO_DIR
     Type: environment
     Description: "Application root directory where application files reside. This directory is reset every time you do a git-push"
-  - Key: OPENSHIFT_INTERNAL_PORT
+  - Key: OPENSHIFT_JBOSSEWS_HTTP_PORT
     Type: environment
     Description: "Internal port to which the web-framework binds to."
-  - Key: OPENSHIFT_INTERNAL_IP
+  - Key: OPENSHIFT_JBOSSEWS_IP
     Type: environment
     Description: "Internal IP to which the web-framework binds to."
   - Key: OPENSHIFT_APP_DNS
@@ -73,6 +73,8 @@ Subscribes:
     Required: false
   set-jdbc-info:
     Type: "NET_TCP:jdbc"
+  set-generic-java:
+    Type: "ENV:NET_TCP:generic-java"
 Group-Overrides:
   - components:
     - "jbossews-2.0"
@@ -94,7 +96,6 @@ Endpoints:
     Private-Port:      8787
 Additional-Control-Actions:
     - threaddump
-Install-Build-Required: false
 Version-Overrides:
   '1.0':
     Display-Name: Tomcat 6 (JBoss EWS 1.0)

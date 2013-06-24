@@ -4,7 +4,7 @@ metadata    :name        => "Openshift Origin Management",
             :license     => "ASL 2.0",
             :version     => "0.1",
             :url         => "http://www.openshift.com",
-            :timeout     => 240
+            :timeout     => 360
 
 
 action "cartridge_do", :description => "run a cartridge action" do
@@ -14,7 +14,7 @@ action "cartridge_do", :description => "run a cartridge action" do
         :prompt         => "Cartridge",
         :description    => "Full name and version of the cartridge to run an action on",
         :type           => :string,
-        :validation     => '^[a-zA-Z0-9\.\-\/]+$',
+        :validation     => '\A[a-zA-Z0-9\.\-\/_]+\z',
         :optional       => false,
         :maxlength      => 64
 

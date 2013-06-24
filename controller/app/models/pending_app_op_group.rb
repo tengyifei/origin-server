@@ -88,7 +88,7 @@ class PendingAppOpGroup
           result_io.append gear.destroy_gear(true)
           self.inc(:num_gears_rolled_back, 1)
         when :track_usage
-          unless op.args["parent_user_id"].nil?
+          unless op.args["parent_user_id"]
             storage_usage_type = (op.args["usage_type"] == UsageRecord::USAGE_TYPES[:addtl_fs_gb])
             tracked_storage = nil
             if storage_usage_type
@@ -106,12 +106,13 @@ class PendingAppOpGroup
           application.group_overrides=op.saved_values["group_overrides"]
           application.save
         when :set_connections
-          application.set_connections(op.saved_values["connections"])
+          # no op
         when :execute_connections
-          application.execute_connections
+          application.execute_connections rescue nil
         when :set_gear_additional_filesystem_gb
           gear = get_gear_for_rollback(op)
-          gear.set_addtl_fs_gb(op.saved_values["additional_filesystem_gb"], handle)
+          tag = { "op_id" => op._id.to_s }
+          gear.set_addtl_fs_gb(op.saved_values["additional_filesystem_gb"], handle, tag)
           use_parallel_job = true
         when :add_alias
           gear = get_gear_for_rollback(op)
@@ -159,7 +160,7 @@ class PendingAppOpGroup
             comp_name = op.args["comp_spec"]["comp"]
             cart_name = op.args["comp_spec"]["cart"]
             if op.op_type == :new_component
-              component_instance = ComponentInstance.new(cartridge_name: cart_name, component_name: comp_name, group_instance_id: group_instance._id)
+              component_instance = ComponentInstance.new(cartridge_name: cart_name, component_name: comp_name, group_instance_id: group_instance._id, cartridge_vendor: op.args["cartridge_vendor"], version: op.args["version"])
             else
               component_instance = application.component_instances.find_by(cartridge_name: cart_name, component_name: comp_name, group_instance_id: group_instance._id)
             end
@@ -182,13 +183,17 @@ class PendingAppOpGroup
           when :unreserve_uid
             gear.unreserve_uid          
           when :expose_port
-            job = gear.get_expose_port_job(cart_name)
-            RemoteJob.add_parallel_job(handle, "expose-ports::#{component_instance._id.to_s}", gear, job)
+            job = gear.get_expose_port_job(component_instance)
+            tag = { "expose-ports" => component_instance._id.to_s, "op_id" => op._id.to_s }
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
             use_parallel_job = true
           when :new_component
             application.component_instances.push(component_instance)
           when :del_component
+            cartname = component_instance.cartridge_name
             application.component_instances.delete(component_instance)
+            application.downloaded_cart_map.delete_if { |cname,c| c["versioned_name"]==component_instance.cartridge_name}
+            application.save
           when :add_component
             result_io.append gear.add_component(component_instance, op.args["init_git_url"])
           when :post_configure_component
@@ -219,41 +224,60 @@ class PendingAppOpGroup
           when :destroy_gear
             result_io.append gear.destroy_gear(true)
           when :start_component
-            result_io.append gear.start(cart_name)
+            tag = { "op_id" => op._id.to_s }
+            job = gear.get_start_job(component_instance)
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
+            use_parallel_job = true
           when :stop_component
+            tag = { "op_id" => op._id.to_s }
             if args.has_key?("force") and args["force"]==true
-              result_io.append gear.force_stop(cart_name)
+              job = gear.get_force_stop_job(component_instance)
             else
-              result_io.append gear.stop(cart_name)
+              job = gear.get_stop_job(component_instance)
             end
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
+            use_parallel_job = true
           when :restart_component
-            result_io.append gear.restart(cart_name)
+            tag = { "op_id" => op._id.to_s }
+            job = gear.get_restart_job(component_instance)
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
+            use_parallel_job = true
           when :reload_component_config
-            result_io.append gear.reload_config(cart_name)
+            tag = { "op_id" => op._id.to_s }
+            job = gear.get_reload_job(component_instance)
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
+            use_parallel_job = true
           when :tidy_component
-            result_io.append gear.tidy(comp_name)
+            tag = { "op_id" => op._id.to_s }
+            job = gear.get_tidy_job(component_instance)
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
+            use_parallel_job = true
           when :update_configuration
-            gear.update_configuration(op.args,handle)
+            tag = { "op_id" => op._id.to_s }
+            gear.update_configuration(op.args,handle,tag)
             use_parallel_job = true
           when :add_broker_auth_key 
+            tag = { "op_id" => op._id.to_s }
             job = gear.get_broker_auth_key_add_job(args["iv"], args["token"])
-            RemoteJob.add_parallel_job(handle, "", gear, job)
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
             use_parallel_job = true
           when :remove_broker_auth_key
+            tag = { "op_id" => op._id.to_s }
             job = gear.get_broker_auth_key_remove_job()
-            RemoteJob.add_parallel_job(handle, "", gear, job)
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
             use_parallel_job = true
           when :set_group_overrides
             application.group_overrides=op.args["group_overrides"]
             application.save
           when :set_connections
-            application.set_connections(op.args["connections"])
+            # no op
           when :execute_connections
             application.execute_connections
           when :unsubscribe_connections
             application.unsubscribe_connections(op.args["sub_pub_info"])
           when :set_gear_additional_filesystem_gb
-            gear.set_addtl_fs_gb(op.args["additional_filesystem_gb"], handle)
+            tag = { "op_id" => op._id.to_s }
+            gear.set_addtl_fs_gb(op.args["additional_filesystem_gb"], handle, tag)
             use_parallel_job = true
           when :add_alias
             result_io.append gear.add_alias(op.args["fqdn"])
@@ -277,35 +301,49 @@ class PendingAppOpGroup
             a.certificate_added_at = nil
             self.application.save
           when :replace_all_ssh_keys
+            tag = { "op_id" => op._id.to_s }
             job = gear.get_fix_authorized_ssh_keys_job(op.args["keys_attrs"])
-            RemoteJob.add_parallel_job(handle, "", gear, job)
+            RemoteJob.add_parallel_job(handle, tag, gear, job)
             use_parallel_job = true
           end
           
           if use_parallel_job 
             parallel_job_ops.push op
+          elsif result_io.exitcode != 0
+            op.set(:state, :failed)
+            if result_io.hasUserActionableError
+              raise OpenShift::UserException.new("Unable to #{self.op_type.to_s.gsub("_"," ")}", result_io.exitcode, nil, result_io) 
+            else
+              raise OpenShift::NodeException.new("Unable to #{self.op_type.to_s.gsub("_"," ")}", result_io.exitcode, result_io) 
+            end
           else
             op.set(:state, :completed)
-          end
-        end
-        if result_io.exitcode != 0
-          if result_io.hasUserActionableError
-            raise OpenShift::UserException.new("Unable to #{op.op_type.to_s.gsub("_"," ")}", result_io.exitcode, nil, result_io) 
-          else
-            raise OpenShift::NodeException.new("Unable to #{op.op_type.to_s.gsub("_"," ")}", result_io.exitcode, nil, result_io) 
           end
         end
       
         if parallel_job_ops.length > 0
           RemoteJob.execute_parallel_jobs(handle)
+          failed_ops = []
           RemoteJob.get_parallel_run_results(handle) do |tag, gear_id, output, status|
-            if status==0 && tag.start_with?("expose-ports::")
-              component_instance_id = tag[14..-1]
-              application.component_instances.find(component_instance_id).process_properties(ResultIO.new(status, output, gear_id))
+            if tag.has_key?("expose-ports")
+              if status==0
+                component_instance_id = tag["expose-ports"]
+                application.component_instances.find(component_instance_id).process_properties(ResultIO.new(status, output, gear_id))
+              end
+            else
+              result_io.append ResultIO.new(status, output, gear_id)
+              failed_ops << tag["op_id"] if status!=0 
             end
           end
-          parallel_job_ops.each{ |op| op.set(:state, :completed) }
+          parallel_job_ops.each{ |op| 
+            if failed_ops.include? op._id.to_s 
+              op.set(:state, :failed) 
+            else
+              op.set(:state, :completed) 
+            end
+          }
           self.application.save
+          raise Exception.new("Failed to correctly execute all parallel operations - #{result_io.inspect}") unless failed_ops.empty?
         end
       end
       unless self.parent_op_id.nil?
@@ -337,5 +375,17 @@ class PendingAppOpGroup
       component_instance = application.component_instances.find_by(cartridge_name: cart_name, component_name: comp_name, group_instance_id: group_instance._id)
     end
     component_instance
+  end
+  
+  def serializable_hash_with_timestamp
+    s_hash = self.serializable_hash
+    t = Time.zone.now
+    if self.created_at.nil?
+      s_hash["created_at"] = t
+    end
+    if self.updated_at.nil?
+      s_hash["updated_at"] = t
+    end
+    s_hash
   end
 end

@@ -5,7 +5,7 @@ Description: "Jenkins is a continuous integration (CI) build server that is deep
 Version: '1.4'
 License: MIT license
 License-Url: http://jenkinsci.org/mitlicense
-Cartridge-Version: 0.0.1
+Cartridge-Version: 0.0.2
 Cartridge-Vendor: redhat
 Categories:
   - web_framework
@@ -22,10 +22,10 @@ Cart-Data:
   - Key: OPENSHIFT_REPO_DIR
     Type: environment
     Description: "Application root directory where application files reside. This directory is reset every time you do a git-push"
-  - Key: OPENSHIFT_INTERNAL_PORT
+  - Key: OPENSHIFT_JENKINS_PORT
     Type: environment
     Description: "Internal port to which the web-framework binds to."
-  - Key: OPENSHIFT_INTERNAL_IP
+  - Key: OPENSHIFT_JENKINS_IP
     Type: environment
     Description: "Internal IP to which the web-framework binds to."
   - Key: OPENSHIFT_APP_DNS
@@ -71,4 +71,3 @@ Endpoints:
 Scaling:
   Min: 1
   Max: 1
-Install-Build-Required: false

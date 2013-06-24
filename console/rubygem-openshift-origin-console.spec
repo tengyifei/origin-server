@@ -9,7 +9,7 @@
 
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
-Version: 1.9.1
+Version: 1.10.5
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -45,6 +45,10 @@ Requires:      %{?scl:%scl_prefix}rubygem(rspec-core)
 
 BuildRequires: %{?scl:%scl_prefix}build
 BuildRequires: scl-utils-build
+BuildRequires: %{?scl:%scl_prefix}rubygem(coffee-rails)
+BuildRequires: %{?scl:%scl_prefix}rubygem(sass-rails)
+BuildRequires: %{?scl:%scl_prefix}rubygem(jquery-rails)
+BuildRequires: %{?scl:%scl_prefix}rubygem(uglifier)
 BuildRequires: %{?scl:%scl_prefix}rubygem(rails)
 BuildRequires: %{?scl:%scl_prefix}rubygem(compass-rails)
 BuildRequires: %{?scl:%scl_prefix}rubygem(mocha)
@@ -147,6 +151,176 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Thu Jun 20 2013 Adam Miller <admiller@redhat.com> 1.10.5-1
+- Merge pull request #2900 from fabianofranz/master
+  (dmcphers+openshiftbot@redhat.com)
+- The console tabs are slightly misaligned (ccoleman@redhat.com)
+- More assertions on app creation timeout tests (ffranz@redhat.com)
+- Now redirecting to My Applications when app creation times out
+  (ffranz@redhat.com)
+- Handling nil exception message (ffranz@redhat.com)
+- Proper timeout error message (ffranz@redhat.com)
+- Bug 967504 - proper timeout (ffranz@redhat.com)
+- Bug 967504 - tests (ffranz@redhat.com)
+- Bug 967504 - handling timeout (ffranz@redhat.com)
+- Bug 967504 - web console now properly handling app creation timeout
+  (ffranz@redhat.com)
+
+* Wed Jun 19 2013 Adam Miller <admiller@redhat.com> 1.10.4-1
+- Merge branch 'master' of github.com:openshift/origin-server into 617dev
+  (sgoodwin@redhat.com)
+- Addition of defaul print specific css from latest bootstrap Updated entire
+  _reset.scss - no impact expected (sgoodwin@redhat.com)
+
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 1.10.3-1
+- Merge pull request #2847 from liggitt/bug_974483_error_page_header
+  (dmcphers+openshiftbot@redhat.com)
+- Remove obsolete panda container from 404 pages (jliggitt@redhat.com)
+- Fix bug 974483 - make header match openshift.com (jliggitt@redhat.com)
+
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 1.10.2-1
+- Add a proper check for rockmongo (dmcphers@redhat.com)
+- Merge pull request #2856 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2852 from
+  liggitt/bug_971328_app_create_missing_result_messages
+  (dmcphers+openshiftbot@redhat.com)
+- First pass at removing v1 cartridges (dmcphers@redhat.com)
+- Fix bug 971328 - jenkins creation missing result messages
+  (jliggitt@redhat.com)
+- Merge pull request #2831 from smarterclayton/bug_972878_version_assets
+  (dmcphers+openshiftbot@redhat.com)
+- Use new routes (jliggitt@redhat.com)
+- Add unit tests for message parsing, add reload support (jliggitt@redhat.com)
+- Fix bug 971280 - make app restart message correct (jliggitt@redhat.com)
+- Merge pull request #2509 from jwforres/route_id_clash
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2801 from smarterclayton/bug_970933_to_master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2832 from jwforres/bug_971147_allow_scaling_quickstart
+  (dmcphers+openshiftbot@redhat.com)
+- Fix mock test cases for the new routes used by the console
+  (jforrest@redhat.com)
+- Fix routing clashes when id matches new or edit (jforrest@redhat.com)
+- Implement review feedback (jforrest@redhat.com)
+- Bug 971147 - make not-scalable a recommendation (jforrest@redhat.com)
+- js_required forces session cookie reset, wrong abstraction to use for
+  noscript (ccoleman@redhat.com)
+- Merge pull request #2824 from jwforres/bug_972877
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2825 from liggitt/user_guide_url
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2814 from jtharris/bugs/BZ971136
+  (dmcphers+openshiftbot@redhat.com)
+- Remove border and background color from checkboxes to fix IE10
+  (jforrest@redhat.com)
+- Fix checkbox on authorizations page to work with new styles
+  (jforrest@redhat.com)
+- Use community redirect for linking to the user guide (jliggitt@redhat.com)
+- Bug 972877 - checkboxes are not correctly aligned (jforrest@redhat.com)
+- Add test to validate REST API returning partially created results
+  (ccoleman@redhat.com)
+- Unit test for missing framework. (jharris@redhat.com)
+- Add framework to the Application schema (jharris@redhat.com)
+- Use -z with quotes (dmcphers@redhat.com)
+- Bug 970933 - CLI backgrounds are incorrect (ccoleman@redhat.com)
+
+* Fri Jun 07 2013 Adam Miller 1.10.1-5
+- Bump spec for site rebuild
+
+* Thu Jun 06 2013 Adam Miller 1.10.1-4
+- Bump spec for site rebuild
+
+* Wed Jun 05 2013 Adam Miller 1.10.1-3
+- Bump spec for site rebuild
+
+* Mon Jun 03 2013 Adam Miller 1.10.1-2
+- Bump spec for 2.0.28.1 rebuild
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.10.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.9.10-1
+- <openshift-console> Bug 968442 - Change verbiage of get_started page
+  (jdetiber@redhat.com)
+- Merge pull request #2619 from jtharris/email_blacklist
+  (dmcphers+openshiftbot@redhat.com)
+- Add prohibited email domain configuration. (jharris@redhat.com)
+
+* Wed May 29 2013 Adam Miller <admiller@redhat.com> 1.9.9-1
+- Merge pull request #2657 from smarterclayton/clear_carts_on_reload
+  (dmcphers+openshiftbot@redhat.com)
+- Clear cartridges when applications are reloaded, fix downloadable application
+  test (ccoleman@redhat.com)
+
+* Tue May 28 2013 Adam Miller <admiller@redhat.com> 1.9.8-1
+- Merge pull request #2638 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2635 from
+  liggitt/bug_966330_authorization_keys_responsive_layout
+  (dmcphers+openshiftbot@redhat.com)
+- fix some broken tests (rchopra@redhat.com)
+- Fix bug 966330 - fix authorizations and ssh keys for responsive layouts
+  (jliggitt@redhat.com)
+
+* Fri May 24 2013 Adam Miller <admiller@redhat.com> 1.9.7-1
+- Tests don't pass (ccoleman@redhat.com)
+- Additional tests of downloading cartridges (ccoleman@redhat.com)
+
+* Thu May 23 2013 Adam Miller <admiller@redhat.com> 1.9.6-1
+- Merge pull request #2592 from smarterclayton/better_mail_config
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2598 from smarterclayton/prevent_unrescued_errors
+  (dmcphers+openshiftbot@redhat.com)
+- Review comments (ccoleman@redhat.com)
+- Prevent unrescued errors in the console (ccoleman@redhat.com)
+- Better mail config, allow SMTP to be set by ops (ccoleman@redhat.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 1.9.5-1
+- add required Build deps found because the Rails package got cleaned up
+  (admiller@redhat.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 1.9.4-1
+- Merge pull request #2590 from smarterclayton/rescue_delivery_failures
+  (dmcphers+openshiftbot@redhat.com)
+- Rescue delivery failures gracefully with a global logger
+  (ccoleman@redhat.com)
+- Bug 961072 (jharris@redhat.com)
+
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 1.9.3-1
+- 
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 1.9.2-1
+- Merge pull request #2514 from jtharris/log_helper_move
+  (dmcphers+openshiftbot@redhat.com)
+- Moving log_helper into console (jharris@redhat.com)
+- Safeguard against unexpected field name responses from the REST API, using
+  sym to check (ffranz@redhat.com)
+- Safeguard against unexpected field name responses from the REST API
+  (ffranz@redhat.com)
+- Bug 963156 (dmcphers@redhat.com)
+- Merge pull request #2424 from smarterclayton/upgrade_to_mocha_0_13_3
+  (admiller@redhat.com)
+- Review comment - kill comments (ccoleman@redhat.com)
+- Make scaling info easier to get at in UI (ccoleman@redhat.com)
+- Card online_ui_278 - Log helper utility (jharris@redhat.com)
+- Merge pull request #2435 from smarterclayton/allow_ci_reporter_to_be_optional
+  (dmcphers+openshiftbot@redhat.com)
+- ci_reporter is optional, not required (ccoleman@redhat.com)
+- Merge pull request #2428 from
+  smarterclayton/cart_spec_parsing_doesnt_handle_urls
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2427 from jwforres/Card227MenuHeaderDropdowns
+  (dmcphers+openshiftbot@redhat.com)
+- Cartridge spec parsing does not handle deserialized JSON hashes - a hash
+  should be treated as a hard match, not a soft spec (ccoleman@redhat.com)
+- Card 227 megamenu primary link dropdown - move bootstrap dropdown import
+  (jforrest@redhat.com)
+- Bug 961671 - Remove the community link from the header (ccoleman@redhat.com)
+- Upgrade to mocha 0.13.3 (compatible with Rails 3.2.12) (ccoleman@redhat.com)
+- Bug 961226 Update storage controller to reflect broker API change
+  (hripps@redhat.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 - Merge pull request #2399 from smarterclayton/allow_grids_to_be_pulled

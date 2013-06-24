@@ -15,6 +15,7 @@ class Gear
   field :uuid, type: String, default: ""
   field :uid, type: Integer
   field :name, type: String, default: ""
+  field :quarantined, type: Boolean, default: false
   field :host_singletons, type: Boolean, default: false
   field :app_dns, type: Boolean, default: false
 
@@ -105,7 +106,7 @@ class Gear
   end
   
   def status(component_instance)
-    @container.status(self, component_instance.cartridge_name)
+    @container.status(self, component_instance)
   end
   
   # Installs the specified component on the gear.
@@ -119,7 +120,7 @@ class Gear
   #   success = 0
   # @raise [OpenShift::NodeException] on failure
   def add_component(component, init_git_url=nil)
-    result_io = get_proxy.configure_cartridge(self, component.cartridge_name, init_git_url)
+    result_io = get_proxy.configure_cartridge(self, component, init_git_url)
     component.process_properties(result_io)
     app.process_commands(result_io, component._id)
     raise OpenShift::NodeException.new("Unable to add component #{component.cartridge_name}::#{component.component_name}", result_io.exitcode, result_io) if result_io.exitcode != 0
@@ -137,7 +138,7 @@ class Gear
   #   success = 0
   # @raise [OpenShift::NodeException] on failure
   def post_configure_component(component, init_git_url=nil)
-    result_io = get_proxy.post_configure_cartridge(self, component.cartridge_name, init_git_url)
+    result_io = get_proxy.post_configure_cartridge(self, component, init_git_url)
     component.process_properties(result_io)
     app.process_commands(result_io, component._id)
     raise OpenShift::NodeException.new("Unable to post-configure component #{component.cartridge_name}::#{component.component_name}", result_io.exitcode, result_io) if result_io.exitcode != 0
@@ -155,7 +156,7 @@ class Gear
   #   success = 0
   # @raise [OpenShift::NodeException] on failure
   def remove_component(component)
-    result_io = get_proxy.deconfigure_cartridge(self, component.cartridge_name)
+    result_io = get_proxy.deconfigure_cartridge(self, component)
     app.process_commands(result_io)
     result_io
   end
@@ -204,7 +205,11 @@ class Gear
     tag = ""
     handle = RemoteJob.create_parallel_job
     RemoteJob.run_parallel_on_gears(gears, handle) { |exec_handle, gear|
-      RemoteJob.add_parallel_job(exec_handle, tag, gear, gear.get_proxy.get_show_state_job(gear))
+      if gear.get_proxy
+        RemoteJob.add_parallel_job(exec_handle, tag, gear, gear.get_proxy.get_show_state_job(gear))
+      else
+        gear_states[gear.uuid.to_s] = "unknown"
+      end
     }
     RemoteJob.get_parallel_run_results(handle) { |tag, gear, output, status|
       if status != 0
@@ -231,12 +236,11 @@ class Gear
     return @container
   end
 
-  def update_configuration(args, remote_job_handle)
+  def update_configuration(args, remote_job_handle, tag="")
     add_keys = args["add_keys_attrs"]
     remove_keys = args["remove_keys_attrs"]
     add_envs = args["add_env_vars"]
     remove_envs = args["remove_env_vars"]
-    tag = ""
     
     add_keys.each     { |ssh_key| RemoteJob.add_parallel_job(remote_job_handle, tag, self, get_proxy.get_add_authorized_ssh_key_job(self, ssh_key["content"], ssh_key["type"], ssh_key["name"])) } unless add_keys.nil?      
     remove_keys.each  { |ssh_key| RemoteJob.add_parallel_job(remote_job_handle, tag, self, get_proxy.get_remove_authorized_ssh_key_job(self, ssh_key["content"], ssh_key["name"])) } unless remove_keys.nil?                 
@@ -250,9 +254,9 @@ class Gear
     @app ||= group_instance.application
   end
   
-  def set_addtl_fs_gb(additional_filesystem_gb, remote_job_handle)
+  def set_addtl_fs_gb(additional_filesystem_gb, remote_job_handle, tag = "addtl-fs-gb")
     total_fs_gb = additional_filesystem_gb + Gear.base_filesystem_gb(self.group_instance.gear_size)
-    RemoteJob.add_parallel_job(remote_job_handle, "addtl-fs-gb", self, get_proxy.get_update_gear_quota_job(self, total_fs_gb, ""))
+    RemoteJob.add_parallel_job(remote_job_handle, tag, self, get_proxy.get_update_gear_quota_job(self, total_fs_gb, ""))
   end
 
   def server_identities

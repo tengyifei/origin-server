@@ -20,7 +20,7 @@
 require_relative '../test_helper'
 
 module OpenShift
-  class ManagedFilesTest < OpenShift::V2SdkTestCase
+  class ManagedFilesTest < OpenShift::NodeTestCase
     include ManagedFiles
 
     def setup
@@ -30,7 +30,8 @@ module OpenShift
 
       @cartridge = OpenStruct.new({
         :name =>  'mock',
-        :directory =>  'mock'
+        :directory =>  'mock',
+        :short_name =>  'MOCK'
       })
       FileUtils.mkdir_p(File.join(@user.homedir,@cartridge.directory))
     end
@@ -75,6 +76,14 @@ module OpenShift
       %w(a ./b /c ~/d e/f/g).tap do |expected|
         set_managed_files({:foo => expected})
         assert_equal expected, managed_files(@cartridge, :foo, @user.homedir, false)
+      end
+    end
+
+    def test_block_immutable_files
+      %w(metadata/manifest.yml metadata/managed_files.yml env/OPENSHIFT_MOCK_IDENT env/OPENSHIFT_MOCK_DIR a).tap do |expected|
+        set_managed_files({:foo => expected})
+
+        assert_equal %w(mock/a), managed_files(@cartridge, :foo, @user.homedir)
       end
     end
 

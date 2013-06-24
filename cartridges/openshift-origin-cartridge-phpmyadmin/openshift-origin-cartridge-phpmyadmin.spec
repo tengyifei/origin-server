@@ -2,7 +2,7 @@
 
 Summary:       phpMyAdmin support for OpenShift
 Name:          openshift-origin-cartridge-phpmyadmin
-Version: 1.9.1
+Version: 1.10.4
 Release:       1%{?dist}
 Group:         Applications/Internet
 License:       ASL 2.0
@@ -10,44 +10,106 @@ URL:           https://www.openshift.com
 Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      rubygem(openshift-origin-node)
 Requires:      openshift-origin-node-util
-Requires:      phpMyAdmin
+Requires:      phpMyAdmin >= 3.4
+Requires:      phpMyAdmin < 3.6
+%if 0%{?fedora}%{?rhel} <= 6
 Requires:      httpd < 2.4
+%endif
+%if 0%{?fedora} >= 19
+Requires:      httpd > 2.3
+Requires:      httpd < 2.5
+%endif
 BuildArch:     noarch
+
+Obsoletes: openshift-origin-cartridge-phpmyadmin-3.4
 
 %description
 Provides phpMyAdmin cartridge support. (Cartridge Format V2)
 
-
-
 %prep
 %setup -q
-
 
 %build
 %__rm %{name}.spec
 
-
 %install
-%__rm -rf %{buildroot}
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
-
-%clean
-%__rm -rf %{buildroot}
+%if 0%{?fedora}%{?rhel} <= 6
+rm -rf %{buildroot}%{cartridgedir}/versions/3.5
+mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%endif
+%if 0%{?fedora} == 19
+rm -rf %{buildroot}%{cartridgedir}/versions/3.4
+mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.f19 %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%endif
+rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 %post
 %{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
+test -f %{_sysconfdir}/phpMyAdmin/config.inc.php && mv %{_sysconfdir}/phpMyAdmin/config.inc.php{,.orig.$(date +%F)} || rm -f %{_sysconfdir}/phpMyAdmin/config.inc.php
+ln -sf %{cartridgedir}/versions/shared/phpMyAdmin/config.inc.php %{_sysconfdir}/phpMyAdmin/config.inc.php
 
 %files
-%defattr(-,root,root,-)
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%attr(0755,-,-) %{cartridgedir}
+%{cartridgedir}
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Fri Jun 21 2013 Adam Miller <admiller@redhat.com> 1.10.4-1
+- WIP Cartridge - Updated manifest.yml versions for compatibility
+  (jhonce@redhat.com)
+
+* Thu Jun 20 2013 Adam Miller <admiller@redhat.com> 1.10.3-1
+- Merge pull request #2899 from VojtechVitek/bz974899_phpmyadmin_config_2
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 975700 - check the httpd pid file for corruption and attempt to fix it.
+  (rmillner@redhat.com)
+- fix phpMyAdmin config file (vvitek@redhat.com)
+
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 1.10.2-1
+- First pass at removing v1 cartridges (dmcphers@redhat.com)
+- Add version check around DefaultRuntimeDir directive as it is available only
+  on apache 2.4+ (kraman@gmail.com)
+- Relax phpmyadmin version check (kraman@gmail.com)
+- Update phpmyadmin cartridge for F19 version (kraman@gmail.com)
+- Fix stop for httpd-based carts. (mrunalp@gmail.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.10.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Tue May 28 2013 Adam Miller <admiller@redhat.com> 1.9.7-1
+- Bug 967118 - Remove redundant entries from managed_files.yml
+  (jhonce@redhat.com)
+
+* Fri May 24 2013 Adam Miller <admiller@redhat.com> 1.9.6-1
+- remove install build required for non buildable carts (dmcphers@redhat.com)
+
+* Thu May 23 2013 Adam Miller <admiller@redhat.com> 1.9.5-1
+- Bug 966319 - Gear needs to write to httpd configuration (jhonce@redhat.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 1.9.4-1
+- Bug 962662 (dmcphers@redhat.com)
+- Bug 965537 - Dynamically build PassEnv httpd configuration
+  (jhonce@redhat.com)
+
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 1.9.3-1
+- spec file cleanup (tdawson@redhat.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 1.9.2-1
+- locking fixes and adjustments (dmcphers@redhat.com)
+- Add erb processing to managed_files.yml Also fixed and added some test cases
+  (fotios@redhat.com)
+- Card online_runtime_297 - Allow cartridges to use more resources
+  (jhonce@redhat.com)
+- WIP Cartridge Refactor -- Cleanup spec files (jhonce@redhat.com)
+- Card online_runtime_297 - Allow cartridges to use more resources
+  (jhonce@redhat.com)
+- Move folder creation back to setup (dmcphers@redhat.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 

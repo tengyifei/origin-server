@@ -7,7 +7,7 @@
 
 Summary:       Embedded jenkins client support for OpenShift 
 Name:          openshift-origin-cartridge-jenkins-client
-Version: 1.8.1
+Version: 1.9.2
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -25,43 +25,61 @@ Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      %{?scl:%scl_prefix}rubygem-json
 BuildArch:     noarch
 
+Obsoletes: openshift-origin-cartridge-jenkins-client-1.4
+
 %description
 Provides plugin jenkins client support. (Cartridge Format V2)
-
 
 %prep
 %setup -q
 
-
 %build
 %__rm %{name}.spec
 
-
 %install
-%__rm -rf %{buildroot}
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
-
-
-%clean
-%__rm -rf %{buildroot}
-
 
 %post
 %{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
 %files
-%defattr(-,root,root,-)
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%attr(0755,-,-) %{cartridgedir}
+%{cartridgedir}
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
-
-
 %changelog
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 1.9.2-1
+- First pass at removing v1 cartridges (dmcphers@redhat.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.8.6-1
+- Fix bug 967439 - improve jenkins client message (jliggitt@redhat.com)
+
+* Fri May 24 2013 Adam Miller <admiller@redhat.com> 1.8.5-1
+- remove install build required for non buildable carts (dmcphers@redhat.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 1.8.4-1
+- Bug 962662 (dmcphers@redhat.com)
+
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 1.8.3-1
+- Merge pull request #2532 from ironcladlou/bz/962324
+  (dmcphers+openshiftbot@redhat.com)
+- spec file cleanup (tdawson@redhat.com)
+- Bug 962324: Add status output to jenkins-client (ironcladlou@gmail.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- locking fixes and adjustments (dmcphers@redhat.com)
+- Add erb processing to managed_files.yml Also fixed and added some test cases
+  (fotios@redhat.com)
+- WIP Cartridge Refactor -- Cleanup spec files (jhonce@redhat.com)
+- Bug 956044 (dmcphers@redhat.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 

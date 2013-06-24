@@ -5,10 +5,20 @@ require File.expand_path('../../config/environment', __FILE__)
 require 'rails/test_help'
 require 'mocha'
 
-if(File.exist?('/etc/fedora-release'))
-  PHP_VERSION = 'php-5.4'
-else
-  PHP_VERSION = 'php-5.3'
+manifest = YAML.load(File.open(Dir["/var/lib/openshift/.cartridge_repository/redhat-php/*/metadata/manifest.yml"].first))
+PHP_VERSION = "php-" + manifest['Version']
+
+manifest = YAML.load(File.open(Dir["/var/lib/openshift/.cartridge_repository/redhat-ruby/*/metadata/manifest.yml"].first))
+RUBY_VERSION = "ruby-" + manifest['Version']
+
+if File.exist?("/var/lib/openshift/.cartridge_repository/redhat-mysql")
+  manifest = YAML.load(File.open(Dir["/var/lib/openshift/.cartridge_repository/redhat-mysql/*/metadata/manifest.yml"].first))
+  MYSQL_VERSION = "mysql-" + manifest['Version']
+end
+
+if File.exist?("/var/lib/openshift/.cartridge_repository/redhat-mariadb")
+  manifest = YAML.load(File.open(Dir["/var/lib/openshift/.cartridge_repository/redhat-mariadb/*/metadata/manifest.yml"].first))
+  MYSQL_VERSION = "mariadb-" + manifest['Version']
 end
 
 def gen_uuid

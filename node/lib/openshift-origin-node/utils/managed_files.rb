@@ -15,10 +15,16 @@
 #++
 
 require 'openshift-origin-node/utils/node_logger'
+require 'safe_yaml'
+
+SafeYAML::OPTIONS[:default_mode] = :unsafe
 
 module OpenShift
   module ManagedFiles
     include NodeLogger
+
+    # Immutable Files: Once instantiated in a gear this files cannot be changed. mode: 0644  own: root.uuid
+    IMMUTABLE_FILES = %w(metadata/manifest.yml metadata/managed_files.yml env/OPENSHIFT_*_IDENT env/OPENSHIFT_*_DIR)
 
     # Turn blacklist into regexes
     FILENAME_BLACKLIST = %r{^\.(ssh|sandbox|tmp|env)}
@@ -56,10 +62,11 @@ module OpenShift
       end
 
       # Ensure the this works with symbols or strings in yml file or argument
-      file_patterns = YAML.load_file(managed_files).values_at(*[type.to_s,type.to_sym])
+      file_patterns = YAML.load_file(managed_files, :safe => true, :deserialize_symbols => true).values_at(*[type.to_s,type.to_sym])
         .flatten.compact      # Remove any nils
         .map(&:strip)         # Remove leading/trailing whitespace
         .delete_if(&:empty?)  # Remove any empty patterns
+
 
       # Specify whether or not to do extra processing
       if process_files
@@ -88,6 +95,11 @@ module OpenShift
             pattern
           end
         end.flatten
+
+        IMMUTABLE_FILES.each do |name|
+          name.gsub!('*', cart.short_name)
+          wanted_files.delete(PathUtils.join(root, cart.directory, name))
+        end
 
         # Return files as relative to root
         wanted_files.map{|x| x[root.length..-1]}

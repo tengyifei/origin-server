@@ -8,7 +8,7 @@
 
 Summary:       Common msg components for OpenShift broker and node
 Name:          openshift-origin-msg-common
-Version: 1.7.1
+Version: 1.10.3
 Release:       1%{?dist}
 License:       ASL 2.0
 URL:           http://www.openshift.com
@@ -29,15 +29,37 @@ for OpenShift broker and node
 mkdir -p %{buildroot}%{mco_root}agent
 mkdir -p %{buildroot}%{mco_root}validator
 cp -p agent/* %{buildroot}%{mco_root}agent/
-cp -p validator/* %{buildroot}%{mco_root}validator/
 chmod 644 %{buildroot}%{mco_root}agent/*
+%if 0%{?fedora}%{?rhel} < 19
+cp -p validator/* %{buildroot}%{mco_root}validator/
 chmod 644 %{buildroot}%{mco_root}validator/*
+%endif
 
 %files
 %{mco_root}agent/*
+%if 0%{?fedora}%{?rhel} < 19
 %{mco_root}validator/*
+%endif
 
 %changelog
+* Tue Jun 18 2013 Adam Miller <admiller@redhat.com> 1.10.3-1
+- Bug 972757 (asari.ruby@gmail.com)
+
+* Tue Jun 11 2013 Troy Dawson <tdawson@redhat.com> 1.10.2-1
+- Node timeout handling improvements (ironcladlou@gmail.com)
+- Remove any_validator hack. F19 mcollective includes this already.
+  (kraman@gmail.com)
+
+* Tue Jun 11 2013 Troy Dawson <tdawson@redhat.com> 1.10.1-1
+- Bump up version to 1.10
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 1.7.2-1
+- Removing code dealing with namespace updates for applications
+  (abhgupta@redhat.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.7.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 

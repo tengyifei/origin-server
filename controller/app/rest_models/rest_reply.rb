@@ -28,23 +28,31 @@
 # @attr [Array<Message>] messages Messages and errors returned in the REST reply
 # @attr [Array<String>] supported_api_versions Other supported REST API versions
 class RestReply < OpenShift::Model
-  attr_accessor :version, :status, :type, :data, :messages, :supported_api_versions
+  attr_accessor :version, :status, :type, :data, :messages, :supported_api_versions, :api_version
   
   def initialize(requested_api_version, status=nil, type=nil, data=nil)
     self.status = status
     self.type = type
     self.data = data
     self.messages = []
-    self.version = requested_api_version.to_s
+    self.version = requested_api_version.to_s 
+    self.api_version = requested_api_version
     self.supported_api_versions = OpenShift::Controller::ApiBehavior::SUPPORTED_API_VERSIONS
   end
   
   def process_result_io(result_io)
     unless result_io.nil?
-      messages.push(Message.new(:debug, result_io.debugIO.string)) unless result_io.debugIO.string.empty?
-      messages.push(Message.new(:info, result_io.messageIO.string)) unless result_io.messageIO.string.empty?
-      messages.push(Message.new(:error, result_io.errorIO.string)) unless result_io.errorIO.string.empty?
-      messages.push(Message.new(:result, result_io.resultIO.string)) unless result_io.resultIO.string.empty?    
+      if result_io.is_a? Array
+        result_io.each do |r|
+          process_result_io(r)
+        end
+      end
+      if result_io.is_a? ResultIO
+        messages.push(Message.new(:debug, result_io.debugIO.string)) unless result_io.debugIO.string.empty?
+        messages.push(Message.new(:info, result_io.messageIO.string)) unless result_io.messageIO.string.empty?
+        messages.push(Message.new(:error, result_io.errorIO.string)) unless result_io.errorIO.string.empty?
+        messages.push(Message.new(:result, result_io.resultIO.string)) unless result_io.resultIO.string.empty?    
+      end
     end
   end
   

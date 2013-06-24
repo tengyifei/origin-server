@@ -8,13 +8,6 @@ require 'rest-client'
 
 include AppHelper
 
-Given /^a ([^ ]+) application, verify that you cannot add jenkins client without server being available$/ do |cart_name|
-  steps %Q{
-    Given a new #{cart_name} type application
-    Then I fail to embed a jenkins-client-1.4 cartridge into the application
-  }
-end
-
 When /^I configure a hello_world diy application with jenkins enabled$/ do
     @app = TestApp.create_unique('diy-0.1', 'diy')
     run "echo -e \"Host #{@app.hostname}\n\tStrictHostKeyChecking no\n\" >> ~/.ssh/config"
@@ -40,18 +33,20 @@ When /^I configure a hello_world diy application with jenkins enabled$/ do
 end
 
 When /^I push an update to the diy application$/ do
-    output = `awk <#{$temp}/cucumber.log '/^ *Git URL.*diy.git.$/ {print $NF}'`.split("\n")
+    output = `awk <#{$temp}/cucumber.log '/^ *Git remote.*diy.git.$/ {print $NF}'`.split("\n")
     @diy_git_url = output[-1]
     $logger.debug "git url: #{@diy_git_url}"
     assert_not_nil @diy_git_url, "Failed to find Git URL for diy application"
 
-    FileUtils.rm_rf 'diy' if File.exists? 'diy'
-    assert_directory_not_exists 'diy'
 
-    exit_code = run "git clone #{@diy_git_url} diy"
+    git_dir = "/tmp/rhc/diy_jenkins"
+    FileUtils.rm_rf git_dir if File.exists? git_dir
+    assert_directory_not_exists git_dir
+
+    exit_code = run "git clone #{@diy_git_url} #{git_dir}"
     assert_equal 0, exit_code, "Failed to clone diy repo"
 
-    Dir.chdir("diy") do
+    Dir.chdir(git_dir) do
       exit_code = run "sed -i 's/Welcome to OpenShift/Jenkins Builder Testing/' diy/index.html"
       assert_equal 0, exit_code, "Failed to update diy/index.html"
 
@@ -89,7 +84,7 @@ Then /^the application will be updated$/ do
       end while job['color'] != 'blue'
     end
     job['color'].should be == 'blue' 
-    
+
     app_uuid = @diy_git_url.match(TestApp::SSH_OUTPUT_PATTERN)[1]
     path = "/var/lib/openshift/#{app_uuid}/app-root/repo/#{@app.name}/index.html"
     $logger.debug "jenkins built application path = #{path}"

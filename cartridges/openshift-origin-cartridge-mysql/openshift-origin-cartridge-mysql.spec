@@ -2,7 +2,7 @@
 
 Summary:       Provides embedded mysql support
 Name:          openshift-origin-cartridge-mysql
-Version: 0.3.1
+Version: 0.4.3
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -14,41 +14,67 @@ Requires:      rubygem(openshift-origin-node)
 Requires:      openshift-origin-node-util
 BuildArch:     noarch
 
+Obsoletes: openshift-origin-cartridge-mysql-5.1
 
 %description
 Provides mysql cartridge support to OpenShift. (Cartridge Format V2)
 
-
 %prep
 %setup -q
-
 
 %build
 %__rm %{name}.spec
 
-
 %install
-%__rm -rf %{buildroot}
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
 
 %post
 %{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
-%clean
-%__rm -rf %{buildroot}
-
-
 %files
-%defattr(-,root,root,-)
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%attr(0755,-,-) %{cartridgedir}
+%attr(0755,-,-) %{cartridgedir}/hooks/
+%{cartridgedir}
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Jun 19 2013 Adam Miller <admiller@redhat.com> 0.4.3-1
+- Bug 970914 - Mysql big data snapshot restore failed (fotios@redhat.com)
+
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 0.4.2-1
+- First pass at removing v1 cartridges (dmcphers@redhat.com)
+- Bug 971296: Display mysql environment variables rather than IPs during
+  install (ironcladlou@gmail.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 0.4.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Fri May 24 2013 Adam Miller <admiller@redhat.com> 0.3.6-1
+- Bug 967017: Use underscores for v2 cart script names (ironcladlou@gmail.com)
+- remove install build required for non buildable carts (dmcphers@redhat.com)
+
+* Thu May 23 2013 Adam Miller <admiller@redhat.com> 0.3.5-1
+- Merge pull request #2596 from fotioslindiakos/Bug960707
+  (dmcphers+openshiftbot@redhat.com)
+- Bug960707: MySQL snapshot and restore across applications (fotios@redhat.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 0.3.4-1
+- Bug 962662 (dmcphers@redhat.com)
+- Fix bug 964348 (pmorie@gmail.com)
+
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 0.3.3-1
+- spec file cleanup (tdawson@redhat.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 0.3.2-1
+- locking fixes and adjustments (dmcphers@redhat.com)
+- Add erb processing to managed_files.yml Also fixed and added some test cases
+  (fotios@redhat.com)
+- WIP Cartridge Refactor -- Cleanup spec files (jhonce@redhat.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.3.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 

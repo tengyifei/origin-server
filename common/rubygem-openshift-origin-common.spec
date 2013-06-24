@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Common
 Name:          rubygem-%{gem_name}
-Version: 1.8.1
+Version: 1.10.4
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -23,6 +23,8 @@ Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
 Requires:      %{?scl:%scl_prefix}rubygems
 Requires:      %{?scl:%scl_prefix}rubygem(activemodel)
 Requires:      %{?scl:%scl_prefix}rubygem(json)
+Requires:      %{?scl:%scl_prefix}rubygem(safe_yaml)
+Requires:      %{?scl:%scl_prefix}rubygem(bundler)
 %if 0%{?rhel}
 Requires:      openshift-origin-util-scl
 %endif
@@ -75,6 +77,20 @@ gem install -V \
 %install
 mkdir -p %{buildroot}%{gem_dir}
 cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
+mkdir -p %{buildroot}/%{gem_instdir}/.yardoc
+
+%if 0%{?scl:1}
+mkdir -p %{buildroot}%{_root_sbindir}
+cp -p bin/oo-* %{buildroot}%{_root_sbindir}/
+mkdir -p %{buildroot}%{_root_mandir}/man8/
+cp bin/man/*.8 %{buildroot}%{_root_mandir}/man8/
+%else
+mkdir -p %{buildroot}%{_sbindir}
+cp -p bin/oo-* %{buildroot}%{_sbindir}/
+mkdir -p %{buildroot}%{_mandir}/man8/
+cp bin/man/*.8 %{buildroot}%{_mandir}/man8/
+%endif
+
 
 %files
 %dir %{gem_instdir}
@@ -89,6 +105,14 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_spec}
 %{gem_libdir}
 
+%if 0%{?scl:1}
+%attr(0750,-,-) %{_root_sbindir}/oo-diagnostics
+%{_root_mandir}/man8/oo-diagnostics.8.gz
+%else
+%attr(0750,-,-) %{_sbindir}/oo-diagnostics
+%{_mandir}/man8/oo-diagnostics.8.gz
+%endif
+
 %exclude %{gem_cache}
 %exclude %{gem_instdir}/rubygem-%{gem_name}.spec
 
@@ -96,6 +120,73 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %doc %{gem_docdir}
 
 %changelog
+* Fri Jun 21 2013 Adam Miller <admiller@redhat.com> 1.10.4-1
+- <oo-diagnostics> Bug 976874 - Detect abrt-addon-python conflicts
+  (jdetiber@redhat.com)
+- <common> bug 976173 oo-diagnostics requires bundler (lmeyer@redhat.com)
+
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 1.10.3-1
+- First pass at removing v1 cartridges (dmcphers@redhat.com)
+- Merge pull request #2805 from BanzaiMan/dev/hasari/bz972757
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 972757: Allow vendor names to start with a numeral (asari.ruby@gmail.com)
+
+* Tue Jun 11 2013 Troy Dawson <tdawson@redhat.com> 1.10.2-1
+- Bump up version (tdawson@redhat.com)
+- <oo-diagnostics> Bug 970805 - Add check for broker SSL cert
+  (jdetiber@redhat.com)
+- Fixing optional scl macros in rubygem-openshift-origin-common
+  (kraman@gmail.com)
+- Merge pull request #2707 from kraman/f19_fixes
+  (dmcphers+openshiftbot@redhat.com)
+- <common> fix .spec so oo-diag is in non-scl locations (lmeyer@redhat.com)
+- Fixed spurious yardoc inclusion as this causes build to break on F19
+  (kraman@gmail.com)
+- origin_runtime_138 - Add SSL_ENDPOINT variable and filter whether carts use
+  ssl_to_gear. (rmillner@redhat.com)
+- Add ssl_to_gear option. (mrunalp@gmail.com)
+- <common> add oo-diagnostics and man page (lmeyer@redhat.com)
+- Make Install-Build-Required default to false (ironcladlou@gmail.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Wed May 29 2013 Adam Miller <admiller@redhat.com> 1.8.8-1
+- Merge pull request #2654 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- fix bz 967779, 967409, 967395 (rchopra@redhat.com)
+- Merge pull request #2658 from rmillner/out_of_date
+  (dmcphers+openshiftbot@redhat.com)
+- These policies are long deprecated, removing them to avoid confusion.
+  (rmillner@redhat.com)
+
+* Tue May 28 2013 Adam Miller <admiller@redhat.com> 1.8.7-1
+- vendoring of cartridges (rchopra@redhat.com)
+
+* Fri May 24 2013 Adam Miller <admiller@redhat.com> 1.8.6-1
+- Bug 965317 - Add way to patch File class so all files have sync enabled.
+  (rmillner@redhat.com)
+- Bug 966759 - Ensure mappings start with / (jhonce@redhat.com)
+
+* Thu May 23 2013 Adam Miller <admiller@redhat.com> 1.8.5-1
+- Fix for bug 960757  - Sending init_git_url only for deployable cartridge
+  configure/post-configure  - Removing is_primary_cart method in favor of
+  is_deployable (abhgupta@redhat.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 1.8.4-1
+- WIP Cartridge Refactor - V2 -> V2 Migration (jhonce@redhat.com)
+- safe yaml for parsing of downloaded yaml (rchopra@redhat.com)
+
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 1.8.3-1
+- WIP Cartridge Refactor - V2 -> V2 Migration (jhonce@redhat.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 1.8.2-1
+- Merge pull request #2491 from ironcladlou/dev/v2carts/private-endpoints-fix
+  (dmcphers+openshiftbot@redhat.com)
+- Escape early from endpoint creation when there are none to create
+  (ironcladlou@gmail.com)
+- Bug 958653 (lnader@redhat.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.8.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 - Merge pull request #2341 from lnader/master

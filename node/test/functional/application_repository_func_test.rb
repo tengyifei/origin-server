@@ -18,7 +18,7 @@ require 'pathname'
 
 # Deploy cannot be testing in this manner. SELinux requires a valid UID or the tests fail.
 # See cucumber test application_repository.feature
-class ApplicationRepositoryFuncTest < OpenShift::V2SdkTestCase
+class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
   GEAR_BASE_DIR = '/var/lib/openshift'
 
   def before_setup
@@ -62,7 +62,10 @@ class ApplicationRepositoryFuncTest < OpenShift::V2SdkTestCase
     @state = mock('OpenShift::Utils::ApplicationState')
     @state.stubs(:value=).with('started').returns('started')
 
-    @model               = OpenShift::V2CartridgeModel.new(@config, @user, @state)
+    @hourglass = mock()
+    @hourglass.stubs(:remaining).returns(3600)
+
+    @model               = OpenShift::V2CartridgeModel.new(@config, @user, @state, @hourglass)
     @cartridge_name      = 'mock-0.1'
     @cartridge_directory = 'mock'
     @cartridge_home      = File.join(@user.homedir, @cartridge_directory)
@@ -105,6 +108,14 @@ class ApplicationRepositoryFuncTest < OpenShift::V2SdkTestCase
   def test_new
     repo = OpenShift::ApplicationRepository.new(@user)
     refute_nil repo
+  end
+
+  def test_no_template
+    template = File.join(@user.homedir, @cartridge_directory, 'template')
+    FileUtils.rm_rf template
+    repo = OpenShift::ApplicationRepository.new(@user)
+    refute_path_exist template
+    repo.archive
   end
 
   def test_bare_repository_usr
@@ -216,7 +227,7 @@ class ApplicationRepositoryFuncTest < OpenShift::V2SdkTestCase
 
       runtime_repo = "#{@user.homedir}/app-root/runtime/repo"
       FileUtils.mkpath(runtime_repo)
-      repo.deploy
+      repo.archive
       assert_path_exist File.join(runtime_repo, 'perl', 'health_check.pl')
     rescue OpenShift::Utils::ShellExecutionException => e
       puts %Q{
@@ -245,7 +256,7 @@ class ApplicationRepositoryFuncTest < OpenShift::V2SdkTestCase
 
       runtime_repo = "#{@user.homedir}/app-root/runtime/repo"
       FileUtils.mkpath(runtime_repo)
-      repo.deploy
+      repo.archive
       assert_path_exist File.join(runtime_repo, 'perl', 'health_check.pl')
     rescue OpenShift::Utils::ShellExecutionException => e
       puts %Q{
@@ -274,9 +285,40 @@ class ApplicationRepositoryFuncTest < OpenShift::V2SdkTestCase
 
       runtime_repo = "#{@user.homedir}/app-root/runtime/repo"
       FileUtils.mkpath(runtime_repo)
-      repo.deploy
+      repo.archive
       assert_path_exist File.join(runtime_repo, 'perl', 'health_check.pl')
       assert_path_exist File.join(runtime_repo, 'module001', 'README.md')
+    rescue OpenShift::Utils::ShellExecutionException => e
+      puts %Q{
+        Failed to create git repo from cartridge template: rc(#{e.rc})
+        stdout ==> #{e.stdout}
+        stderr ==> #{e.stderr}
+           #{e.backtrace.join("\n")}}
+      raise
+    end
+  end
+
+  def test_bare_nested_submodule
+    create_template(File.join(@cartridge_home, 'template', 'perl'))
+    create_bare_nested_submodule
+    expected_path = File.join(@user.homedir, 'git', @user.app_name + '.git')
+
+    repo = OpenShift::ApplicationRepository.new(@user)
+    repo.destroy
+    refute_path_exist(expected_path)
+
+    begin
+      repo.populate_from_cartridge(@cartridge_directory)
+
+      assert_equal expected_path, repo.path
+      assert_bare_repository(repo)
+
+      runtime_repo = "#{@user.homedir}/app-root/runtime/repo"
+      FileUtils.mkpath(runtime_repo)
+      repo.archive
+      assert_path_exist File.join(runtime_repo, 'perl', 'health_check.pl')
+      assert_path_exist File.join(runtime_repo, 'lib', 'module001', 'README.md')
+      assert_path_exist File.join(runtime_repo, 'lib', 'module001', 'module002', 'README.md')
     rescue OpenShift::Utils::ShellExecutionException => e
       puts %Q{
         Failed to create git repo from cartridge template: rc(#{e.rc})
@@ -363,6 +405,59 @@ git config user.name "Mock Template builder";
 git add -f .;
 git </dev/null commit -a -m "Creating mocking template" 2>&1;
 git submodule add #{submodule} module001
+git submodule update --init
+git </dev/null commit -m 'Added submodule module001'
+popd;
+git </dev/null clone --bare --no-hardlinks template template.git 2>&1;
+chown -R #{@user.uid}:#{@user.uid} template template.git
+}
+      FileUtils.chown_R(@user.uid, @user.uid, template)
+      #puts "\ncreate_bare_submodule: #{output}"
+
+      FileUtils.rm_r(template)
+    end
+  end
+
+  def create_bare_nested_submodule
+    template  = File.join(@cartridge_home, 'template')
+    submodule = File.join(@cartridge_home, 'module001')
+    nested_submodule = File.join(@cartridge_home, 'module002')
+
+    Dir.chdir(@cartridge_home) do
+      output = %x{\
+set -xe;
+
+mkdir module002;
+pushd module002;
+git init;
+git config user.email "module002@example.com";
+git config user.name "Mock Module builder";
+touch README.md;
+git add -f .;
+git </dev/null commit -a -m "Creating module002" 2>&1;
+popd;
+
+mkdir module001;
+pushd module001;
+git init;
+git config user.email "module001@example.com";
+git config user.name "Mock Module builder";
+touch README.md;
+git add -f .;
+git submodule add #{nested_submodule} module002
+git submodule update --init
+git </dev/null commit -a -m "Creating module001" 2>&1;
+popd;
+
+pushd #{template}
+git init;
+git config user.email "mocker@example.com";
+git config user.name "Mock Template builder";
+touch README.md;
+mkdir lib;
+git add -f .;
+git </dev/null commit -a -m "Creating mocking template" 2>&1;
+git submodule add #{submodule} lib/module001
 git submodule update --init
 git </dev/null commit -m 'Added submodule module001'
 popd;

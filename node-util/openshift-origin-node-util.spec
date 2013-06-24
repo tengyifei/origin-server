@@ -1,6 +1,6 @@
 Summary:       Utility scripts for the OpenShift Origin broker
 Name:          openshift-origin-node-util
-Version: 1.9.1
+Version: 1.10.4
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -32,6 +32,7 @@ rm %{buildroot}%{_sbindir}/oo-restore
 cp bin/rhc-* %{buildroot}%{_bindir}/
 cp bin/oo-snapshot %{buildroot}%{_bindir}/
 cp bin/oo-restore %{buildroot}%{_bindir}/
+cp bin/unidle_gear.sh %{buildroot}%{_bindir}/
 
 %if 0%{?fedora} >= 18
   mv %{buildroot}%{_sbindir}/oo-httpd-singular.apache-2.4 %{buildroot}%{_sbindir}/oo-httpd-singular
@@ -68,6 +69,7 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-gears
 %attr(0750,-,-) %{_sbindir}/oo-app-idle
 %attr(0750,-,-) %{_sbindir}/oo-autoidler
+%attr(0750,-,-) %{_sbindir}/oo-auto-idler
 %attr(0750,-,-) %{_sbindir}/oo-idler
 %attr(0750,-,-) %{_sbindir}/oo-idler-stats
 %attr(0750,-,-) %{_sbindir}/oo-init-quota
@@ -82,9 +84,11 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 %attr(0750,-,-) %{_sbindir}/oo-cartridge
 %attr(0750,-,-) %{_sbindir}/oo-admin-cartridge
 %attr(0750,-,-) %{_sbindir}/oo-cart-version
+%attr(0750,-,-) %{_sbindir}/oo-admin-repair-node
 %attr(0755,-,-) %{_bindir}/rhc-list-ports
 %attr(0755,-,-) %{_bindir}/oo-snapshot
 %attr(0755,-,-) %{_bindir}/oo-restore
+%attr(0755,-,-) %{_bindir}/unidle_gear.sh
 
 %doc LICENSE
 %doc README-Idler.md
@@ -120,6 +124,95 @@ mv services/openshift-gears.service %{buildroot}/etc/systemd/system/openshift-ge
 /sbin/restorecon /usr/sbin/oo-restorer* || :
 
 %changelog
+* Fri Jun 21 2013 Adam Miller <admiller@redhat.com> 1.10.4-1
+- Fix bug 971955: load users correctly from /etc/passwd (pmorie@gmail.com)
+
+* Tue Jun 18 2013 Adam Miller <admiller@redhat.com> 1.10.3-1
+- Bug 971176 - Catch cartridge repository issues. (rmillner@redhat.com)
+- Merge pull request #2867 from rmillner/misc_bugs
+  (dmcphers+openshiftbot@redhat.com)
+- Fix typo (dmcphers@redhat.com)
+- Bug 974268 - Narrow the window where user and quota data can get out of sync
+  and set the start time prior to any other collection.  Deal with a race
+  condition with the lock files in unix_user. (rmillner@redhat.com)
+
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 1.10.2-1
+- Merge pull request #2858 from rmillner/misc_bugs
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 974268 - Squash error messages for gears which have been created or
+  destroyed while the accept-node script is run. (rmillner@redhat.com)
+- First pass at removing v1 cartridges (dmcphers@redhat.com)
+- Bug 974370 - oo-admin-repair-node should be mode 0750. (rmillner@redhat.com)
+- Fix bug 974203: add checks for V1 cartridge directories in gears
+  (pmorie@gmail.com)
+- Fix bug 971955: migration metadata check in oo-accept-node (pmorie@gmail.com)
+- oo-accept-node: fixed cgroups defunct proc bug (twiest@redhat.com)
+- Merge pull request #2780 from rmillner/capital_dns
+  (dmcphers+openshiftbot@redhat.com)
+- The symbolic link for the old cartridge was confusing the websocket test.
+  (rmillner@redhat.com)
+- Post v2 migration issues - some legacy DNS variables had capitals in them.
+  (rmillner@redhat.com)
+- Idler whitelist. (mrunalp@gmail.com)
+- Add mindepth/maxdepth for finding manifest file. (mrunalp@gmail.com)
+- Make NodeLogger pluggable (ironcladlou@gmail.com)
+- Bug 969228 - Check selinux node set with oo-accept-node.
+  (rmillner@redhat.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.10.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 1.9.8-1
+- Auto Idler (mrunalp@gmail.com)
+
+* Wed May 29 2013 Adam Miller <admiller@redhat.com> 1.9.7-1
+- Merge pull request #2661 from rmillner/BZ963321
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 963321 - Report an error if OPENSHIFT_GEAR_DNS is missing instead of
+  crash. (rmillner@redhat.com)
+
+* Tue May 28 2013 Adam Miller <admiller@redhat.com> 1.9.6-1
+- Ignore gears without frontend mappings in the idler. (mrunalp@gmail.com)
+- Bug 967118 - Make Platform/Cartridge shared files immutable
+  (jhonce@redhat.com)
+- Merge pull request #2624 from twiest/dev/twiest/oo-accept-node-invalid-ascii-
+  bug-fix (dmcphers+openshiftbot@redhat.com)
+- oo-accept-node: Fixed invalid ASCII bug, added full paths to binaries
+  (twiest@redhat.com)
+
+* Fri May 24 2013 Adam Miller <admiller@redhat.com> 1.9.5-1
+- BZ963827 - Improved logging messages (calfonso@redhat.com)
+- Bug 965317 - Add way to patch File class so all files have sync enabled.
+  (rmillner@redhat.com)
+- Merge pull request #2404 from Miciah/oo-accept-linux-check-
+  allow_polyinstantiation (dmcphers+openshiftbot@redhat.com)
+- oo-accept-node: check allow_polyinstantiation (miciah.masters@gmail.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 1.9.4-1
+- Merge pull request #2594 from calfonso/master
+  (dmcphers+openshiftbot@redhat.com)
+- BZ963827 - Logs generated by oo-admin-ctl-gears should include timestamps
+  (calfonso@redhat.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 1.9.3-1
+- Merge pull request #2572 from pmorie/bugs/957461
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #2553 from detiber/bz964089
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 957461 (pmorie@gmail.com)
+- Bug 962673 (dmcphers@redhat.com)
+- <oo-accept-node> Bug 964089 - Fix check_cgroup_procs (jdetiber@redhat.com)
+- oo-accept-node changed the cgroups check to ignore defunct processes
+  (twiest@redhat.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 1.9.2-1
+- Bug 961911 - Add lockfile for oo-autoidler (jhonce@redhat.com)
+- Fixed 2 bugs in oo-accept-node (twiest@redhat.com)
+- Switching v2 to be the default (dmcphers@redhat.com)
+- Merge pull request #2398 from ironcladlou/bz/960509
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 960509, Bug 960674: Refactor rhc-list-port (ironcladlou@gmail.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 1.9.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 

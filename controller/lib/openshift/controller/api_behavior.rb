@@ -3,15 +3,11 @@ module OpenShift
     module ApiBehavior
       extend ActiveSupport::Concern
 
-      API_VERSION = 1.4
-      SUPPORTED_API_VERSIONS = [1.0, 1.1, 1.2, 1.3, 1.4]
+      API_VERSION = 1.5
+      SUPPORTED_API_VERSIONS = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
 
       protected
         attr :requested_api_version
-
-        def new_rest_reply(*arguments)
-          RestReply.new(requested_api_version, *arguments)
-        end
 
         def check_version
 
@@ -116,6 +112,9 @@ module OpenShift
           return render_error(:not_found, "Application '#{application_id}' not found for domain '#{@domain.namespace}'", 101) if application_id.nil? or application_id !~ Application::APP_NAME_COMPATIBILITY_REGEX
           begin
             @application = Application.find_by(domain: @domain, canonical_name: application_id)
+            unless @application.group_instances.length > 0 and @application.component_instances.length > 0 and @application.group_instances.select{|gi| gi.gears.length>0}.length>0
+              render_error(:not_found, "Application '#{application_id}' not found for domain '#{@domain.namespace}'", 101)
+            end
 
             @application_name = @application.name
             @application_uuid = @application.uuid

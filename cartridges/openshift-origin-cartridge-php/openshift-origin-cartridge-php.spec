@@ -1,27 +1,27 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/v2/php
+%global frameworkdir %{_libexecdir}/openshift/cartridges/v2/php
 
-Name: openshift-origin-cartridge-php
-Version: 0.4.1
-Release: 1%{?dist}
-Summary: Php cartridge
-Group: Development/Languages
-License: ASL 2.0
-URL: https://www.openshift.com
-Source0: http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{version}.tar.gz
+Name:          openshift-origin-cartridge-php
+Version: 0.5.3
+Release:       1%{?dist}
+Summary:       Php cartridge
+Group:         Development/Languages
+License:       ASL 2.0
+URL:           https://www.openshift.com
+Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      rubygem(openshift-origin-node)
-Requires:      openshift-origin-node-util
 %if 0%{?fedora}%{?rhel} <= 6
 Requires:      php >= 5.3.2
 Requires:      php < 5.4
 Requires:      httpd < 2.4
 %endif
-%if 0%{?fedora} >= 18
-Requires:      php >= 5.4
-Requires:      php < 5.5
+%if 0%{?fedora} >= 19
+Requires:      php >= 5.5
+Requires:      php < 5.6
+Requires:      httpd > 2.3
 Requires:      httpd < 2.5
 %endif
 Requires:      php
-Requires:      rubygem-builder
 Requires:      php-devel
 Requires:      php-pdo
 Requires:      php-gd
@@ -39,56 +39,104 @@ Requires:      php-bcmath
 Requires:      php-process
 Requires:      php-pecl-imagick
 Requires:      php-pecl-xdebug
+BuildArch:     noarch
 
-BuildArch: noarch
+Obsoletes: openshift-origin-cartridge-php-5.3
 
 %description
 PHP cartridge for openshift. (Cartridge Format V2)
-
 
 %prep
 %setup -q
 
 %build
-%__rm %{name}.spec
 
 %install
-%__rm -rf %{buildroot}
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
+%__mkdir -p %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
 
 %if 0%{?fedora}%{?rhel} <= 6
-%__mv %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-2.2/* %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
-%__rm -rf %{buildroot}%{cartridgedir}/versions/5.4
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%__rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora
+mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
 %endif
-%if 0%{?fedora} >= 18
-%__mv %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-2.4/* %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
-%__rm -rf %{buildroot}%{cartridgedir}/versions/5.3
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%__rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel
-sed -i 's/#DefaultRuntimeDir/DefaultRuntimeDir/g' %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf.d/openshift.conf.erb
+%if 0%{?fedora} == 18
+mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora18 %{buildroot}%{cartridgedir}/metadata/manifest.yml
 %endif
-%__rm -rf %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf-httpd-*
-
-%clean
-%__rm -rf %{buildroot}
+%if 0%{?fedora} == 19
+mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora19 %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%endif
+rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 %post
-%{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
+%{_sbindir}/oo-admin-cartridge --action install --source /usr/libexec/openshift/cartridges/v2/php
 
 %files
-%defattr(-,root,root,-)
-%dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}/hooks/
-%attr(0755,-,-) %{cartridgedir}
+%{cartridgedir}
 %doc %{cartridgedir}/README.md
-%doc %{cartridgedir}/COPYRIGHT
-%doc %{cartridgedir}/LICENSE
+
 
 %changelog
+* Thu Jun 20 2013 Adam Miller <admiller@redhat.com> 0.5.3-1
+- Bug 975700 - check the httpd pid file for corruption and attempt to fix it.
+  (rmillner@redhat.com)
+
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 0.5.2-1
+- First pass at removing v1 cartridges (dmcphers@redhat.com)
+- Fix php configuration bugs. (mrunalp@gmail.com)
+- Add version check around DefaultRuntimeDir directive as it is available only
+  on apache 2.4+ (kraman@gmail.com)
+- Update PHP cartridge for F19 version (kraman@gmail.com)
+- Eliminate noisy output from php control script (ironcladlou@gmail.com)
+- Remove rubygem-builder dep from php cartridges (jdetiber@redhat.com)
+- Fix stop for httpd-based carts. (mrunalp@gmail.com)
+- Make Install-Build-Required default to false (ironcladlou@gmail.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 0.5.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 0.4.8-1
+- Merge pull request #2676 from VojtechVitek/php_control_always_return_0
+  (dmcphers+openshiftbot@redhat.com)
+- fix php control script to always return 0 (vvitek@redhat.com)
+
+* Wed May 29 2013 Adam Miller <admiller@redhat.com> 0.4.7-1
+- Merge pull request #2652 from VojtechVitek/php_cartridge_cleanup
+  (dmcphers+openshiftbot@redhat.com)
+- php v2 cartridge clean-up (vvitek@redhat.com)
+
+* Tue May 28 2013 Adam Miller <admiller@redhat.com> 0.4.6-1
+- Bug 966963: Remove unnecessary versioned conf files from php cart
+  (ironcladlou@gmail.com)
+
+* Thu May 23 2013 Adam Miller <admiller@redhat.com> 0.4.5-1
+- Bug 966255: Remove OPENSHIFT_INTERNAL_* references from v2 carts
+  (ironcladlou@gmail.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 0.4.4-1
+- Bug 962662 (dmcphers@redhat.com)
+- Bug 965537 - Dynamically build PassEnv httpd configuration
+  (jhonce@redhat.com)
+- Fix bug 964348 (pmorie@gmail.com)
+
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 0.4.3-1
+- spec file cleanup (tdawson@redhat.com)
+- Merge pull request #2521 from VojtechVitek/bz956962_2
+  (dmcphers+openshiftbot@redhat.com)
+- Fix PHPRC and php.ini path (vvitek@redhat.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 0.4.2-1
+- Bug 963156 (dmcphers@redhat.com)
+- locking fixes and adjustments (dmcphers@redhat.com)
+- Add erb processing to managed_files.yml Also fixed and added some test cases
+  (fotios@redhat.com)
+- Card online_runtime_297 - Allow cartridges to use more resources
+  (jhonce@redhat.com)
+- WIP Cartridge Refactor -- Cleanup spec files (jhonce@redhat.com)
+- Card online_runtime_297 - Allow cartridges to use more resources
+  (jhonce@redhat.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.4.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 
@@ -179,7 +227,7 @@ sed -i 's/#DefaultRuntimeDir/DefaultRuntimeDir/g' %{buildroot}%{cartridgedir}/ve
 - Merge pull request #1801 from VojtechVitek/php5_standard
   (dmcphers+openshiftbot@redhat.com)
 - HAProxy WIP. (mrunalp@gmail.com)
-- Fix health_check.php to confo%__rm PHP 5 standards (vvitek@redhat.com)
+- Fix health_check.php to conform PHP 5 standards (vvitek@redhat.com)
 
 * Tue Mar 26 2013 Adam Miller <admiller@redhat.com> 0.1.6-1
 - getting jenkins working (dmcphers@redhat.com)

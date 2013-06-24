@@ -6,13 +6,13 @@
 %global cartridgedir %{_libexecdir}/openshift/cartridges/v2/ruby
 
 Name:          openshift-origin-cartridge-ruby
-Version: 0.4.1
+Version: 0.5.5
 Release:       1%{?dist}
 Summary:       Ruby cartridge
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           https://www.openshift.com
-Source0:       http://mirror.openshift.com/pub/origin-server/source/%{name}/%{name}-%{version}.tar.gz
+Source0:       http://mirror.openshift.com/pub/openshift-origin/source/%{name}/%{name}-%{version}.tar.gz
 Requires:      gcc-c++
 Requires:      libev
 Requires:      libev-devel
@@ -42,6 +42,8 @@ Requires:      rubygem-sqlite3
 Requires:      rubygem-thread-dump
 Requires:      ruby-mysql
 Requires:      ruby-sqlite3
+Requires:      %{?scl:%scl_prefix}rubygem-fastthread
+Requires:      %{?scl:%scl_prefix}runtime
 %endif
 
 Requires:      %{?scl:%scl_prefix}js
@@ -72,7 +74,6 @@ Requires:      %{?scl:%scl_prefix}rubygem-diff-lcs
 Requires:      %{?scl:%scl_prefix}rubygem-erubis
 Requires:      %{?scl:%scl_prefix}rubygem-execjs
 Requires:      %{?scl:%scl_prefix}rubygem-fakeweb
-Requires:      %{?scl:%scl_prefix}rubygem-fastthread
 Requires:      %{?scl:%scl_prefix}rubygem-fssm
 Requires:      %{?scl:%scl_prefix}rubygem-hike
 Requires:      %{?scl:%scl_prefix}rubygem-http_connection
@@ -127,7 +128,6 @@ Requires:      %{?scl:%scl_prefix}ruby-irb
 Requires:      %{?scl:%scl_prefix}ruby-libs
 Requires:      %{?scl:%scl_prefix}ruby-mysql
 Requires:      %{?scl:%scl_prefix}ruby-tcltk
-Requires:      %{?scl:%scl_prefix}runtime
 
 # Deps for users
 Requires:      ImageMagick-devel
@@ -139,11 +139,13 @@ Requires:      ruby-nokogiri
 Requires:      rubygem-nokogiri
 %endif
 
+Obsoletes: openshift-origin-cartridge-ruby-1.8
+Obsoletes: openshift-origin-cartridge-ruby-1.9-scl
+
 BuildArch:     noarch
 
 %description
 Ruby cartridge for OpenShift. (Cartridge Format V2)
-
 
 %prep
 %setup -q
@@ -151,30 +153,112 @@ Ruby cartridge for OpenShift. (Cartridge Format V2)
 %build
 %__rm %{name}.spec
 
-
 %install
-%__rm -rf %{buildroot}
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
 
+%if 0%{?fedora}%{?rhel} <= 6
+%__mv %{buildroot}%{cartridgedir}/versions/1.9-scl %{buildroot}%{cartridgedir}/versions/1.9
+%__mv %{buildroot}%{cartridgedir}/lib/ruby_context.rhel %{buildroot}%{cartridgedir}/lib/ruby_context
+%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%endif
+%if 0%{?fedora} == 19
+%__rm -rf %{buildroot}%{cartridgedir}/versions/1.9-scl
+%__rm -rf %{buildroot}%{cartridgedir}/versions/1.8
+%__mv %{buildroot}%{cartridgedir}/lib/ruby_context.f19 %{buildroot}%{cartridgedir}/lib/ruby_context
+%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.f19 %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%endif
+%__rm -f %{buildroot}%{cartridgedir}/lib/ruby_context.*
+%__rm -f %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
-%clean
-%__rm -rf %{buildroot}
-
-%post
+%posttrans
 %{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
 
+
 %files
-%defattr(-,root,root,-)
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}/hooks/
-%attr(0755,-,-) %{cartridgedir}
+%{cartridgedir}
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Fri Jun 21 2013 Adam Miller <admiller@redhat.com> 0.5.5-1
+- WIP Cartridge - Updated manifest.yml versions for compatibility
+  (jhonce@redhat.com)
+
+* Thu Jun 20 2013 Adam Miller <admiller@redhat.com> 0.5.4-1
+- Bug 975700 - check the httpd pid file for corruption and attempt to fix it.
+  (rmillner@redhat.com)
+
+* Tue Jun 18 2013 Adam Miller <admiller@redhat.com> 0.5.3-1
+- Remove 'thread-dumper' (asari.ruby@gmail.com)
+- Merge pull request #2871 from mrunalp/bugs/974933
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 974933: Better handle threaddump for scaled up gears. (mrunalp@gmail.com)
+
+* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 0.5.2-1
+- First pass at removing v1 cartridges (dmcphers@redhat.com)
+- Fix Ruby's URL in the v2 cartridge (asari.ruby@gmail.com)
+- Bug 971460 - Refactor path_append/prepend to accept multiple elements
+  (jhonce@redhat.com)
+- Fix ruby cartridge. It reuires a ~/.passenger dir on RHEL 6.4 systems Fix
+  some cucumber tests tags (kraman@gmail.com)
+- Add version check around DefaultRuntimeDir directive as it is available only
+  on apache 2.4+ (kraman@gmail.com)
+- Update Ruby cartridge for F19 version. (kraman@gmail.com)
+- Bug 970658 (asari.ruby@gmail.com)
+- Bug 970698 (asari.ruby@gmail.com)
+- Fix stop for httpd-based carts. (mrunalp@gmail.com)
+- Make Install-Build-Required default to false (ironcladlou@gmail.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 0.5.1-1
+- bump_minor_versions for sprint 29 (admiller@redhat.com)
+
+* Thu May 30 2013 Adam Miller <admiller@redhat.com> 0.4.8-1
+- Bug 968882 - Fix MIMEMagicFile (jhonce@redhat.com)
+
+* Wed May 29 2013 Adam Miller <admiller@redhat.com> 0.4.7-1
+- Bug 966465 (dmcphers@redhat.com)
+- Bug 962657 (dmcphers@redhat.com)
+
+* Tue May 28 2013 Adam Miller <admiller@redhat.com> 0.4.6-1
+- Replace pre-receive cart control action with pre-repo-archive
+  (ironcladlou@gmail.com)
+
+* Thu May 23 2013 Adam Miller <admiller@redhat.com> 0.4.5-1
+- Bug 966255: Remove OPENSHIFT_INTERNAL_* references from v2 carts
+  (ironcladlou@gmail.com)
+
+* Wed May 22 2013 Adam Miller <admiller@redhat.com> 0.4.4-1
+- Bug 962662 (dmcphers@redhat.com)
+- Bug 965537 - Dynamically build PassEnv httpd configuration
+  (jhonce@redhat.com)
+- Bug 965322 - Use expected version of ruby to start httpd (jhonce@redhat.com)
+- Bug 965322 - Ruby always building 1.9.3 environment (jhonce@redhat.com)
+- Fix bug 964348 (pmorie@gmail.com)
+
+* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 0.4.3-1
+- spec file cleanup (tdawson@redhat.com)
+
+* Thu May 16 2013 Adam Miller <admiller@redhat.com> 0.4.2-1
+- Bug 963634 - Need to create all 1.9.3 env vars in setup (jhonce@redhat.com)
+- process-version -> update-configuration (dmcphers@redhat.com)
+- Bug 963156 (dmcphers@redhat.com)
+- Implement status function for ruby v2 cart based on simple curl.
+  (asari.ruby@gmail.com)
+- locking fixes and adjustments (dmcphers@redhat.com)
+- Add erb processing to managed_files.yml Also fixed and added some test cases
+  (fotios@redhat.com)
+- Card online_runtime_297 - Allow cartridges to use more resources
+  (jhonce@redhat.com)
+- WIP Cartridge Refactor -- Cleanup spec files (jhonce@redhat.com)
+- Card online_runtime_297 - Allow cartridges to use more resources
+  (jhonce@redhat.com)
+- Bug 957247 (asari.ruby@gmail.com)
+
 * Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.4.1-1
 - bump_minor_versions for sprint 28 (admiller@redhat.com)
 

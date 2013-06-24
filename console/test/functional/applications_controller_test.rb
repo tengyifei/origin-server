@@ -219,9 +219,10 @@ class ApplicationsControllerTest < ActionController::TestCase
     get(:index)
     apps = assigns(:applications)
     assert apps
-    assert_equal apps.length, 1
-    apps[0].name == app.name
+    assert apps.length > 0
+    assert apps.any?{ |a| a.name == app.name }
     assert_response :success
+    assert_select 'h2 > a', app.name
   end
 
   test "should filter application list with name" do
@@ -258,6 +259,26 @@ class ApplicationsControllerTest < ActionController::TestCase
     assert groups[0].cartridges[0].display_name
     assert domain = assigns(:domain)
     assert !assigns(:has_keys)
+
+    assert_select 'h1', with_app.name
+    with_app.cartridges.map(&:display_name).each do |name|
+      assert_select 'h2', name
+    end
+  end
+
+  test "should retrieve downloaded application details" do
+    cart = with_downloaded_app.reload.cartridges.first
+
+    get :show, :id => with_downloaded_app.name
+    assert_response :success
+    assert app = assigns(:application)
+    assert groups = assigns(:gear_groups)
+
+    assert_select 'h1', with_downloaded_app.name
+    assert_select 'p', /Created from/ do |p|
+      assert_select 'a', :href => cart.url
+    end
+    assert_select 'h2', cart.name
   end
 
   test "should retrieve application details with has_sshkey cache set" do
@@ -313,6 +334,17 @@ class ApplicationsControllerTest < ActionController::TestCase
     get :show, :id => 'idontexist'
     assert_response :success
     assert_select 'h1', /Application 'idontexist' does not exist/
+  end
+
+  test "should result in error message when app creation times out" do
+    with_domain
+    Application.any_instance.expects(:save).raises(ActiveResource::TimeoutError.new('Timeout'))
+    post(:create, {:application => get_post_form})
+    assert app = assigns(:application)
+    assert !app.persisted?
+    assert !flash[:error].empty?
+    assert_match /Application creation is taking longer than expected./i, flash[:error]
+    assert_redirected_to applications_path
   end
 
   test 'invalid destroy should render page' do

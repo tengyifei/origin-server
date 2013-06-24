@@ -213,6 +213,9 @@ module RestApi
       def []=(s, v)
         super s.to_s, v
       end
+      def delete(s)
+        super s.to_s
+      end
     end
 
     def initialize(attributes = {}, persisted=false)
@@ -226,6 +229,9 @@ module RestApi
     def load(attributes, remove_root=false)
       raise ArgumentError, "expected an attributes Hash, got #{attributes.inspect}" unless attributes.is_a?(Hash)
       self.prefix_options, attributes = split_options(attributes)
+
+      # Clear calculated messages
+      self.messages = nil
 
       aliased = self.class.aliased_attributes
       calculated = self.class.calculated_attributes
@@ -388,7 +394,12 @@ module RestApi
         prefix_options, query_options = split_options(prefix_options) if query_options.nil?
 
         #begin changes
-        path = "#{prefix(prefix_options)}#{collection_name}"
+        path = "#{prefix(prefix_options)}"
+        if singular_resource? && !id.nil?
+          path << "#{element_name}"
+        else
+          path << "#{collection_name}"
+        end
         unless singleton?
           raise ArgumentError, "id is required for non-singleton resources #{self}" if id.nil?
           path << "/#{URI.parser.escape id.to_s}"
@@ -439,6 +450,9 @@ module RestApi
       def use_patch_on_update?
         self.use_patch_api?
       end
+      def singular_resource?
+        self.singular_resource_api
+      end
 
       protected
         def allow_anonymous
@@ -449,6 +463,9 @@ module RestApi
         end
         def use_patch_on_update
           self.use_patch_api = true
+        end
+        def singular_resource
+          self.singular_resource_api = true
         end
     end
 
@@ -509,11 +526,39 @@ module RestApi
     def self.as_indifferent_hash
       IndifferentAccess
     end
-    has_many :messages, :class_name => as_indifferent_hash
+
+    class Message < Struct.new(:exit_code, :field, :severity, :text)
+      def to_s
+        text
+      end
+    end
+
+    def messages
+      @messages ||= begin
+        Array(attributes[:messages]).map do |m|
+          Message.new(
+            m['exit_code'].to_i,
+            m['field'],
+            m['severity'],
+            m['text']
+          ) if m['text'].present?
+        end.compact
+      rescue
+        []
+      end
+    end
+    def messages= messages
+      @messages = nil
+      if messages.present?
+        attributes[:messages] = messages
+      else
+        attributes.delete(:messages)
+      end
+    end
 
     #FIXME may be refactored
     def remote_results
-      (attributes[:messages] || []).select{ |m| m['field'] == 'result' }.map{ |m| m['text'].presence }.compact
+      (attributes[:messages] || []).select{ |m| m['severity'] == 'result' }.map{ |m| m['text'].presence }.compact
     end
     def has_exit_code?(code, opts=nil)
       codes = errors.instance_variable_get(:@codes) || {}
@@ -539,7 +584,7 @@ module RestApi
           end
         end
         message = I18n.t(code, :scope => [:rest_api, :errors], :default => text.to_s)
-        field = (field || 'base').to_sym
+        field = (field && field.respond_to?(:to_sym) ? field : 'base').to_sym
         errors.add(field, message) unless message.blank?
 
         codes = errors.instance_variable_get(:@codes)
@@ -569,6 +614,30 @@ module RestApi
     #
     def reload
       self.load(prefix_options.merge(self.class.find(to_param, :params => prefix_options, :as => as).attributes))
+    end
+
+    #
+    # Override method from CustomMethods to handle singular resource paths
+    #
+    def custom_method_element_url(method_name, options = {})
+        path = "#{self.class.prefix(prefix_options)}"
+        if self.class.singular_resource?
+          path << "#{self.class.element_name}"
+        else
+          path << "#{self.class.collection_name}"
+        end
+        path << "/#{id}/#{method_name}.#{self.class.format.extension}#{self.class.__send__(:query_string, options)}"
+    end
+
+    def custom_method_collection_url(method_name, options = {})
+      prefix_options, query_options = split_options(options)
+      path = "#{self.class.prefix(prefix_options)}"
+      if self.class.singular_resource?
+        path << "#{self.class.element_name}"
+      else
+        path << "#{self.class.collection_name}"
+      end
+      path << "/#{method_name}.#{self.class.format.extension}#{self.class.__send__(:query_string, options)}"
     end
 
     class << self
@@ -733,6 +802,7 @@ module RestApi
       class_attribute :anonymous_api, :instance_writer => false
       class_attribute :singleton_api, :instance_writer => false
       class_attribute :use_patch_api, :instance_writer => false
+      class_attribute :singular_resource_api, :instance_writer => false
 
       # supports presence of AttributeMethods and Dirty
       def attribute(s)
@@ -797,7 +867,7 @@ module RestApi
   class Base
     self.idle_timeout = 4
     self.open_timeout = 3
-    self.read_timeout = 180
+    self.read_timeout = 240
 
     #
     # Update the configuration of the Rest API.  Use instead of

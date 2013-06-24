@@ -25,7 +25,7 @@ module OpenShift
   ;
 end
 
-class ApplicationContainerTest < Test::Unit::TestCase
+class ApplicationContainerTest < OpenShift::NodeTestCase
 
   def setup
     # Set up the config
@@ -61,7 +61,7 @@ class ApplicationContainerTest < Test::Unit::TestCase
     OpenShift::ApplicationContainer.stubs(:get_build_model).returns(:v2)
 
     @container = OpenShift::ApplicationContainer.new(@gear_uuid, @gear_uuid, @user_uid,
-        @app_name, @gear_uuid, @namespace, nil, nil, nil)
+        @app_name, @gear_uuid, @namespace, nil, nil)
 
     @mock_manifest = %q{#
         Name: mock

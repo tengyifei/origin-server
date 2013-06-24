@@ -19,7 +19,7 @@
 #
 require_relative '../test_helper'
 
-class UnixUserModelFunctionalTest < Test::Unit::TestCase
+class UnixUserModelFunctionalTest < OpenShift::NodeTestCase
 
   def assert_directory?(file)
     assert File.directory?(file), "Directory #{file} not found"
@@ -36,7 +36,11 @@ class UnixUserModelFunctionalTest < Test::Unit::TestCase
     @gear_name = @app_name
     @namespace = 'jwh201204301647'
     @verbose = false
-    @user_homedir = "/tmp/homedir-#{@user_uid}"
+
+    # polyinstantiation makes creating the homedir a pain...
+    @user_homedir = "/data/tests/#{@user_uid}"
+    FileUtils.rm_r @user_homedir if File.exist?(@user_homedir)
+    FileUtils.mkdir_p @user_homedir
     `useradd -u #{@user_uid} -d #{@user_homedir} #{@user_uid} 1>/dev/null 2>&1`
 
     @config = mock('OpenShift::Config')
@@ -61,9 +65,9 @@ class UnixUserModelFunctionalTest < Test::Unit::TestCase
     o = OpenShift::UnixUser.new(@gear_uuid, @gear_uuid, @user_uid, @app_name,
                                 @gear_name, @namespace,
                                 nil, nil, @verbose)
-    assert_not_nil o
+    refute_nil o
 
-    o.initialize_homedir("/tmp/", "#{@user_homedir}/", "cartridges/openshift-origin-cartridge-abstract/")
+    o.initialize_homedir("/tmp/", "#{@user_homedir}/")
     assert_directory?(@user_homedir)
     assert !File.symlink?("#{@user_homedir}/data"), 'found deprecated data symlink'
     assert !File.directory?("#{@user_homedir}/app"), 'found deprecated app directory'

@@ -37,7 +37,7 @@ module OpenShift
         @id = id
         @district = district
       end
-      
+
       # <<class method>>
       #
       # Determine what gear sizes are valid for a given user
@@ -65,7 +65,7 @@ module OpenShift
           return ["small"]
         end
       end
-      
+
       # <<factory method>>
       #
       # Find a node which fulfills app requirements.  Implements the superclass
@@ -106,7 +106,7 @@ module OpenShift
 
         MCollectiveApplicationContainerProxy.new(current_server, district)
       end
-      
+
       # <<factory method>>
       #
       # Find a single node. Implements superclass find_one() method. 
@@ -119,11 +119,10 @@ module OpenShift
       #
       # NOTES:
       # * Uses rpc_find_one() method
-      
       def self.find_one_impl(node_profile=nil)
         current_server = rpc_find_one(node_profile)
         current_server, capacity, district = rpc_find_available(node_profile) unless current_server 
-        
+
         raise OpenShift::NodeException.new("No nodes found.", 140) unless current_server
         Rails.logger.debug "DEBUG: find_one_impl: current_server: #{current_server}"
 
@@ -165,7 +164,6 @@ module OpenShift
       def self.blacklisted_in_impl?(name)
         false
       end
-      
 
       # <<class method>>
       #
@@ -232,7 +230,7 @@ module OpenShift
         end
         output
       end
-      
+
       # <<object method>>
       #
       # <<attribute setter>>
@@ -336,31 +334,7 @@ module OpenShift
           end
         end
       end
-      
-      #
-      # A District object accessor method
-      # It uses the datastore to query persistent storage
-      # 
-      # INPUTS:
-      # * district_uuid: a lookup handle for a district in the datastore
-      #
-      # RETURNS:
-      # * not quite sure.
-      #
-      def inc_externally_reserved_uids_size(district_uuid=nil)
-        if Rails.configuration.msg_broker[:districts][:enabled]
-          if @district
-            district_uuid = @district.uuid
-          else
-            district_uuid = get_district_uuid unless district_uuid
-          end
-          if district_uuid && district_uuid != 'NONE'
-            #cleanup
-            District::inc_externally_reserved_uids_size(district_uuid)
-          end
-        end
-      end
-      
+
       def build_base_gear_args(gear, quota_blocks=nil, quota_files=nil)
         app = gear.app
         args = Hash.new
@@ -374,6 +348,21 @@ module OpenShift
         args['--with-uid'] = gear.uid if gear.uid
         args['--with-request-id'] = Thread.current[:user_action_log_uuid]
         args
+      end
+
+      def build_base_component_args(component, existing_args={})
+        cart = component.cartridge_name
+        existing_args['--cart-name'] = cart
+        existing_args['--component-name'] = component.component_name
+        existing_args['--with-software-version'] = component.version
+        existing_args['--cartridge-vendor'] = component.cartridge_vendor
+        if not component.cartridge_vendor.empty?
+          clist = cart.split('-')
+          if clist[0]==component.cartridge_vendor.to_s
+            existing_args['--cart-name'] = clist[1..-1].join('-')
+          end
+        end
+        existing_args
       end
 
       #
@@ -403,21 +392,22 @@ module OpenShift
         (1..10).each do |i|                    
           args = build_base_gear_args(gear, quota_blocks, quota_files)
           mcoll_reply = execute_direct(@@C_CONTROLLER, 'app-create', args)
-          
+
           begin
             result = parse_result(mcoll_reply, gear)
           rescue OpenShift::OOException => ooex
+            # destroy the gear in case of failures
+            # the UID will be unreserved up as part of rollback
+            destroy(gear, true)
+
             # raise the exception if this is the last retry
             raise ooex if i == 10
-            
+
             result = ooex.resultIO
             if result.exitcode == 129 && has_uid_or_gid?(gear.uid) # Code to indicate uid already taken
-              destroy(gear, true)
-              inc_externally_reserved_uids_size
               gear.uid = reserve_uid
               app.save
             else
-              destroy(gear, true)
               raise ooex
             end
           else
@@ -426,7 +416,7 @@ module OpenShift
         end
         result
       end
-    
+
       #
       # Remove a gear from a node
       # Optionally release a reserved UID from the District.
@@ -450,7 +440,7 @@ module OpenShift
         result_io = parse_result(result, gear)
 
         uid = gear.uid unless uid
-        
+
         if uid && !keep_uid
           unreserve_uid(uid)
         end
@@ -643,12 +633,12 @@ module OpenShift
       end
 
 
-      # 
+      #
       # Get the operating state of a gear
-      # 
+      #
       # INPUTS:
       # * gear: Gear Object
-      # 
+      #
       # RETURNS:
       # * mcollective result string (stdout)
       #
@@ -662,8 +652,8 @@ module OpenShift
         result = execute_direct(@@C_CONTROLLER, 'app-state-show', args)
         parse_result(result, gear)
       end
-      
-      # 
+
+      #
       # Install a cartridge in a gear.
       # If the cart is a 'framework' cart, create the gear first.
       #
@@ -681,7 +671,7 @@ module OpenShift
       # 
       # INPUTS:
       # * gear: a Gear object
-      # * cart: a cartridge object
+      # * component: a component_instance object
       # * template_git_url: a url of a git repo containing a cart overlay
       #
       # RETURNS
@@ -699,53 +689,54 @@ module OpenShift
       # * should not include incoherent template install 
       # * calls *either* run_cartridge_command or add_component
       #
-      def configure_cartridge(gear, cart, template_git_url=nil)
+      def configure_cartridge(gear, component, template_git_url=nil)
         result_io = ResultIO.new
         cart_data = nil
-        
+
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        args = build_base_component_args(component, args)
 
         app = gear.app
-        downloaded_cart =  app.downloaded_cart_map.values.find { |c| c["versioned_name"]==cart}
+        downloaded_cart =  app.downloaded_cart_map.values.find { |c| c["versioned_name"]==component.cartridge_name}
         if downloaded_cart
           args['--with-cartridge-manifest'] = downloaded_cart["original_manifest"]
           args['--with-software-version'] = downloaded_cart["version"]
         end
-        
+
         if !template_git_url.nil?  && !template_git_url.empty?
           args['--with-template-git-url'] = template_git_url
         end
 
-        if framework_carts(app).include? cart
-          result_io = run_cartridge_command(cart, gear, "configure", args)
-        elsif embedded_carts(app).include? cart
-          result_io, cart_data = add_component(gear, cart)
+        if framework_carts(app).include? component.cartridge_name
+          result_io = run_cartridge_command(component.cartridge_name, gear, "configure", args)
+        elsif embedded_carts(app).include? component.cartridge_name
+          result_io, cart_data = add_component(gear, component.cartridge_name, args)
         else
           #no-op
         end
-        
+
         return result_io#, cart_data
       end
-      
-      # 
+
+      #
       # Post configuration for a cartridge on a gear.
       #
       # INPUTS:
       # * gear: a Gear object
-      # * cart: the name of the cartridge
+      # * component: component_instance object
       # * template_git_url: a url of a git repo containing a cart overlay
       #
       # RETURNS
       # ResultIO: the result of running post-configuration on the cartridge
       #
-      def post_configure_cartridge(gear, cart, template_git_url=nil)
+      def post_configure_cartridge(gear, component, template_git_url=nil)
         result_io = ResultIO.new
         cart_data = nil
-        
+        cart = component.cartridge_name
+
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
-        
+        args = build_base_component_args(component, args)
+
         if !template_git_url.nil?  && !template_git_url.empty?
           args['--with-template-git-url'] = template_git_url
         end
@@ -755,16 +746,16 @@ module OpenShift
         else
           #no-op
         end
-        
+
         return result_io
       end
-      
+
       #
       # Remove a Gear and the last contained cartridge from a node
       # 
       # INPUTS
       # * gear: a Gear object
-      # * cart: a Cartridge object
+      # * component: a component_instance object
       # 
       # RETURNS:
       # * result of run_cartridge_command 'deconfigure' OR remove_component
@@ -776,19 +767,20 @@ module OpenShift
       # ** remove_gear on Node
       # * should raise an exception for invalid gear?
       # 
-      def deconfigure_cartridge(gear, cart)
+      def deconfigure_cartridge(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
 
         if framework_carts(gear.app).include? cart
           run_cartridge_command(cart, gear, "deconfigure", args)
         elsif embedded_carts(gear.app).include? cart
-          remove_component(gear,cart)
+          remove_component(gear,component)
         else
           ResultIO.new
-        end        
+        end
       end
-      
+
       # <<accessor>>
       # Get the public hostname of a Node
       #
@@ -805,7 +797,7 @@ module OpenShift
       def get_public_hostname
         rpc_get_fact_direct('public_hostname')
       end
-      
+
       # <<accessor>>
       # Get the "capacity" of a node
       #
@@ -822,7 +814,7 @@ module OpenShift
       def get_capacity
         rpc_get_fact_direct('capacity').to_f
       end
-      
+
       # <<accessor>>
       # Get the "active capacity" of a node
       #
@@ -839,7 +831,7 @@ module OpenShift
       def get_active_capacity
         rpc_get_fact_direct('active_capacity').to_f
       end
-      
+
       # <<accessor>>
       # Get the district UUID (membership handle) of a node
       #
@@ -856,7 +848,7 @@ module OpenShift
       def get_district_uuid
         rpc_get_fact_direct('district_uuid')
       end
-      
+
       # <<accessor>>
       # Get the public IP address of a Node
       #
@@ -873,7 +865,6 @@ module OpenShift
       def get_ip_address
         rpc_get_fact_direct('ipaddress')
       end
-      
 
       # <<accessor>>
       # Get the public IP address of a Node
@@ -924,7 +915,7 @@ module OpenShift
       # NOTES:
       # * method on Node
       # * calls rpc_get_fact_direct
-      #      
+      #
       def get_quota_blocks
         rpc_get_fact_direct('quota_blocks')
       end
@@ -944,42 +935,9 @@ module OpenShift
       # NOTES:
       # * method on Node
       # * calls rpc_get_fact_direct
-      #      
+      #
       def get_quota_files
         rpc_get_fact_direct('quota_files')
-      end
-
-      #
-      # Run a cartridge hook script
-      #
-      # INPUTS:
-      # * gear: a Gear object
-      # * cart: a Cartridge object
-      # * connector_name: String
-      # * input_args: String: CLI arguments to the connector command?
-      #
-      # RETURNS:
-      # * Array [output, exitcode] - STDOUT and the exit code of the command
-      #
-      # NOTES
-      # * method on Gear?
-      # * method on Cartridge!?
-      # * Should raise exception on no reply?
-      # * uses execute_direct
-      #
-      def execute_connector(gear, cart, connector_name, input_args)
-        args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
-        args['--hook-name'] = connector_name
-        args['--input-args'] = input_args.join(" ")
-        mcoll_reply = execute_direct(@@C_CONTROLLER, 'connector-execute', args)
-        if mcoll_reply and mcoll_reply.length>0
-          mcoll_reply = mcoll_reply[0]
-          output = mcoll_reply.results[:data][:output]
-          exitcode = mcoll_reply.results[:data][:exitcode]
-          return [output, exitcode]
-        end
-        [nil, nil]
       end
 
       #
@@ -997,11 +955,18 @@ module OpenShift
       # * uses start_component
       # * should be a method on Gear?
       #
-      def start(gear, cart)
+      def start(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
 
         run_cartridge_command_ignore_components(cart, gear, "start", args)
+      end
+
+      def get_start_job(gear, component)
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+        RemoteJob.new('openshift-origin-node', 'start', args)
       end
 
       #
@@ -1020,13 +985,20 @@ module OpenShift
       # * uses start_component
       # * should be a method on Gear?
       #      
-      def stop(gear, cart)
+      def stop(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
 
         run_cartridge_command_ignore_components(cart, gear, "stop", args)
       end
-      
+
+      def get_stop_job(gear, component)
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+        RemoteJob.new('openshift-origin-node', 'stop', args)
+      end
+
       # 
       # Force gear services to stop
       # 
@@ -1047,7 +1019,13 @@ module OpenShift
         result = execute_direct(@@C_CONTROLLER, 'force-stop', args)
         parse_result(result)
       end
-      
+
+      def get_force_stop_job(gear, component)
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+        RemoteJob.new('openshift-origin-node', 'force-stop', args)
+      end
+
       #
       # Stop and restart cart services on a gear
       #
@@ -1063,13 +1041,19 @@ module OpenShift
       # * uses restart_component
       # * method on Gear?
       #
-      def restart(gear, cart)
+      def restart(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
-        
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
+
         run_cartridge_command_ignore_components(cart, gear, "restart", args)
       end
-      
+
+      def get_restart_job(gear, component)
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+        RemoteJob.new('openshift-origin-node', 'restart', args)
+      end
 
       #
       # "reload" cart services on a gear.
@@ -1087,13 +1071,20 @@ module OpenShift
       # * uses restart_component
       # * method on Gear?
       #      
-      def reload(gear, cart)
+      def reload(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
 
         run_cartridge_command_ignore_components(cart, gear, "reload", args)
       end
- 
+
+      def get_reload_job(gear, component)
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+        RemoteJob.new('openshift-origin-node', 'reload', args)
+      end
+
       #
       # Get the status from cart services in an existing Gear
       #
@@ -1109,13 +1100,14 @@ module OpenShift
       # * uses run_cartridge_command
       # * component_status
       #
-      def status(gear, cart)
+      def status(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
 
         run_cartridge_command_ignore_components(cart, gear, "status", args)
       end
- 
+
       #
       # Clean up unneeded artifacts in a gear
       # 
@@ -1131,12 +1123,18 @@ module OpenShift
       # * doesn't use cart input
       # * calls execute_direct
       #
-      def tidy(gear, cart)
+      def tidy(gear, component)
         args = build_base_gear_args(gear)
         result = execute_direct(@@C_CONTROLLER, 'tidy', args)
         parse_result(result)
       end
-      
+
+      def get_tidy_job(gear, component)
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+        RemoteJob.new('openshift-origin-node', 'tidy', args)
+      end
+
       #
       # dump the cartridge threads
       #
@@ -1151,15 +1149,22 @@ module OpenShift
       # * calls run_cartridge_command
       # * method on Gear or Cart?
       #
-      def threaddump(gear, cart)
+      def threaddump(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
 
         if framework_carts(gear.app).include?(cart)
           run_cartridge_command(cart, gear, "threaddump", args)
         else
           ResultIO.new
         end 
+      end
+
+      def get_threaddump_job(gear, component)
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+        RemoteJob.new('openshift-origin-node', 'threaddump', args)
       end
 
       #
@@ -1176,10 +1181,12 @@ module OpenShift
       # * calls run_cartridge_command
       # * method on Gear or Cart?
       # * only applies to the "framework" services
-      #      
-      def system_messages(gear, cart)
+      #
+      def system_messages(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        args = build_base_component_args(component, args)
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
 
         if framework_carts(gear.app).include?(cart)
           run_cartridge_command(cart, gear, "system-messages", args)
@@ -1202,28 +1209,28 @@ module OpenShift
       # * calls run_cartridge_command
       # * executes 'expose-port' action.
       # * method on Gear or Cart?
-      #            
-      def get_expose_port_job(gear, cart)
+      #
+      def get_expose_port_job(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        args = build_base_component_args(component, args)
         RemoteJob.new('openshift-origin-node', 'expose-port', args)
       end
-      
-      def get_conceal_port_job(gear, cart)
+
+      def get_conceal_port_job(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        args = build_base_component_args(component, args)
         RemoteJob.new('openshift-origin-node', 'conceal-port', args)
       end
-      
-      def get_show_port_job(gear, cart)
+
+      def get_show_port_job(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        args = build_base_component_args(component, args)
         RemoteJob.new('openshift-origin-node', 'show-port', args)
       end
-      
-      def expose_port(gear, cart)
+
+      def expose_port(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        args = build_base_component_args(component, args)
         result = execute_direct(@@C_CONTROLLER, 'expose-port', args)
         parse_result(result)
       end
@@ -1242,11 +1249,11 @@ module OpenShift
       # * calls run_cartridge_command
       # * executes "conceal-port" action.
       # * method on Gear or Cart?
-      #            
+      #
       # Deprecated: remove from the REST API and then delete this.
-      def conceal_port(gear, cart)
+      def conceal_port(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        args = build_base_component_args(component, args)
         result = execute_direct(@@C_CONTROLLER, 'conceal-port', args)
         parse_result(result)
       end
@@ -1265,22 +1272,22 @@ module OpenShift
       # * calls run_cartridge_command
       # * executes "show-port" action
       # * method on Gear or Cart?
-      #            
+      #
       # Deprecated: remove from the REST API and then delete this.
       def show_port(gear, cart)
         ResultIO.new
       end
-      
-      # 
+
+      #
       # Add an application alias to a gear
       #
       # INPUTS:
       # * gear: a Gear object
       # * server_alias: String - a new FQDN for the gear
-      # 
+      #
       # RETURNS:
       # * String: stdout from a command
-      # 
+      #
       # NOTES:
       # * calls execute_direct
       # * executes the 'add-alias' action on the node
@@ -1292,17 +1299,17 @@ module OpenShift
         result = execute_direct(@@C_CONTROLLER, 'add-alias', args)
         parse_result(result)
       end
-      
-      # 
+
+      #
       # remove an application alias to a gear
       #
       # INPUTS:
       # * gear: a Gear object
       # * server_alias: String - a new FQDN for the gear
-      # 
+      #
       # RETURNS:
       # * String: stdout from a command
-      # 
+      #
       # NOTES:
       # * calls execute_direct
       # * executes the 'remove-alias' action on the gear.
@@ -1312,9 +1319,9 @@ module OpenShift
         args = build_base_gear_args(gear)
         args['--with-alias-name']=server_alias
         result = execute_direct(@@C_CONTROLLER, 'remove-alias', args)
-        parse_result(result)        
+        parse_result(result)
       end
-      
+
       #
       # Extracts the frontend httpd server configuration from a gear.
       #
@@ -1374,7 +1381,7 @@ module OpenShift
       #
       # NOTES:
       # * uses RemoteJob
-      # 
+      #
       def get_env_var_add_job(gear, key, value)
         args = build_base_gear_args(gear)
         args['--with-key'] = key
@@ -1390,7 +1397,7 @@ module OpenShift
       # * gear: a Gear object
       # * key: an environment variable name
       # * value: and environment variable value
-      # 
+      #
       # RETURNS:
       # * a RemoteJob object
       #
@@ -1403,7 +1410,7 @@ module OpenShift
         job = RemoteJob.new('openshift-origin-node', 'env-var-remove', args)
         job
       end
-  
+
       #
       # Create a job to add an authorized key
       #
@@ -1412,13 +1419,13 @@ module OpenShift
       # * ssh_key: String - SSH public key string
       # * key_type: String, Enum [dsa|rsa]
       # * comment: String
-      # 
+      #
       # RETURNS:
       # * a RemoteJob object
       #
       # NOTES:
       # * uses RemoteJob
-      # 
+      #
       def get_add_authorized_ssh_key_job(gear, ssh_key, key_type=nil, comment=nil)
         args = build_base_gear_args(gear)
         args['--with-ssh-key'] = ssh_key
@@ -1435,13 +1442,13 @@ module OpenShift
       # * gear: a Gear object
       # * ssh_key: String - SSH public key string
       # * comment: String
-      # 
+      #
       # RETURNS:
       # * a RemoteJob object
       #
       # NOTES:
       # * uses RemoteJob
-      #       
+      #
       def get_remove_authorized_ssh_key_job(gear, ssh_key, comment=nil)
         args = build_base_gear_args(gear)
         args['--with-ssh-key'] = ssh_key
@@ -1456,13 +1463,13 @@ module OpenShift
       # INPUTS:
       # * gear: a Gear object
       # * ssh_keys: Array - SSH public key list
-      # 
+      #
       # RETURNS:
       # * a RemoteJob object
       #
       # NOTES:
       # * uses RemoteJob
-      # 
+      #
       def get_fix_authorized_ssh_keys_job(gear, ssh_keys)
         args = build_base_gear_args(gear)
         args['--with-ssh-keys'] = ssh_keys.map {|k| {'key' => k['content'], 'type' => k['type'], 'comment' => k['name']}}
@@ -1477,13 +1484,13 @@ module OpenShift
       # * gear: a Gear object
       # * iv: ??
       # * token: ??
-      # 
+      #
       # RETURNS:
       # * a RemoteJob object
       #
       # NOTES:
       # * uses RemoteJob
-      #       
+      #
       def get_broker_auth_key_add_job(gear, iv, token)
         args = build_base_gear_args(gear)
         args['--with-iv'] = iv
@@ -1497,13 +1504,13 @@ module OpenShift
       #
       # INPUTS:
       # * gear: a Gear object
-      # 
+      #
       # RETURNS:
       # * a RemoteJob object
       #
       # NOTES:
       # * uses RemoteJob
-      #         
+      #
       def get_broker_auth_key_remove_job(gear)
         args = build_base_gear_args(gear)
         job = RemoteJob.new('openshift-origin-node', 'broker-auth-key-remove', args)
@@ -1524,10 +1531,11 @@ module OpenShift
       #
       # NOTES:
       # * uses RemoteJob
-      # 
-      def get_execute_connector_job(gear, cart, connector_name, connection_type, input_args, pub_cart=nil)
+      #
+      def get_execute_connector_job(gear, component, connector_name, connection_type, input_args, pub_cart=nil)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
         args['--hook-name'] = connector_name
         args['--publishing-cart-name'] = pub_cart if pub_cart
         args['--connection-type'] = connection_type
@@ -1554,10 +1562,11 @@ module OpenShift
       #
       # NOTES:
       # * uses RemoteJob
-      # 
-      def get_unsubscribe_job(gear, cart, publish_cart_name)
+      #
+      def get_unsubscribe_job(gear, component, publish_cart_name)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = cart
+        cart = component.cartridge_name
+        args = build_base_component_args(component, args)
         args['--publishing-cart-name'] = publish_cart_name
         job = RemoteJob.new('openshift-origin-node', 'unsubscribe', args)
         job
@@ -1574,7 +1583,7 @@ module OpenShift
       #
       # NOTES:
       # * uses RemoteJob
-      #         
+      #
       def get_show_state_job(gear)
         args = build_base_gear_args(gear)
         job = RemoteJob.new('openshift-origin-node', 'app-state-show', args)
@@ -1594,10 +1603,10 @@ module OpenShift
       #
       # NOTES:
       # * uses RemoteJob
-      #         
-      def get_status_job(gear, cart)
+      #
+      def get_status_job(gear, component)
         args = build_base_gear_args(gear)
-        job = RemoteJob.new(cart, 'status', args)
+        job = RemoteJob.new(component.cartridge_name, 'status', args)
         job
       end
 
@@ -1612,7 +1621,7 @@ module OpenShift
       #
       # NOTES:
       # * uses RemoteJob
-      #         
+      #
       def get_show_gear_quota_job(gear)
         args = Hash.new
         args['--uuid'] = gear.uuid
@@ -1631,7 +1640,7 @@ module OpenShift
       #
       # NOTES:
       # * uses RemoteJob
-      #               
+      #
       def get_update_gear_quota_job(gear, storage_in_gb, inodes)
         args = Hash.new
         args['--uuid']   = gear.uuid
@@ -1641,8 +1650,8 @@ module OpenShift
         job = RemoteJob.new('openshift-origin-node', 'set-quota', args)
         job
       end
-      
-      # 
+
+      #
       # Re-start a gear after migration
       #
       # INPUTS:
@@ -1655,9 +1664,9 @@ module OpenShift
       #
       # NOTES:
       # * uses OpenShift::DnsService
-      # * 
+      # *
       #
-      # 
+      #
       def move_gear_post(gear, destination_container, state_map)
         app = gear.app
         reply = ResultIO.new
@@ -1673,7 +1682,7 @@ module OpenShift
           unless leave_stopped
             log_debug "DEBUG: Starting cartridge '#{cart}' in '#{app.name}' after move on #{destination_container.id}"
             args = build_base_gear_args(gear)
-            args['--cart-name'] = cart
+            args = build_base_component_args(cinst, args)
             reply.append destination_container.send(:run_cartridge_command, cart, gear, "start", args, false)
           end
         end
@@ -1722,13 +1731,20 @@ module OpenShift
           # stop the cartridge if it needs to
           unless leave_stopped
             log_debug "DEBUG: Stopping existing app cartridge '#{cart}' before moving"
-            do_with_retry('stop') do
-              reply.append source_container.stop(gear, cart)
+            begin
+              do_with_retry('stop') do
+                reply.append source_container.stop(gear, cinst)
+              end
+            rescue Exception=>e
+              # a force-stop will be applied if its a framework cartridge, so ignore the failure on stop
+              if not framework_carts(app).include? cart
+                raise e
+              end
             end
             if framework_carts(app).include? cart
               log_debug "DEBUG: Force stopping existing app cartridge '#{cart}' before moving"
               do_with_retry('force-stop') do
-                reply.append source_container.force_stop(gear, cart)
+                reply.append source_container.force_stop(gear, cinst)
               end
             end
           end
@@ -1738,17 +1754,17 @@ module OpenShift
 
       #
       # Move a gear from one node to another
-      # 
+      #
       # INPUTS
       # * gear: a Gear object
       # * destination_container: An ApplicationContainerProxy?
       # * destination_district_uuid: String
       # * change_district: Boolean
       # * node_profile: String
-      # 
+      #
       # RETURNS:
       # * ResultIO 
-      # 
+      #
       # RAISES:
       # * OpenShift::UserException
       #
@@ -1759,7 +1775,7 @@ module OpenShift
       # * uses resolve_destination
       # * uses rsync_destination_container
       # * uses move_gear_destroy_old
-      # 
+      #
       def move_gear_secure(gear, destination_container, destination_district_uuid, change_district, node_profile)
         app = gear.app
         Application.run_in_application_lock(app) do
@@ -1771,6 +1787,10 @@ module OpenShift
         app = gear.app
         reply = ResultIO.new
         state_map = {}
+
+        if gear.get_proxy.get_district_uuid == 'NONE'
+          raise OpenShift::UserException.new("Move gear *not* supported without districts.")
+        end
 
         # resolve destination_container according to district
         destination_container, destination_district_uuid, district_changed = resolve_destination(gear, destination_container, destination_district_uuid, change_district, node_profile)
@@ -1795,7 +1815,6 @@ module OpenShift
         gi = gear.group_instance
         gi.all_component_instances.each do |cinst|
           next if cinst.is_singleton? and (not gear.host_singletons)
-          # idle, leave_stopped, quota_blocks, quota_files = get_cart_status(gear, cart)
           state_map[cinst.cartridge_name] = [idle, leave_stopped]
         end
 
@@ -1819,9 +1838,9 @@ module OpenShift
               cart = cinst.cartridge_name
               idle, leave_stopped = state_map[cart]
 
-              if app.scalable and not CartridgeCache.find_cartridge(cart).categories.include? "web_proxy"
+              if app.scalable and not CartridgeCache.find_cartridge(cart, app).categories.include? "web_proxy"
                 begin
-                  reply.append destination_container.expose_port(gear, cinst.cartridge_name)
+                  reply.append destination_container.expose_port(gear, cinst)
                 rescue Exception=>e
                   # just pass because some embedded cartridges do not have expose-port hook implemented (e.g. jenkins-client)
                 end
@@ -1838,9 +1857,9 @@ module OpenShift
                 next if not gi_comps.include? cinst
                 cart = cinst.cartridge_name
                 idle, leave_stopped = state_map[cart]
-                if leave_stopped and CartridgeCache.find_cartridge(cart).categories.include? "web_proxy"
+                if leave_stopped and CartridgeCache.find_cartridge(cart, app).categories.include? "web_proxy"
                   log_debug "DEBUG: Explicitly stopping cartridge '#{cart}' in '#{app.name}' after move on #{destination_container.id}"
-                  reply.append destination_container.stop(gear, cart)
+                  reply.append destination_container.stop(gear, cinst)
                 end
               end
             end
@@ -1857,7 +1876,7 @@ module OpenShift
               if framework_carts(app).include? cart
                 begin
                   args = build_base_gear_args(gear)
-                  args['--cart-name'] = cart
+                  args = build_base_component_args(cinst, args)
                   reply.append destination_container.send(:run_cartridge_command, cart, gear, "remove-httpd-proxy", args, false)
                 rescue Exception => e
                   log_debug "DEBUG: Remove httpd proxy with cart '#{cart}' failed on '#{destination_container.id}'  - gear: '#{gear.name}', app: '#{app.name}'"
@@ -1881,7 +1900,7 @@ module OpenShift
               idle, leave_stopped = state_map[cart]
               if not leave_stopped
                 args = build_base_gear_args(gear)
-                args['--cart-name'] = cart
+                args = build_base_component_args(cinst, args)
                 reply.append source_container.run_cartridge_command(cart, gear, "start", args, false)
               end
             end
@@ -1896,7 +1915,7 @@ module OpenShift
         reply
       end
 
-      # 
+      #
       # Remove and destroy a old gear after migration
       #
       # INPUTS:
@@ -1907,13 +1926,13 @@ module OpenShift
       #
       # RETURNS:
       # * a ResultIO object
-      # 
+      #
       # CATCHES:
       # * Exception
       #
       # NOTES:
       # * uses source_container.destroy
-      # 
+      #
       def move_gear_destroy_old(gear, source_container, destination_container, district_changed)
         app = gear.app
         reply = ResultIO.new
@@ -1928,7 +1947,7 @@ module OpenShift
       end
 
       #
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * destination_container: ??
@@ -1938,7 +1957,7 @@ module OpenShift
       #
       # RETURNS:
       # * Array: [destination_container, destination_district_uuid, district_changed]
-      # 
+      #
       # RAISES:
       # * OpenShift::UserException
       #
@@ -1950,13 +1969,13 @@ module OpenShift
         required_uid = gear.uid
         source_container = gear.get_proxy
         source_district_uuid = source_container.get_district_uuid
- 
+
         if node_profile and (destination_container or destination_district_uuid or !Rails.configuration.msg_broker[:node_profile_enabled])
           log_debug "DEBUG: Option node_profile '#{node_profile}' is being ignored either in favor of destination district/container "\
                     "or node_profile is disabled in msg broker configuration."
           node_profile = nil
         end
- 
+
         if destination_container.nil?
           if !destination_district_uuid and !change_district
             destination_district_uuid = source_district_uuid unless source_district_uuid == 'NONE'
@@ -1967,7 +1986,7 @@ module OpenShift
             gear_exists_in_district = true
             required_uid = nil
           end
-          
+
           least_preferred_server_identities = [source_container.id]
           destination_gear_size = node_profile || gear.group_instance.gear_size
           destination_container = MCollectiveApplicationContainerProxy.find_available_impl(destination_gear_size, destination_district_uuid, nil, gear_exists_in_district, required_uid)
@@ -1979,20 +1998,20 @@ module OpenShift
           end
           destination_district_uuid = destination_container.get_district_uuid
         end
-        
+
         log_debug "DEBUG: Source district uuid: #{source_district_uuid}"
         log_debug "DEBUG: Destination district uuid: #{destination_district_uuid}"
         district_changed = (destination_district_uuid != source_district_uuid)
 
         if source_container.id == destination_container.id
-          raise OpenShift::UserException.new("Error moving app.  Old and new servers are the same: #{source_container.id}", 1)
+          raise OpenShift::UserException.new("Error moving gear.  Old and new servers are the same: #{source_container.id}", 1)
         end
         return [destination_container, destination_district_uuid, district_changed]
       end
 
       #
       # copy the file contents of a gear on this node to a new gear on another
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * destination_container: an ApplicationContainerProxxy object
@@ -2045,7 +2064,7 @@ module OpenShift
       #
       # INPUT:
       # app: an Application object
-      # 
+      #
       # RETURN:
       # * Array: [idle, leave_stopped, quota_file, quota_blocks]
       #
@@ -2057,7 +2076,7 @@ module OpenShift
       def get_app_status(app)
         web_framework = nil
         app.requires.each do |feature|
-          cart = CartridgeCache.find_cartridge(feature)
+          cart = CartridgeCache.find_cartridge(feature, app)
           next unless cart.categories.include? "web_framework"
           web_framework = cart.name
           break
@@ -2065,10 +2084,10 @@ module OpenShift
 
         component_instances = app.get_components_for_feature(web_framework)
         gear = component_instances.first.group_instance.gears.first 
-        get_cart_status(gear, web_framework)
+        get_cart_status(gear, component_instances.first)
       end
 
-      # 
+      #
       # get the status of a cartridge in a gear?
       #
       # INPUTS:
@@ -2081,7 +2100,7 @@ module OpenShift
       # NOTES:
       # * uses do_with_retry
       #
-      def get_cart_status(gear, cart_name)
+      def get_cart_status(gear, component)
         app = gear.app
         source_container = gear.get_proxy
         leave_stopped = false
@@ -2090,7 +2109,7 @@ module OpenShift
         quota_files = nil
         log_debug "DEBUG: Getting existing app '#{app.name}' status before moving"
         do_with_retry('status') do
-          result = source_container.status(gear, cart_name)
+          result = source_container.status(gear, component)
           result.properties["attributes"][gear.uuid].each do |key, value|
             if key == 'status'
               case value
@@ -2108,6 +2127,7 @@ module OpenShift
           end
         end
 
+        cart_name = component.cartridge_name
         if idle
           log_debug "DEBUG: Gear component '#{cart_name}' was idle"
         elsif leave_stopped
@@ -2166,7 +2186,7 @@ module OpenShift
           rpc_client.reset
         end
         Rails.logger.debug("DEBUG: rpc_exec: rpc_client=#{rpc_client}")
-      
+
         # Execute a block and make sure we disconnect the client
         begin
           result = yield rpc_client
@@ -2178,7 +2198,7 @@ module OpenShift
 
         result
       end
-      
+
       #
       # Set the district of a node
       #
@@ -2188,7 +2208,7 @@ module OpenShift
       #
       # RETURNS:
       # * ResultIO?
-      # 
+      #
       # NOTES:
       # * uses MCollective::RPC::Client
       # * uses ApplicationContainerProxy @id
@@ -2209,9 +2229,9 @@ module OpenShift
         Rails.logger.debug result.inspect
         result
       end
-      
+
       protected
-      
+
       #
       # Try some action until it passes or exceeds a maximum number of tries
       #
@@ -2246,7 +2266,7 @@ module OpenShift
           end
         end
       end
-      
+
       #
       # Initializes the list of cartridges which are "standalone" or framework
       # 
@@ -2281,17 +2301,17 @@ module OpenShift
       # NOTES:
       # * Uses CartridgeCache
       # * Why not just ask the CartridgeCache every time?
-      #      
+      #
       def embedded_carts(app=nil)
         @embedded_carts ||= CartridgeCache.cartridge_names('embedded',app)
       end
-      
+
       # 
       # Add a component to an existing gear on the node
       #
       # INPUTS:
       # * gear: a Gear object
-      # * component: String
+      # * cart: string representing cartridge name
       #
       # RETURNS:
       # * Array [ResultIO, String]
@@ -2306,36 +2326,28 @@ module OpenShift
       # * uses run_cartridge_command
       # * runs "configure" on a "component" which used to be called "embedded"
       #
-      def add_component(gear, component)
+      def add_component(gear, cart, args)
         app = gear.app
         reply = ResultIO.new
 
-        args = build_base_gear_args(gear)
-        args['--cart-name'] = component
-        downloaded_cart =  app.downloaded_cart_map.values.find { |c| c["versioned_name"]==component }
-        if downloaded_cart
-          args['--with-cartridge-manifest'] = downloaded_cart["original_manifest"]
-          args['--with-software-version'] = downloaded_cart["version"]
-        end
-        
         begin
-          reply.append run_cartridge_command(component, gear, 'configure', args)
+          reply.append run_cartridge_command(cart, gear, 'configure', args)
         rescue Exception => e
           begin
-            Rails.logger.debug "DEBUG: Failed to embed '#{component}' in '#{app.name}' for user '#{app.domain.owner.login}'"
-            reply.debugIO << "Failed to embed '#{component} in '#{app.name}'"
-            reply.append run_cartridge_command(component, gear, 'deconfigure', args)
+            Rails.logger.debug "DEBUG: Failed to embed '#{cart}' in '#{app.name}' for user '#{app.domain.owner.login}'"
+            reply.debugIO << "Failed to embed '#{cart} in '#{app.name}'"
+            reply.append run_cartridge_command(cart, gear, 'deconfigure', args)
           ensure
             raise
           end
         end
-        
+
         component_details = reply.appInfoIO.string.empty? ? '' : reply.appInfoIO.string
-        reply.debugIO << "Embedded app details: #{component_details}"
+        reply.debugIO << "\n\n#{cart}: #{component_details}"
         [reply, component_details]
       end
 
-      # 
+      #
       # Post configure a component on the gear
       #
       # INPUTS:
@@ -2358,21 +2370,22 @@ module OpenShift
       def post_configure_component(gear, component)
         app = gear.app
         reply = ResultIO.new
+        cart = component.cartridge_name
 
         args = build_base_gear_args(gear)
-        args['--cart-name'] = component
-        
+        args = build_base_component_args(component, args)
+
         begin
-          reply.append run_cartridge_command(component, gear, 'post-configure', args)
+          reply.append run_cartridge_command(cart, gear, 'post-configure', args)
         rescue Exception => e
           begin
-            Rails.logger.debug "DEBUG: Failed to run post-configure on '#{component}' in '#{app.name}' for user '#{app.domain.owner.login}'"
-            reply.debugIO << "Failed to run post-configure on '#{component} in '#{app.name}'"
+            Rails.logger.debug "DEBUG: Failed to run post-configure on '#{cart}' in '#{app.name}' for user '#{app.domain.owner.login}'"
+            reply.debugIO << "Failed to run post-configure on '#{cart} in '#{app.name}'"
           ensure
             raise
           end
         end
-        
+
         component_details = reply.appInfoIO.string.empty? ? '' : reply.appInfoIO.string
         reply.debugIO << "Embedded app details: #{component_details}"
         [reply, component_details]
@@ -2380,124 +2393,130 @@ module OpenShift
 
       #
       # Remove a component from a gear
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * component: String: a component name
       #
       # RETURNS:
-      # * ResultIO? String? 
-      # 
+      # * ResultIO? String?
+      #
       # NOTES
       # * method on gear?
-      # 
+      #
       def remove_component(gear, component)
         app = gear.app
         args = build_base_gear_args(gear)
-        args['--cart-name'] = component
+        args = build_base_component_args(component, args)
+        cart = component.cartridge_name
 
-        Rails.logger.debug "DEBUG: Deconfiguring embedded application '#{component}' in application '#{app.name}' on node '#{@id}'"
-        return run_cartridge_command(component, gear, 'deconfigure', args)
+        Rails.logger.debug "DEBUG: Deconfiguring embedded application '#{cart}' in application '#{app.name}' on node '#{@id}'"
+        return run_cartridge_command(cart, gear, 'deconfigure', args)
       end
 
       #
       # Start a component service
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * component: String: a component name
       #
       # RETURNS:
       # * ResultIO?
-      # 
+      #
       # NOTES
       # * method on gear?
-      #       
+      #
       def start_component(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = component
+        args = build_base_component_args(component, args)
+        cart = component.cartridge_name
 
-        run_cartridge_command(component, gear, "start", args)
+        run_cartridge_command(cart, gear, "start", args)
       end
 
       #
       # Stop a component service
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * component: String: a component name
       #
       # RETURNS:
       # * ResultIO?
-      # 
+      #
       # NOTES
       # * method on gear?
-      #             
+      #
       def stop_component(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = component
+        args = build_base_component_args(component, args)
+        cart = component.cartridge_name
 
-        run_cartridge_command(component, gear, "stop", args)
+        run_cartridge_command(cart, gear, "stop", args)
       end
 
       #
       # Restart a component service
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * component: String: a component name
       #
       # RETURNS:
       # * ResultIO?
-      # 
+      #
       # NOTES
       # * method on gear?
-      #                   
+      #
       def restart_component(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = component
+        args = build_base_component_args(component, args)
+        cart = component.cartridge_name
 
-        run_cartridge_command(component, gear, "restart", args)
+        run_cartridge_command(cart, gear, "restart", args)
       end
-      
+
       #
       # Reload a component service
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * component: String: a component name
       #
       # RETURNS:
       # * ResultIO?
-      # 
+      #
       # NOTES
       # * method on gear?
-      #                   
+      #
       def reload_component(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = component
+        args = build_base_component_args(component, args)
+        cart = component.cartridge_name
 
-        run_cartridge_command(component, gear, "reload", args)
+        run_cartridge_command(cart, gear, "reload", args)
       end
 
       #
       # Get the status a component service
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * component: String: a component name
       #
       # RETURNS:
       # * ResultIO?
-      # 
+      #
       # NOTES
       # * method on gear?
-      #                         
+      #
       def component_status(gear, component)
         args = build_base_gear_args(gear)
-        args['--cart-name'] = component
+        args = build_base_component_args(component, args)
+        cart = component.cartridge_name
 
-        run_cartridge_command(component, gear, "status", args)
+        run_cartridge_command(cart, gear, "status", args)
       end
 
       #
@@ -2516,14 +2535,14 @@ module OpenShift
       #
       # INPUTS:
       # * message: String
-      #      
+      #
       def log_error(message)
         Rails.logger.error message
         puts message
       end
 
-      # 
-      # 
+      #
+      #
       # INPUTS:
       # * cartridge: String, a cartridge name
       # * action: String, and action name
@@ -2531,7 +2550,7 @@ module OpenShift
       # * long_debug_output: Boolean
       #
       # RETURNS:
-      # * 
+      # *
       #
       # NOTES:
       # * "cartridge_do" is a catch-all agent message handler
@@ -2587,7 +2606,7 @@ module OpenShift
       def parse_result(mcoll_reply, gear=nil, command=nil)
         app = gear.app unless gear.nil?
         result = ResultIO.new
-        
+
         mcoll_result = mcoll_reply[0]
         output = nil
         if (mcoll_result && (defined? mcoll_result.results) && !mcoll_result.results[:data].nil?)
@@ -2609,22 +2628,22 @@ module OpenShift
         if result.exitcode != 0
           result.debugIO << "Command return code: " + result.exitcode.to_s
           if result.hasUserActionableError
-            raise OpenShift::UserException.new(result.errorIO.string, result.exitcode, result)
+            raise OpenShift::UserException.new(result.errorIO.string, result.exitcode, nil, result)
           else
             raise OpenShift::NodeException.new("Node execution failure (invalid exit code from node).  If the problem persists please contact Red Hat support.", 143, result)
           end
         end
-        
+
         result
       end
-      
+
       #
       # Returns the server identity of the specified app
       #
       # INPUTS:
       # * app_uuid: String
       # * app_name: String
-      # 
+      #
       # RETURNS:
       # * server identity (string?)
       #
@@ -2645,7 +2664,7 @@ module OpenShift
         end
         return server_identity
       end
-      
+
       #
       # Returns whether this server has the specified app
       #
@@ -2669,7 +2688,7 @@ module OpenShift
           end
         end
       end
-      
+
       #
       # Returns whether this server has the specified embedded app
       #
@@ -2679,7 +2698,7 @@ module OpenShift
       #
       # RETURNS:
       # * Boolean
-      # 
+      #
       # NOTES:
       # * uses rpc_exec
       #
@@ -2692,16 +2711,16 @@ module OpenShift
           end
         end
       end
-      
+
       #
       # Returns whether this server has already reserved the specified uid as a uid or gid
       #
       # INPUTS:
       # * uid: Integer
-      # 
+      #
       # RETURNS:
       # * Boolean
-      # 
+      #
       # NOTES:
       # * uses rpc_exec
       #
@@ -2776,7 +2795,7 @@ module OpenShift
               raise
             end
           end
-	      rescue OpenShift::NodeException => e
+        rescue OpenShift::NodeException => e
           if command == 'deconfigure'
             if framework.start_with?('embedded/')
               if has_embedded_app?(app.uuid, framework[9..-1])
@@ -2800,7 +2819,7 @@ module OpenShift
 
         resultIO
       end
-      
+
       #
       # Execute a cartridge hook command in a gear
       #
@@ -2810,7 +2829,7 @@ module OpenShift
       #
       # RETURNS:
       # * Array of known server identities
-      # 
+      #
       # RAISES:
       # * Exception
       #
@@ -2841,7 +2860,7 @@ module OpenShift
       #
       # RETURNS:
       # * Array: [server, capacity, district] 
-      # 
+      #
       # NOTES:
       # * are the return values String?
       #
@@ -2852,7 +2871,7 @@ module OpenShift
       def self.rpc_find_available(node_profile=nil, district_uuid=nil, least_preferred_server_identities=nil, force_rediscovery=false, gear_exists_in_district=false, required_uid=nil)
 
         district_uuid = nil if district_uuid == 'NONE'
-        
+
         # validate to ensure incompatible parameters are not passed
         if gear_exists_in_district
           if required_uid or district_uuid.nil?
@@ -2881,17 +2900,17 @@ module OpenShift
         additional_filters = [{:fact => "active_capacity",
                                :value => '100',
                                :operator => "<"}]
-        
+
         if require_specific_district || require_district
           additional_filters.push({:fact => "district_active",
                                    :value => true.to_s,
                                    :operator => "=="})
         end
-                               
+
         if require_specific_district
           additional_filters.push({:fact => "district_uuid",
                                    :value => district_uuid,
-                                   :operator => "=="})                         
+                                   :operator => "=="})
         elsif require_district
           additional_filters.push({:fact => "district_uuid",
                                    :value => "NONE",
@@ -2910,7 +2929,7 @@ module OpenShift
 
         # Get the districts
         districts = prefer_district ? District.find_all : [] # candidate for caching
-          
+
         # Get the active % on the nodes
         rpc_opts = nil
         rpc_get_fact('active_capacity', nil, force_rediscovery, additional_filters, rpc_opts) do |server, capacity|
@@ -2969,7 +2988,7 @@ module OpenShift
 
         return current_server, current_capacity, current_district
       end
-      
+
       #
       # Return a single node matching a given profile
       #
@@ -2978,7 +2997,7 @@ module OpenShift
       #
       # RETURNS:
       # * String: server name?
-      # 
+      #
       # RAISES:
       # * OpenShift::NodeException
       #
@@ -3013,7 +3032,7 @@ module OpenShift
         end
         return current_server
       end
-      
+
       #
       # Make a deep copy of the RPC options hash
       #
@@ -3029,7 +3048,7 @@ module OpenShift
         # Make a deep copy of the default options
         Marshal::load(Marshal::dump(Rails.configuration.msg_broker[:rpc_options]))
       end
-    
+
       #
       # Return the value of the MCollective response
       # for both a single result and a multiple result
@@ -3046,22 +3065,22 @@ module OpenShift
       # 
       def self.rvalue(response)
         result = nil
-    
+
         if response[:body]
           result = response[:body][:data][:value]
         elsif response[:data]
           result = response[:data][:value]
         end
-    
+
         result
       end
-    
-      # 
+
+      #
       # true if the response indicates success
       #
       # INPUTS:
       # * response
-      # 
+      #
       # RETURNS:
       # * Boolean
       #
@@ -3071,7 +3090,7 @@ module OpenShift
       def rsuccess(response)
         response[:body][:statuscode].to_i == 0
       end
-    
+
       #
       # Returns the fact value from the specified server.
       # Yields to the supplied block if there is a non-nil
@@ -3100,7 +3119,7 @@ module OpenShift
         rpc_exec('rpcutil', servers, force_rediscovery, options) do |client|
           client.get_fact(:fact => fact) do |response|
             next unless Integer(response[:body][:statuscode]) == 0
-    
+
             # Yield the sender and the value to the block
             result = rvalue(response)
             yield response[:senderid], result if result
@@ -3109,7 +3128,7 @@ module OpenShift
 
         result
       end
-    
+
       #
       # Given a known fact and node, get a single fact directly.
       # This is significantly faster then the get_facts method
@@ -3130,7 +3149,7 @@ module OpenShift
       # 
       def rpc_get_fact_direct(fact)
           options = MCollectiveApplicationContainerProxy.rpc_options
-    
+
           rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('rpcutil', options)
           begin
             result = rpc_client.custom_request('get_fact', {:fact => fact}, @id, {'identity' => @id})[0]
@@ -3142,10 +3161,10 @@ module OpenShift
           ensure
             rpc_client.disconnect
           end
-    
+
           return value
       end
-    
+
       #
       # Get mcollective rpc client. For errors, convert generic exception
       # to NodeException.
@@ -3153,7 +3172,7 @@ module OpenShift
       # INPUTS:
       # * agent: String (??)
       # * options: Hash
-      # 
+      #
       # RETURNS:
       # * MCollective::RPC::Client
       #
@@ -3180,7 +3199,7 @@ module OpenShift
       #
       # INPUTS:
       # * none
-      # 
+      #
       # RETURNS:
       # * Hash [gear_map[], node_map[]]
       #
@@ -3241,7 +3260,7 @@ module OpenShift
       #
       # INPUTS:
       # * none
-      # 
+      #
       # RETURNS:
       # * Hash [gear_sshey_map[], node_list[]]
       #
@@ -3269,10 +3288,10 @@ module OpenShift
       # <<class method>>
       #
       # Execute a set of operations on a node in parallel
-      # 
+      #
       # INPUTS:
       # * handle: Hash ???
-      # 
+      #
       # RETURNS:
       # * ???
       #
@@ -3295,7 +3314,7 @@ module OpenShift
                 exitcode = mcoll_reply.results[:data][:exitcode]
                 sender = mcoll_reply.results[:sender]
                 Rails.logger.debug("DEBUG: Output of parallel execute: #{output}, exitcode: #{exitcode}, from: #{sender}  (Request ID: #{Thread.current[:user_action_log_uuid]})")
-                
+
                 handle[sender] = output if exitcode == 0
               end
             }
