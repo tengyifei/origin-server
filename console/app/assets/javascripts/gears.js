@@ -48,6 +48,11 @@
 	/*
 	 *
 	 */
+	Gears.config.start_gears = 0;
+
+	/*
+	 *
+	 */
 	Gears.current_gears = 0;
 
 	/*
@@ -256,6 +261,7 @@
 		Gears.config.currency = Gears.View.elements.table.attr('data-currency');
 
 		Gears.current_gears = parseInt(Gears.View.elements.table.gears.attr('data-gears'), 10) || 1;
+		Gears.config.start_gears = Gears.current_gears;
 
 		Gears._load_getup_config();
 		Gears._bind_events();
@@ -370,7 +376,7 @@
 	 */
 	Gears.remove = function() {
 		if (Gears.View.loading) return;
-		if (Gears.current_gears <= Gears.config.consumed_gears) return;
+		if (Gears.current_gears <= Gears.config.start_gears) return;
 
 		Gears.current_gears--;
 		Gears.update();
