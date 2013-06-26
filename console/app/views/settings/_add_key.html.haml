@@ -1,6 +1,6 @@
 %h2 Public Keys
 .row-fluid
-  .span6
+  %div
     %p
       OpenShift uses a public key to securely encrypt the connection between
       your local machine and your application and to authorize you to upload
@@ -11,5 +11,4 @@
     %p
       = link_to "Learn more about SSH keys.", ssh_keys_help_path
 
-  .span6
     = render :partial => 'keys/simple_form', :locals => { :key => Key.new, :input_class => 'span4' }

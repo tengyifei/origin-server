@@ -1,3 +1,4 @@
 class AccountController < ConsoleController
-  include Account::Dashboard
+  def show
+  end
 end

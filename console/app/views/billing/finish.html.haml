@@ -1,5 +1,5 @@
 - content_for :title, "Add Gears"
-- breadcrumb_for_account 'Add Gears'
+- breadcrumb_for_account_billing 'Add Gears'
 %h1 Almost done!
 %p
   Unfortunately, our payment system with Paypal is under tests, so when this phase is completed we will send to you an email to approve the payment.
@@ -26,4 +26,4 @@
 %p
   %small 1. Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime.
 
-= link_to "Continue...", account_path, :class => 'btn'
+= link_to "Continue...", billing_path, :class => 'btn'

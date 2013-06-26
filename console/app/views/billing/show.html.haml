@@ -1,0 +1,77 @@
+- content_for :title, "Billing"
+- breadcrumb_for_account 'Billing'
+
+= flashes
+
+.row.billing-history
+  .span6
+    %section
+      %h2 Recent Activity
+
+      %dl
+        %dt
+          = link_to "Last Invoice", info_billing_path
+          %small (May 29, 2013)
+        %dd US$ 300.00
+
+        %dt Payments
+        %dd US$ 300.00
+
+        %dt
+          %big Current Balance
+        %dd US$ 0.0
+
+  .span6
+    %section
+      %h2 Billing Address
+
+      %ul.unstyled
+        %li Nagib Couto Kanaan
+        %li (53) 81510220 
+        %li Rua Dr. Boaventura Leite, 191
+        %li CEP 96080-480
+
+      .btn-toolbar
+        = link_to "Edit address", billing_path, :class => 'btn btn-small btn-danger'
+
+%hr
+
+.row
+  .span12
+    %section
+      %h2 Billing History
+
+      %table.table.table-fixed
+        %thead
+          %tr
+            %th{:scope => 'col'} Id
+            %th{:scope => 'col'} Date
+            %th{:scope => 'col'} Type
+            %th{:scope => 'col'} Status
+            %th{:scope => 'col'} Amount
+            %th{:scope => 'col'} PDF
+        %tbody
+          %tr
+            %td
+              = link_to "2031", info_billing_path
+            %td May 29, 2013
+            %td Invoice
+            %td Paid
+            %td US$ 250.23
+            %td -
+          %tr
+            %td
+              = link_to "2032", info_billing_path
+            %td May 30, 2013
+            %td Invoice
+            %td Paid
+            %td US$ 2,350.23
+            %td - 
+          %tr
+            %td
+              = link_to "2033", info_billing_path
+            %td Apr 1, 2013
+            %td Invoice
+            %td Settled
+            %td US$ 10,350.23
+            %td - 
