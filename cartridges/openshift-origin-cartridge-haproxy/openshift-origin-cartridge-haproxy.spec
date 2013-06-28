@@ -2,11 +2,11 @@
     %global scl ruby193
     %global scl_prefix ruby193-
 %endif
-%global cartridgedir %{_libexecdir}/openshift/cartridges/v2/haproxy
+%global cartridgedir %{_libexecdir}/openshift/cartridges/haproxy
 
 Summary:       Provides HA Proxy
 Name:          openshift-origin-cartridge-haproxy
-Version: 0.5.4
+Version: 0.6.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -48,6 +48,9 @@ HAProxy cartridge for OpenShift. (Cartridge Format V2)
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Tue Jun 25 2013 Adam Miller <admiller@redhat.com> 0.6.1-1
+- bump_minor_versions for sprint 30 (admiller@redhat.com)
+
 * Fri Jun 21 2013 Adam Miller <admiller@redhat.com> 0.5.4-1
 - WIP Cartridge - Updated manifest.yml versions for compatibility
   (jhonce@redhat.com)

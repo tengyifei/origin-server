@@ -6,7 +6,7 @@
 
 Summary:       Utility scripts for the OpenShift Origin broker
 Name:          openshift-origin-broker-util
-Version: 1.10.5
+Version: 1.11.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -59,6 +59,7 @@ cp man/*.8 %{buildroot}%{_mandir}/man8/
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-usage
 %attr(0750,-,-) %{_sbindir}/oo-admin-ctl-user
 %attr(0750,-,-) %{_sbindir}/oo-admin-move
+%attr(0750,-,-) %{_sbindir}/oo-admin-upgrade
 %attr(0750,-,-) %{_sbindir}/oo-admin-broker-auth
 %attr(0750,-,-) %{_sbindir}/oo-admin-broker-cache
 %attr(0750,-,-) %{_sbindir}/oo-admin-usage
@@ -86,6 +87,9 @@ cp man/*.8 %{buildroot}%{_mandir}/man8/
 %{_mandir}/man8/oo-stats.8.gz
 
 %changelog
+* Tue Jun 25 2013 Adam Miller <admiller@redhat.com> 1.11.1-1
+- bump_minor_versions for sprint 30 (admiller@redhat.com)
+
 * Thu Jun 20 2013 Adam Miller <admiller@redhat.com> 1.10.5-1
 - Merge pull request #2905 from pravisankar/dev/ravi/bug975713
   (dmcphers+openshiftbot@redhat.com)

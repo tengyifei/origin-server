@@ -201,6 +201,42 @@ module MCollective
       end
 
       #
+      # Upgrade between versions
+      #
+      def upgrade_action
+        Log.instance.info("upgrade_action call / action=#{request.action}, agent=#{request.agent}, data=#{request.data.pretty_inspect}")
+        validate :uuid, /^[a-zA-Z0-9]+$/
+        validate :version, /^.+$/
+        validate :namespace, /^.+$/  
+        uuid = request[:uuid]
+        namespace = request[:namespace]
+        version = request[:version]
+        ignore_cartridge_version = request[:ignore_cartridge_version] == 'true' ? true : false
+        output = ''
+        exitcode = 0
+
+        server_identify = Facter.value(:hostname)
+        begin
+          require 'openshift-origin-node/model/upgrade'
+          output, exitcode = OpenShift::Runtime::Upgrade::upgrade(uuid, namespace, version, server_identify, ignore_cartridge_version)
+        rescue LoadError => e
+          exitcode = 127
+          output += "upgrade not supported. #{e.message}\n"
+        rescue OpenShift::Utils::ShellExecutionException => e
+          exitcode = 1
+          output += "Gear failed to upgrade: #{e.message}\n#{e.stdout}\n#{e.stderr}"
+        rescue Exception => e
+          exitcode = 1
+          output += "Gear failed to upgrade with exception: #{e.message}\n#{e.backtrace}\n"
+        end
+        Log.instance.info("upgrade_action (#{exitcode})\n------\n#{output}\n------)")
+
+        reply[:output] = output
+        reply[:exitcode] = exitcode
+        reply.fail! "upgrade_action failed #{exitcode}.  Output #{output}" unless exitcode == 0
+      end
+
+      #
       # Builds a new ApplicationContainer instance from the standard
       # argument payload which is expected for any message used for
       # gear/cart operations.

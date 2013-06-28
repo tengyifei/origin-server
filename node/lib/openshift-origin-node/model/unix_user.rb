@@ -9,7 +9,7 @@
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or imp54lied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #++
@@ -51,7 +51,6 @@ module OpenShift
     def initialize(application_uuid, container_uuid, user_uid=nil,
         app_name=nil, container_name=nil, namespace=nil, quota_blocks=nil, quota_files=nil, debug=false)
       @config = OpenShift::Config.new
-      @cartridge_format = Utils::Sdk.node_default_model(@config)
 
       @container_uuid = container_uuid
       @application_uuid = application_uuid
@@ -97,7 +96,7 @@ module OpenShift
       gecos    = @config.get("GEAR_GECOS")     || "OO application container"
       notify_observers(:before_unix_user_create)
       basedir = @config.get("GEAR_BASE_DIR")
-      supplementary_groups = @config.get("GEAR_SUPL_GRPS")
+      supplementary_groups = @config.get("GEAR_SUPPLEMENTARY_GROUPS")
 
       # lock to prevent race condition between create and delete of gear
       uuid_lock_file = "/var/lock/oo-create.#{@uuid}"
@@ -337,11 +336,7 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
 
       filename = File.join(env_dir, key)
       File.open(filename, File::WRONLY|File::TRUNC|File::CREAT) do |file|
-        if :v1 == @cartridge_format
-          file.write "export #{key}='#{value}'"
-        else
-          file.write value.to_s
-        end
+        file.write value.to_s
       end
 
       mcs_label = Utils::SELinux.get_mcs_label(uid)
@@ -470,21 +465,13 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
       # Polydir runs before the marker is created so set up sandbox by hand
       sandbox_uuid_dir = File.join(homedir, ".sandbox", @uuid)
       FileUtils.mkdir_p sandbox_uuid_dir
-      if @cartridge_format == :v1
-        FileUtils.chmod(0o1755, sandbox_uuid_dir)
-      else
-        PathUtils.oo_chown(@uuid, nil, sandbox_uuid_dir)
-      end
 
-      env_dir = File.join(homedir, ".env")
-      FileUtils.mkdir_p(env_dir)
-      FileUtils.chmod(0o0750, env_dir)
-      PathUtils.oo_chown(nil, @uuid, env_dir)
+      PathUtils.oo_chown(@uuid, nil, sandbox_uuid_dir)
 
-      ssh_dir = File.join(homedir, ".ssh")
-      FileUtils.mkdir_p(ssh_dir)
-      FileUtils.chmod(0o0750, ssh_dir)
-      PathUtils.oo_chown(nil, @uuid, ssh_dir)
+      mkdir_and_chown File.join(homedir, ".env")
+      mkdir_and_chown File.join(homedir, ".ssh")
+
+      setup_gem_home
 
       geardir = File.join(homedir, @container_name, "/")
       gearappdir = File.join(homedir, "app-root", "/")
@@ -840,6 +827,23 @@ Dir(after)    #{@uuid}/#{@uid} => #{list_home_dir(@homedir)}
           end
         end
       end
+    end
+
+    private
+    def mkdir_and_chown(dir, opts = {})
+      user  = opts[:user]
+      group = opts[:group] || @uuid
+      mode  = opts[:mode] || 0o0750
+      FileUtils.mkdir_p(dir)
+      FileUtils.chmod(mode, dir)
+      PathUtils.oo_chown(user, group, dir)
+    end
+
+    def setup_gem_home
+      gem_home = File.join(homedir, ".gem")
+      add_env_var "GEM_HOME", gem_home
+      add_env_var "OPENSHIFT_RUBYGEMS_PATH_ELEMENT", File.join(gem_home, "bin")
+      mkdir_and_chown gem_home, :user => @uuid
     end
 
   end
