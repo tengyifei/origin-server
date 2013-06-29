@@ -1,5 +1,5 @@
 class Authentication < ActiveResource::Base
-  include Console::GetupAdminHelper
+  include Console::UserManagerHelper
 
   schema do
     string :id, :login, :password
@@ -42,7 +42,7 @@ class Authentication < ActiveResource::Base
 
   def change_password(password, new_password)
 
-    response = getup_admin_post @login + "/account/password/change/", :oldpassword => password, :password1 => new_password, :password2 => new_password
+    response = user_manager_account_password_change @login, password, new_password
     response_code = response.code.to_i
 
     generate_token new_password if response_code >= 200 and response_code < 400
@@ -51,11 +51,11 @@ class Authentication < ActiveResource::Base
   end
 
   def reset_password(email)
-    getup_admin_post "/account/password/reset/", :email => email
+    user_manager_account_password_reset email
   end
 
   def update_password(password, token)
-    response = getup_admin_post "/account/password/reset/key/" + token + "/", :password1 => password, :password2 => password
+    response = user_manager_account_password_reset_key token, password
     response_code = response.code.to_i
 
     response_code >= 200 and response_code < 400

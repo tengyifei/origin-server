@@ -57,13 +57,17 @@ module ActionDispatch::Routing
       end
 
       def openshift_account_resource_routes
-        resource :billing, :controller => :billing, :only => [:show] do
-          member do
-            get :gears
-            get :info
-            get :finish
-          end
-        end        
+        resources :billing, :only => [:show, :index], :format => false
+        resource :gears, :controller => :gears, :only => [:show, :create] do
+          get :confirm
+        end
+
+        match 'payment/confirm' => 'payments_proxy#confirm', :format => false
+        match 'payment/cancel' => 'payments_proxy#cancel', :format => false
+
+        scope 'billing' do
+          resource :address, :controller => :billing_address, :only => [:edit, :create]
+        end
       end
 
       def openshift_settings_routes

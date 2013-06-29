@@ -1,9 +1,12 @@
 - content_for :page_title, 'My Account'
-
 %h1 My Account
 = flashes
 
+.row
+  .span7
+    %section
+      = render :partial => 'gears', :locals => {:capabilities => @capabilities}
 
-.btn-toolbar
-	= link_to "Billing History", billing_path, :class => 'btn btn-small btn-danger'
-	= link_to "Add Gears", gears_billing_path, :class => 'btn btn-small btn-danger'
+  .span5
+    %section
+      = render :partial => 'billing'

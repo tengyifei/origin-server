@@ -42,6 +42,8 @@ module Console
     config_accessor :authentication_session_expire
     config_accessor :session_user_name
 
+    config_accessor :user_manager
+
     #
     # A class that represents the capabilities object
     #
@@ -182,7 +184,17 @@ module Console
         end.merge({
           :url    => config[:BROKER_URL],
           :proxy  => config[:BROKER_PROXY_URL],
-          :broker => config[:LOCAL_BROKER_BASE_URL]
+          :user_manager => {
+            :api => config[:LOCAL_BROKER_BASE_URL],
+            :account_plan => config[:USER_MANAGER_ACCOUNT_PLAN_URL],
+            :account_password_change => config[:USER_MANAGER_ACCOUNT_PASSWORD_CHANGE_URL],
+            :account_password_reset => config[:USER_MANAGER_ACCOUNT_PASSWORD_RESET_URL],
+            :account_password_reset_key => config[:USER_MANAGER_ACCOUNT_PASSWORD_RESET_KEY_URL],
+            :subscription => config[:USER_MANAGER_SUBSCRIPTION_URL],
+            :subscription_confirm => config[:USER_MANAGER_SUBSCRIPTION_CONFIRM_URL],
+            :subscription_cancel  => config[:USER_MANAGER_SUBSCRIPTION_CANCEL_URL],
+            :billing_address => config[:USER_MANAGER_BILLING_ADDRESS_URL]
+          }
         })
       end
 

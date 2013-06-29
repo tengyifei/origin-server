@@ -1,0 +1,88 @@
+- content_for :title, "Billing"
+- breadcrumb_for_account 'Billing'
+
+= flashes
+
+.row.billing-history
+  .span6
+    %section
+      %h2 Recent Activity
+
+      %dl
+        %dt
+          = link_to "Last Invoice", billing_path(2034)
+          %small (May 29, 2013)
+        %dd US$ 300.00
+
+        %dt Payments
+        %dd US$ 300.00
+
+        %dt
+          %big Current Balance
+        %dd US$ 0.0
+
+  .span6
+    %section
+      %h2 Billing Address
+
+      %ul.unstyled
+        %li Nagib Couto Kanaan
+        %li (53) 81510220 
+        %li Rua Dr. Boaventura Leite, 191
+        %li CEP 96080-480
+
+      .btn-toolbar
+        = link_to "Edit address...", edit_address_path, :class => 'btn btn-small btn-danger'
+
+.row.billing-history
+  .span12
+    %section
+      %h2 Billing History
+
+      %table.table.table-fixed
+        %thead
+          %tr
+            %th{:scope => 'col'} Id
+            %th{:scope => 'col'} Month
+            %th{:scope => 'col'} Processed
+            %th{:scope => 'col'} Due Date
+            %th{:scope => 'col'} Status
+            %th{:scope => 'col'} Amount
+            %th{:scope => 'col'} PDF
+        %tbody
+          %tr
+            %td
+              = link_to "2031", billing_path(2031)
+            %td May, 2013
+            %td May 17, 2013
+            %td May 20, 2013
+            %td Paid
+            %td US$ 250.23
+            %td -
+          %tr
+            %td
+              = link_to "2032", billing_path(2032)
+            %td Apr, 2013
+            %td Apr 20, 2013
+            %td Apr 20, 2013
+            %td Paid
+            %td US$ 2,350.23
+            %td - 
+          %tr
+            %td
+              = link_to "2033", billing_path(2033)
+            %td June, 2013
+            %td June 20, 2013
+            %td June 20, 2013
+            %td Failed
+            %td US$ 10,350.23
+            %td - 
+          %tr
+            %td
+              = link_to "2034", billing_path(2034)
+            %td Apr, 2013
+            %td Apr 20, 2013
+            %td June 20, 2013
+            %td Payback
+            %td US$ 50.23
+            %td -             

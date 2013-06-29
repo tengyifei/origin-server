@@ -230,7 +230,7 @@ module Console::LayoutHelper
   def breadcrumb_for_account_billing(*args)
     breadcrumbs_for_each [
       link_to('My Account', account_path),
-      link_to('Billing', billing_path),
+      link_to('Billing', billing_index_path),
     ] + args
   end
 

@@ -8,7 +8,6 @@ module Settings
       user_default_domain rescue nil
       @keys = Key.all :as => @user
       @authorizations = Authorization.all :as => @user
-      @billing = user_capabilities :refresh => true
     end
 
     def password

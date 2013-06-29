@@ -8,7 +8,7 @@
 
 = flashes
 
-%form.form-horizontal.formtastic{:action => billing_path, :id => 'form-billing', :method => 'post'}
+%form.form-horizontal.formtastic{:action => gears_path, :id => 'form-billing', :method => 'post'}
   = token_tag(nil)
 
   .input-append.span3
@@ -24,7 +24,7 @@
 
   %span.right-position{:id => 'message'}
 
-  %table.table.table-fixed.table-striped{:id => 'gears', :'data-source' => 'https://' + broker_host + '/getup/subscription/prices/', :'data-currency' => 'BRL', :'data-max-gears-limit' => @getup_capabilities[:max_gears_limit]}
+  %table.table.table-fixed.table-striped{:id => 'gears', :'data-source' => 'https://' + broker_host + '/getup/subscription/prices/', :'data-currency' => 'BRL', :'data-max-gears-limit' => @account_plan[:max_gears_limit]}
     %thead
       %tr
         %th{:scope => 'col'}
@@ -37,10 +37,10 @@
         %td{:id => 'gears-size', :'data-gears' => @capabilities.max_gears, :'data-consumed-gears' => @capabilities.consumed_gears} -
         %td{:id => 'gears-unit-cost'} -
         %td{:id => 'gears-cost'} -
-      - if @getup_capabilities[:free_tier]
+      - if @account_plan[:free_tier]
         %tr
           %td Credit
-          %td{:id => 'credit-size', :'data-hours' => @getup_capabilities[:free_tier]} -
+          %td{:id => 'credit-size', :'data-hours' => @account_plan[:free_tier]} -
           %td{:id => 'credit-unit-cost'} -
           %td{:id => 'credit-cost'} -        
       %tr.info
@@ -66,7 +66,7 @@
     %small 3. Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime.
 
   %fieldset
-    = link_to "Cancel", billing_path, :class => 'btn'
+    = link_to "Cancel", account_path, :class => 'btn'
     %button.btn.btn-danger.update{:type => 'submit'} Buy with Paypal...
 
 - content_for :javascripts do
