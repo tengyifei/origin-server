@@ -7,7 +7,7 @@ class ApplicationTypesController < ConsoleController
 
     unless @capabilities.gears_free?
       flash.clear
-      flash.now[:warning] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{new_billing_path}">Click here to get more</a>.].html_safe
+      flash.now[:warning] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{gears_path}">Click here to get more</a>.].html_safe
     #   flash.now[:warning] = %Q[Currently you do not have enough free gears available to create a new application. You can either scale down or delete existing applications to free up resources. To add gears <a href="#{new_billing_path}">click here</a>."].html_safe unless 
     # else
     #   flash.now[:warning] = %Q[Currently you do not have any gears. You can add gears <a href="#{new_billing_path}">clicking here</a>.].html_safe
