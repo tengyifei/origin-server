@@ -1,25 +1,18 @@
 - content_for :title, "Add Gears"
 - breadcrumb_for_account 'Add Gears'
-%h1 Almost done!
+%h1 All done!
 %p
-  Unfortunately, our payment system with Paypal is under tests, so when this phase is completed we will send to you an email to approve the payment.
-  %br
-  Even though the resources are available, you can start using them now.
-
+  Your new limit is shown below:
 %p
-  %small
-    If you are not a Paypal user yet, #{link_to "create your account", "https://www.paypal.com/br/cgi-bin/webscr?cmd=_registration-run&amp;from=PayPal"}. You'll need it.
-
-%p
-  Gears:
+  Max Gears Limit:
   %small
     #{@result[:max_gears]}
   %br
-  Approved Amount:
+  Monthly Approved Amount (max):
   %small
     R$ #{@result[:preapproval][:amount]}
   %br
-  Approved Total:
+  Total Approved Amount (up to 12 months):
   %small
     R$ #{@result[:preapproval][:total_amount]} &sup1;
 %br
