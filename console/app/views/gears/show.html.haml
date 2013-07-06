@@ -67,7 +67,7 @@
 
   %fieldset
     = link_to "Cancel", account_path, :class => 'btn'
-    %button.btn.btn-danger.update{:type => 'submit'} Buy with Paypal...
+    %button.btn.paypal{:type => 'submit'} Buy with Paypal...
 
 - content_for :javascripts do
   = javascript_include_tag 'gears'
