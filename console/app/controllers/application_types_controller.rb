@@ -78,7 +78,7 @@ class ApplicationTypesController < ConsoleController
     end
 
     #flash.now[:error] = "There are not enough free gears available to create a new application. You will either need to scale down or delete existing applications to free up resources." unless @capabilities.gears_free?
-    flash.now[:error] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{new_billing_path}">Click here to get more</a>.].html_safe unless @capabilities.gears_free?
+    flash.now[:error] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{gears_path}">Click here to get more</a>.].html_safe unless @capabilities.gears_free?
     @disabled = @missing_cartridges.present? || @cartridges.blank?
 
     user_default_domain rescue nil
