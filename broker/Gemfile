@@ -10,6 +10,7 @@ gem 'regin'
 gem 'open4'
 gem 'systemu'
 gem 'mongoid'
+gem 'mongo'
 gem 'bson'
 gem 'bson_ext'
 gem 'pry', :require => 'pry' if ENV['PRY']
