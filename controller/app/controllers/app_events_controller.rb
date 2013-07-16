@@ -4,6 +4,8 @@
 class AppEventsController < BaseController
   include RestModelHelper
   before_filter :get_domain, :get_application
+  action_log_tag_resource :application
+
   ##
   # API to perform manage an application
   # 
@@ -92,23 +94,21 @@ class AppEventsController < BaseController
         end
     rescue OpenShift::LockUnavailableException => e
       return render_error(:service_unavailable, "Application is currently busy performing another operation. Please try again in a minute.", e.code)
-    rescue OpenShift::UserException => uex
-      return render_error(:unprocessable_entity, uex.message, uex.code)
     rescue Exception => e
       return render_exception(e)
     end
 
-    @application.with(consistency: :strong).reload
+    @application.reload
     app = get_rest_application(@application)
     render_success(:ok, "application", app, msg, r)
   end
   
-  def set_log_tag
-    event = params[:event]
-    if event
-      @log_tag = "#{event.sub('-', '_').upcase}_APPLICATION"
-    else
-      @log_tag = "UNKNOWN_EVENT_APPLICATION"
+  protected
+    def action_log_tag_action
+      if event = params[:event].presence
+        event.underscore.upcase
+      else
+        "UNKNOWN_EVENT"
+      end
     end
-  end
 end

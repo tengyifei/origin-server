@@ -45,6 +45,20 @@ action "cartridge_do", :description => "run a cartridge action" do
            :display_as => "Exit Code"
 end
 
+action "get_facts", :description => "get a specific list of facts" do
+    display :always
+
+    input :facts,
+        :prompt         => "Facts",
+        :description    => "Enumerable list of fact names for which to retrieve values",
+        :type           => :any,
+        :optional       => false
+
+    output :output,
+        :description    => "A hash of facts and their values",
+        :display_as     => "Facts"
+end
+
 action "execute_parallel", :description => "run commands in parallel" do
     display :always
     output  :output,
@@ -183,6 +197,30 @@ action "has_embedded_app", :description => "Does this server contain a specified
            :display_as => "Exit Code"
 end
 
+action "get_gear_envs", :description => "Returns the gear's env hash" do
+    display :always
+
+    input :uuid,
+        :prompt         => "Application uuid",
+        :description    => "Application uuid",
+        :type           => :string,
+        :validation     => '^[a-zA-Z0-9]+$',
+        :optional       => false,
+        :maxlength      => 32
+
+    output  :time,
+            :description => "The time as a message",
+            :display_as => "Time"
+
+    output  :output,
+            :description => "hash",
+            :display_as => "Output"
+
+    output :exitcode,
+           :description => "Exit code",
+           :display_as => "Exit Code"
+end
+
 action "has_uid_or_gid", :description => "Returns whether this system has already taken the uid or gid" do
     display :always
 
@@ -191,6 +229,46 @@ action "has_uid_or_gid", :description => "Returns whether this system has alread
         :description    => "uid/gid",
         :type           => :number,
         :optional       => false
+
+    output  :time,
+            :description => "The time as a message",
+            :display_as => "Time"
+
+    output  :output,
+            :description => "true or false",
+            :display_as => "Output"
+
+    output :exitcode,
+           :description => "Exit code",
+           :display_as => "Exit Code"
+end
+
+action "has_app_cartridge", :description => "Does this application contain the specified cartridge on the gear?" do
+    display :always
+
+    input :app_uuid,
+        :prompt         => "Application uuid",
+        :description    => "Application uuid",
+        :type           => :string,
+        :validation     => '^[a-zA-Z0-9]+$',
+        :optional       => false,
+        :maxlength      => 32
+
+    input :gear_uuid,
+        :prompt         => "Gear uuid",
+        :description    => "Gear uuid",
+        :type           => :string,
+        :validation     => '^[a-zA-Z0-9]+$',
+        :optional       => false,
+        :maxlength      => 32
+
+    input :cartridge,
+        :prompt         => "Cartridge",
+        :description    => "Full name and version of the cartridge to run an action on",
+        :type           => :string,
+        :validation     => '\A[a-zA-Z0-9\.\-\/_]+\z',
+        :optional       => false,
+        :maxlength      => 64
 
     output  :time,
             :description => "The time as a message",

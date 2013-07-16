@@ -60,6 +60,51 @@ Then /^creating a new client( scalable)? (.+) application should fail$/ do |scal
   @apps << @app.name
 end
 
+Given /^a new client created( scalable)? (.+) application named "([^\"]*)" in the namespace "([^\"]*)"$/ do |scalable, type, app_name, namespace_key|
+  @unique_namespace_apps_hash ||= {}
+  @app = TestApp.create_unique(type, nil, scalable)
+  @test_apps_hash ||= {}
+
+  register_user(@app.login, @app.password) if $registration_required
+  if rhc_create_domain(@app)
+    if scalable
+      rhc_create_app(@app, true, '-s')
+    else
+      rhc_create_app(@app)
+    end
+  end
+
+  raise "Could not create domain: #{@app.create_domain_code}" unless @app.create_domain_code == 0
+  raise "Could not create application #{@app.create_app_code}" unless @app.create_app_code == 0
+
+ @test_apps_hash[app_name] = @app
+ @unique_namespace_apps_hash[namespace_key]= @app
+ @apps ||= []
+ @apps << @app.name
+end
+
+Given /^an additional client created( scalable)? (.+) application named "([^\"]*)" in the namespace "([^\"]*)"$/ do |scalable, type, app_name, namespace_key|
+
+ if @unique_namespace_apps_hash[namespace_key].nil?
+  raise "Cannot add new application because the namespace /'#{namespace_key}/' does not exist in the hash of namespaces"
+ else
+  previous_app = @unique_namespace_apps_hash[namespace_key]
+  @app =  TestApp.create_app_from_params(previous_app.namespace, previous_app.login, type, previous_app.password, scalable)
+  register_user(@app.login, @app.password) if $registration_required
+  if scalable
+     rhc_create_app(@app, true, '-s')
+  else
+     rhc_create_app(@app)
+  end 
+ end
+
+ raise "Could not create application #{@app.create_app_code}" unless @app.create_app_code == 0
+ @test_apps_hash ||= {}
+ @test_apps_hash[app_name] = @app
+ @apps ||= []
+ @apps << @app.name
+
+end
 
 When /^(\d+)( scalable)? (.+) applications are created$/ do |app_count, scalable, type|
   # Create our domain and apps
@@ -291,7 +336,7 @@ Then /^the application should be assigned to the supplementary groups? "([^\"]*)
 end
 
 Then /^the application has the group "([^\"]*)" as a secondary group$/ do |supplementary_group|
- command = "ssh 2>/dev/null -o BatchMode=yes -o StrictHostKeyChecking=no -tt #{@app.uid}@#{@app.name}-#{@app.namespace}.dev.rhcloud.com " +  "groups"
+ command = "ssh 2>/dev/null -o BatchMode=yes -o StrictHostKeyChecking=no -tt #{@app.uid}@#{@app.name}-#{@app.namespace}.#{$domain} " +  "groups"
  $logger.info("About to execute command:'#{command}'")
  output_buffer=[]
  exit_code = run(command,output_buffer)
@@ -301,3 +346,72 @@ Then /^the application has the group "([^\"]*)" as a secondary group$/ do |suppl
  end
 end
 
+Then /^the haproxy-status page will( not)? be responding$/ do |negate|
+  expected_status = negate ? 1 : 0
+
+  command = "/usr/bin/curl -s -H 'Host: #{@app.name}-#{@app.namespace}.#{$domain}' -s 'http://localhost/haproxy-status/;csv' | /bin/grep -q -e '^stats,FRONTEND'"
+  exit_status = runcon command, 'unconfined_u', 'unconfined_r', 'unconfined_t'
+  exit_status.should == expected_status
+end
+
+Then /^the gear members will be (UP|DOWN)$/ do |state|
+  found = nil
+
+  OpenShift::timeout(120) do
+    while found != 0
+      found = gear_up?("#{@app.name}-#{@app.namespace}.#{$domain}", state)
+      sleep 1
+    end
+  end
+  assert_equal 0, found, "Could not find valid gear"
+end
+
+Then /^(at least )?(\d+) gears will be in the cluster$/ do |fuzzy, expected|
+  expected = expected.to_i
+  actual = 0
+
+  gear_test = lambda { | expected, actual| return actual != expected }
+
+  if fuzzy
+    gear_test = lambda { |expected, actual| return actual < expected }
+  end
+
+
+  host = "'Host: #{@app.name}-#{@app.namespace}.#{$domain}'"
+  OpenShift::timeout(300) do
+    while gear_test.call(expected, actual)
+      sleep 1
+
+      $logger.debug("============ GEAR CSV #{Process.pid} ============")
+      results = `/usr/bin/curl -s -H #{host} -s 'http://localhost/haproxy-status/;csv'`.chomp()
+      $logger.debug(results)
+      $logger.debug("============ GEAR CSV END ============")
+
+      actual = results.split("\n").find_all {|l| l.start_with?('express,gear')}.length() + results.split("\n").find_all {|l| l.start_with?('express,local')}.length()
+      $logger.debug("Gear count: waiting for #{actual} to be #{'at least ' if fuzzy}#{expected}")
+    end
+  end
+
+  assert_equal false, gear_test.call(expected, actual)
+end
+
+def gear_up?(hostname, state='UP')
+  csv = `/usr/bin/curl -s -H 'Host: #{hostname}' -s 'http://localhost/haproxy-status/;csv'`
+  assert $?.success?, "Failed to retrieve haproxy-status results: #{csv}"
+  $logger.debug("============ GEAR CSV #{Process.pid} ============")
+  $logger.debug(csv)
+  $logger.debug('============ GEAR CSV END ============')
+  found = 1
+  csv.split.each do | haproxy_worker |
+
+    worker_attrib_array = haproxy_worker.split(',')
+    if worker_attrib_array[17] and worker_attrib_array[1].to_s == "local-gear" and worker_attrib_array[17].to_s.start_with?(state)
+      $logger.debug("Found: #{worker_attrib_array[1]} - #{worker_attrib_array[17]}")
+      found = 0
+    elsif worker_attrib_array[17] and worker_attrib_array[1].to_s.start_with?('gear') and not worker_attrib_array[17].to_s.start_with?(state)
+      return 1
+    end
+  end
+  $logger.debug("No gears found")
+  return found
+end

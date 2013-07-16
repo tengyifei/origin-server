@@ -1,5 +1,6 @@
 # @api REST
 class DomainsController < BaseController
+  include RestModelHelper
   before_filter :get_domain, :only => [:show, :destroy]
   # Retuns list of domains for the current user
   # 
@@ -53,7 +54,7 @@ class DomainsController < BaseController
       return render_error(:unprocessable_entity, nil, nil, nil, nil, messages)
     end
 
-    if Domain.with(consistency: :strong).where(canonical_namespace: namespace).count > 0 
+    if Domain.where(canonical_namespace: namespace).count > 0 
       return render_error(:unprocessable_entity, "Namespace '#{namespace}' is already in use. Please choose another.", 103, "id")
     end
 
@@ -138,14 +139,14 @@ class DomainsController < BaseController
     id = params[:id].downcase if params[:id].presence
     force = get_bool(params[:force])
     if force
-      apps = Application.with(consistency: :strong).where(domain_id: @domain._id)
+      apps = Application.where(domain_id: @domain._id)
       while apps.count > 0
         apps.each do |app|
           app.destroy_app
         end
-        apps = Application.with(consistency: :strong).where(domain_id: @domain._id)
+        apps = Application.where(domain_id: @domain._id)
       end
-    elsif Application.with(consistency: :strong).where(domain_id: @domain._id).count > 0
+    elsif Application.where(domain_id: @domain._id).count > 0
       if requested_api_version <= 1.3
         return render_error(:bad_request, "Domain contains applications. Delete applications first or set force to true.", 128)
       else
@@ -155,32 +156,12 @@ class DomainsController < BaseController
 
     begin
       # reload the domain so that MongoId does not see any applications
-      @domain.with(consistency: :strong).reload
+      @domain.reload
       result = @domain.delete
       status = requested_api_version <= 1.4 ? :no_content : :ok
       render_success(status, nil, nil, "Domain #{id} deleted.", result)
     rescue Exception => e
       return render_exception(e) 
     end
-  end
-
-  private
-
-  # Creates a new [RestDomain] or [RestDomain10] based on the requested API version.
-  #
-  # @param [Domain] domain The Domain object
-  # @param [CloudUser] owner of the Domain
-  # @return [RestDomain] REST object for API version > 1.0
-  # @return [RestDomain10] REST object for API version == 1.0
-  def get_rest_domain(domain)
-    if requested_api_version == 1.0
-      RestDomain10.new(domain, @cloud_user, get_url, nolinks)
-    else
-      RestDomain.new(domain, @cloud_user, get_url, nolinks)
-    end
-  end
-  
-  def set_log_tag
-    @log_tag = get_log_tag_prepend + "DOMAIN"
   end
 end

@@ -6,7 +6,7 @@ def upgrade_gear(name, login, gear_uuid)
 end
 
 Then /^the upgrade metadata will be cleaned up$/ do 
-  assert Dir.glob(File.join($home_root, @app.uid, 'data', '.migration*')).empty?
+  assert Dir.glob(File.join($home_root, @app.uid, 'runtime', '.upgrade*')).empty?
   assert_file_not_exists File.join($home_root, @app.uid, 'app-root', 'runtime', '.preupgrade_state')
 end
 
@@ -17,13 +17,14 @@ end
 # TODO: eliminate dependency on 0.0.1 version being hardcoded
 
 Given /^the expected version of the mock cartridge is installed$/ do
-  cart_repo = OpenShift::CartridgeRepository.instance
+  cart_repo = OpenShift::Runtime::CartridgeRepository.instance
   assert cart_repo.exist?('mock', '0.0.1', '0.1'), 'expected mock version must exist'
 end
 
 Given /^a compatible version of the mock cartridge$/ do
   tmp_cart_src = '/tmp/mock-cucumber-rewrite/compat'
   current_manifest = prepare_mock_for_rewrite(tmp_cart_src)
+  create_upgrade_script(tmp_cart_src)
 
   rewrite_and_install(current_manifest, tmp_cart_src) do |manifest, current_version|
     manifest['Compatible-Versions'] = [ current_version ]
@@ -33,12 +34,13 @@ end
 Given /^an incompatible version of the mock cartridge$/ do
   tmp_cart_src = '/tmp/mock-cucumber-rewrite/incompat'
   current_manifest = prepare_mock_for_rewrite(tmp_cart_src)
+  create_upgrade_script(tmp_cart_src)
 
   rewrite_and_install(current_manifest, tmp_cart_src)
 end
 
 def prepare_mock_for_rewrite(target)
-  cart_repo = OpenShift::CartridgeRepository.instance
+  cart_repo = OpenShift::Runtime::CartridgeRepository.instance
   cartridge = cart_repo.select('mock', '0.1')
 
   FileUtils.rm_rf target
@@ -47,6 +49,21 @@ def prepare_mock_for_rewrite(target)
   %x(shopt -s dotglob; cp -ad #{cartridge.repository_path}/* #{target})
 
   cartridge
+end
+
+def create_upgrade_script(target)
+  upgrade_script_path = File.join(target, %w(bin upgrade))
+  upgrade_script = <<-EOF
+#!/bin/bash
+
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+source $OPENSHIFT_MOCK_DIR/mock.conf
+
+touch $MOCK_STATE/upgrade_invoked
+EOF
+
+  IO.write(upgrade_script_path, upgrade_script)
+  FileUtils.chmod('a=wrx,go=r', upgrade_script_path)
 end
 
 def rewrite_and_install(current_manifest, tmp_cart_src)
@@ -69,8 +86,8 @@ def rewrite_and_install(current_manifest, tmp_cart_src)
 end
 
 def assert_successful_install(tmp_cart_src, next_version)
-  OpenShift::CartridgeRepository.instance.install(tmp_cart_src)
-  observed_latest_version = OpenShift::CartridgeRepository.instance.select('mock', '0.1').cartridge_version
+  OpenShift::Runtime::CartridgeRepository.instance.install(tmp_cart_src)
+  observed_latest_version = OpenShift::Runtime::CartridgeRepository.instance.select('mock', '0.1').cartridge_version
 
   $logger.info "Observed latest version: #{observed_latest_version}"
 
@@ -103,9 +120,9 @@ end
 Then /^the invocation markers from an? (compatible|incompatible) upgrade should exist$/ do |type|
   should_exist_markers = case type
   when 'compatible'
-    %w(control_status)
+    %w(upgrade_invoked)
   when 'incompatible'
-    %w(setup_called setup_succeed control_start control_status)
+    %w(upgrade_invoked setup_called setup_succeed control_start control_status)
   end
 
   should_not_exist_markers = case type
@@ -126,4 +143,40 @@ Then /^the invocation markers from an? (compatible|incompatible) upgrade should 
     marker_file = File.join($home_root, @app.uid, 'app-root', 'data', '.mock_cartridge_state', marker)
     assert_file_not_exists marker_file
   end    
+end
+
+Given /^a gear level upgrade extension exists$/ do
+  gear_upgrade_content = <<-EOF
+module OpenShift
+  class GearUpgradeExtension
+    def initialize(uuid, gear_home)
+      @uuid = uuid
+      @gear_home = gear_home
+    end
+
+    def pre_upgrade(progress)
+      progress.log("Creating pre-upgrade marker")
+      touch_marker('pre')
+    end
+
+    def post_upgrade(progress)
+      progress.log("Creating post-upgrade marker")
+      touch_marker('post')
+    end
+
+    def touch_marker(name)
+      marker_name = ".gear_upgrade_\#{name}"
+      marker_path = File.join(@gear_home, 'app-root', 'data', marker_name)
+      FileUtils.touch(marker_path)
+    end
+  end
+end
+EOF
+  IO.write('/tmp/gear_upgrade.rb', gear_upgrade_content)
+  `echo 'GEAR_UPGRADE_EXTENSION=/tmp/gear_upgrade' >> /etc/openshift/node.conf`
+end
+
+Then /^the invocation markers from the gear upgrade should exist$/ do
+  assert_file_exists File.join($home_root, @app.uid, %w(app-root data .gear_upgrade_pre))
+  assert_file_exists File.join($home_root, @app.uid, %w(app-root data .gear_upgrade_post))
 end

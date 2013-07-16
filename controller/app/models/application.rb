@@ -58,7 +58,6 @@ end
 class Application
   include Mongoid::Document
   include Mongoid::Timestamps
-  include UtilHelper
 
   # Maximum length of  a valid application name
   APP_NAME_MAX_LENGTH = 32
@@ -314,7 +313,7 @@ class Application
       ssh_keys = []
 
       # reload the application to get the latest data
-      self.with(consistency: :strong).reload
+      self.reload
 
       # get the application keys
       ssh_keys |= self.app_ssh_keys.map {|k| k.to_key_hash}
@@ -414,9 +413,17 @@ class Application
   # @raise [OpenShift::UserException] Exception raised if there is any reason the feature/cartridge cannot be added into the Application
   def add_features(features, group_overrides=[], init_git_url=nil)
     ssl_endpoint = Rails.application.config.openshift[:ssl_endpoint]
+    cart_name_map = {}
 
     features.each do |feature_name|
       cart = CartridgeCache.find_cartridge(feature_name, self)
+      
+      # ensure that the user isn't trying to add multiple versions of the same cartridge
+      if cart_name_map.has_key?(cart.original_name)
+        raise OpenShift::UserException.new("#{cart.name} cannot co-exist with #{cart_name_map[cart.original_name]} in the same application", 109)
+      else
+        cart_name_map[cart.original_name] = cart.name
+      end
 
       # Make sure this is a valid cartridge
       if cart.nil?
@@ -428,6 +435,14 @@ class Application
           if ci.is_web_framework?
             raise OpenShift::UserException.new("You can only have one framework cartridge in your application '#{name}'.", 109)
           end
+        end
+      end
+
+      # check if the requested feature is provided by any existing/embedded application cartridge
+      component_instances.each do |ci|
+        ci_cart = ci.get_cartridge
+        if ci_cart.original_name == cart.original_name
+          raise OpenShift::UserException.new("#{feature_name} cannot co-exist with cartridge #{ci.cartridge_name} in your application", 109)
         end
       end
 
@@ -492,7 +507,7 @@ class Application
     # adding this feature may have caused pending_ops to be created on the domain
     # for adding env vars and ssh keys
     # execute run_jobs on the domain to take care of those
-    domain.with(consistency: :strong).reload
+    domain.reload
     domain.run_jobs
     result_io
   end
@@ -550,7 +565,7 @@ class Application
     # removing this feature may have caused pending_ops to be created on the domain
     # for removing env vars and ssh keys
     # execute run_jobs on the domain to take care of those
-    domain.with(consistency: :strong).reload
+    domain.reload
     domain.run_jobs
     result_io
   end
@@ -849,11 +864,6 @@ class Application
   end
 
   def component_status(component_instance)
-    #if cartridge_name.nil?
-    #  component_instance = self.component_instances.find(component_name: component_name)
-    #else
-    #  component_instance = self.component_instances.find(component_name: component_name, cartridge_name: cartridge_name)
-    #end
     result_io = ResultIO.new
     status_messages = []
     GroupInstance.run_on_gears(component_instance.group_instance.gears, result_io, false) do |gear, r|
@@ -891,7 +901,7 @@ class Application
         (server_alias.length == 0 ) or
         (server_alias =~ /^\d+\.\d+\.\d+\.\d+$/) or
         (server_alias =~ /\A[\S]+(\.(json|xml|yml|yaml|html|xhtml))\z/) or
-        (not server_alias.match(/\A[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\z/))
+        (not server_alias.match(/\A[a-z0-9]+([\.]?[\-a-z0-9]+)+\z/))
       raise OpenShift::UserException.new("Invalid Server Alias '#{server_alias}' specified", 105)
     end
     validate_certificate(ssl_certificate, private_key, pass_phrase)
@@ -1122,6 +1132,10 @@ class Application
       when "BROKER_KEY_REMOVE"
         pending_op = PendingAppOpGroup.new(op_type: :remove_broker_auth_key, args: { }, user_agent: self.user_agent)
         Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: pending_op.serializable_hash_with_timestamp } })
+      when "NOTIFY_ENDPOINT_CREATE"
+        OpenShift::RoutingService.notify_create_public_endpoint self, *command_item[:args]
+      when "NOTIFY_ENDPOINT_DELETE"
+        OpenShift::RoutingService.notify_delete_public_endpoint self, *command_item[:args]
       end
     end
 
@@ -1148,7 +1162,7 @@ class Application
   # True on success or False if unable to acquire the lock or no pending jobs.
   def run_jobs(result_io=nil)
     result_io = ResultIO.new if result_io.nil?
-    self.with(consistency: :strong).reload
+    self.reload
     return true if (self.pending_op_groups.count == 0)
     begin
       while self.pending_op_groups.count > 0
@@ -1174,7 +1188,7 @@ class Application
             ops, add_gear_count, rm_gear_count = update_requirements(features, group_overrides)
             try_reserve_gears(add_gear_count, rm_gear_count, op_group, ops)
           when :update_component_limits
-            updated_overrides = deep_copy(self.group_overrides || [])
+            updated_overrides = (self.group_overrides || []).deep_dup
             found = updated_overrides.find {|go| go["components"].include? op_group.args["comp_spec"] }
             group_override = found || {"components" => [op_group.args["comp_spec"]]}
             group_override["min_gears"] = op_group.args["min"] unless op_group.args["min"].nil?
@@ -1257,7 +1271,7 @@ class Application
           op_group.execute(result_io)
           unreserve_gears(op_group.num_gears_removed)
           op_group.delete
-          self.with(consistency: :strong).reload
+          self.reload
         end
 
       end
@@ -1435,10 +1449,18 @@ class Application
     init_git_url = nil unless hosts_app_dns
 
     gear_id_prereqs = {}
+    maybe_notify_app_create_op = []
     gear_ids.each do |gear_id|
       host_singletons = (gear_id == singleton_gear_id)
       app_dns = (host_singletons && hosts_app_dns)
-      init_gear_op = PendingAppOp.new(op_type: :init_gear,   args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id, "host_singletons" => host_singletons, "app_dns" => app_dns})
+
+      if app_dns
+        notify_app_create_op = PendingAppOp.new(op_type: :notify_app_create)
+        pending_ops.push(notify_app_create_op) 
+        maybe_notify_app_create_op = [notify_app_create_op]
+      end
+
+      init_gear_op = PendingAppOp.new(op_type: :init_gear,   args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id, "host_singletons" => host_singletons, "app_dns" => app_dns}, prereq: maybe_notify_app_create_op)
       init_gear_op.prereq = [ginst_op_id] unless ginst_op_id.nil?
       reserve_uid_op  = PendingAppOp.new(op_type: :reserve_uid,  args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [init_gear_op._id.to_s])
       create_gear_op    = PendingAppOp.new(op_type: :create_gear,  args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [reserve_uid_op._id.to_s], retry_rollback_op: reserve_uid_op._id.to_s)
@@ -1479,7 +1501,9 @@ class Application
   def calculate_gear_destroy_ops(ginst_id, gear_ids, additional_filesystem_gb)
     pending_ops = []
     delete_gear_op = nil
+    deleting_app = false
     gear_ids.each do |gear_id|
+      deleting_app = true if self.group_instances.find(ginst_id).gears.find(gear_id).app_dns
       destroy_gear_op   = PendingAppOp.new(op_type: :destroy_gear,   args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id})
       deregister_dns_op = PendingAppOp.new(op_type: :deregister_dns, args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [destroy_gear_op._id.to_s])
       unreserve_uid_op  = PendingAppOp.new(op_type: :unreserve_uid,  args: {"group_instance_id"=> ginst_id, "gear_id" => gear_id}, prereq: [deregister_dns_op._id.to_s])
@@ -1506,6 +1530,12 @@ class Application
           "usage_type" => UsageRecord::USAGE_TYPES[:premium_cart], "cart_name" => comp_spec["cart"]}, prereq: [delete_gear_op._id.to_s]))
       end if cartridge.is_premium?
     end
+
+    if deleting_app
+      notify_app_delete_op = PendingAppOp.new(op_type: :notify_app_delete, prereq: [pending_ops.last._id.to_s])
+      pending_ops.push(notify_app_delete_op) 
+    end
+
     pending_ops
   end
 
@@ -1837,10 +1867,12 @@ class Application
       component_ops[config_order[idx]][:post_configures].each { |op| op.prereq += prereq_ids }
     end
 
-    execute_connection_op = nil
-    all_ops_ids = pending_ops.map{ |op| op._id.to_s }
-    execute_connection_op = PendingAppOp.new(op_type: :execute_connections, prereq: all_ops_ids)
-    pending_ops.push execute_connection_op
+    unless pending_ops.empty? or ((pending_ops.length == 1) and (pending_ops[0].op_type == :set_group_overrides))
+      execute_connection_op = nil
+      all_ops_ids = pending_ops.map{ |op| op._id.to_s }
+      execute_connection_op = PendingAppOp.new(op_type: :execute_connections, prereq: all_ops_ids)
+      pending_ops.push execute_connection_op
+    end
 
     # check to see if there are any deployable carts being configured
     # if so, then make sure that the post-configure op for it is executed at the end
@@ -1951,7 +1983,7 @@ class Application
       until Lock.lock_user(owner, self)
         sleep 1
       end
-      owner.with(consistency: :strong).reload
+      owner.reload
       owner_capabilities = owner.get_capabilities
       if owner.consumed_gears + num_gears_added > owner_capabilities["max_gears"] and num_gears_added > 0
         raise OpenShift::GearLimitReachedException.new("#{owner.login} is currently using #{owner.consumed_gears} out of #{owner_capabilities["max_gears"]} limit and this application requires #{num_gears_added} additional gears.")
@@ -1974,7 +2006,7 @@ class Application
       until Lock.lock_user(owner, self)
         sleep 1
       end
-      owner.with(consistency: :strong).reload
+      owner.reload
       owner.consumed_gears -= num_gears_removed
       owner.save
     ensure
@@ -1983,7 +2015,7 @@ class Application
   end
 
   def process_group_overrides(component_instances, group_overrides)
-    overrides = group_overrides ? deep_copy(group_overrides) : []
+    overrides = (group_overrides || []).deep_dup
     cleaned_overrides = []
 
     # Resolve additional group overrides from component_instances
@@ -1992,7 +2024,7 @@ class Application
       prof = cart.profile_for_feature(component_instance["comp"])
       prof = prof[0] if prof.is_a?(Array)
       comp = prof.get_component(component_instance["comp"])
-      overrides += deep_copy(prof.group_overrides)
+      overrides += prof.group_overrides.deep_dup
       component_go = {"components" => [{"cart" => cart.name, "comp" => comp.name}] }
       if !comp.is_singleton?
         component_go["min_gears"] = comp.scaling.min
@@ -2046,7 +2078,7 @@ class Application
     # work on cleaned_overrides only
     go_map = {}
     cleaned_overrides.each { |go|
-      merged_go = deep_copy(go)
+      merged_go = go.deep_dup
       go["components"].each { |comp|
         existing_go = go_map["#{comp["cart"]}/#{comp["comp"]}"]
         merged_go = merge_group_overrides(merged_go, existing_go) if existing_go
@@ -2059,9 +2091,8 @@ class Application
     component_instances.each { |ci|
       go = go_map["#{ci["cart"]}/#{ci["comp"]}"]
       next if go.nil?
-      processed_group_overrides << deep_copy(go) if !processed_group_overrides.include? go
+      processed_group_overrides << go.deep_dup if !processed_group_overrides.include? go
     }
-    # processed_group_overrides = deep_copy(go_map.values.uniq)
     return [processed_group_overrides, processed_group_overrides]
   end
 
@@ -2112,7 +2143,7 @@ class Application
   def elaborate(features, group_overrides = [])
     profiles = []
     added_cartridges = []
-    overrides = deep_copy(group_overrides)
+    overrides = group_overrides.deep_dup
 
     #calculate initial list based on user provided dependencies
     features.each do |feature|
@@ -2363,7 +2394,7 @@ class Application
   # Do not change the format of the key name, otherwise it may break key removal code on the node
   def get_updated_ssh_keys(user_id, keys)
     updated_keys_attrs = keys.map { |key|
-      key_attrs = deep_copy(key.to_key_hash)
+      key_attrs = key.to_key_hash.deep_dup
       case key.class
       when UserSshKey
         key_attrs["name"] = user_id.to_s + "-" + key_attrs["name"]
