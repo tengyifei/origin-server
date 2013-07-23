@@ -58,11 +58,11 @@ module OpenShift
         capability_gear_sizes = user_capabilities['gear_sizes'] if user_capabilities.has_key?('gear_sizes')
 
         if user.auth_method == :broker_auth
-          return ["small", "medium"] | capability_gear_sizes
+          return Rails.configuration.openshift[:gear_sizes] | capability_gear_sizes
         elsif !capability_gear_sizes.nil? and !capability_gear_sizes.empty?
           return capability_gear_sizes
         else
-          return ["small"]
+          return Rails.configuration.openshift[:default_gear_capabilities]
         end
       end
 
@@ -75,7 +75,7 @@ module OpenShift
       # * node_profile: string identifier for a set of node characteristics
       # * district_uuid: identifier for the district
       # * least_preferred_server_identities: list of server identities that are least preferred. These could be the ones that won't allow the gear group to be highly available
-      # * gear_exists_in_district: true if the gear belongs to a node in the same district  
+      # * gear_exists_in_district: true if the gear belongs to a node in the same district
       # * required_uid: the uid that is required to be available in the destination district
       #
       # RETURNS:
@@ -89,7 +89,7 @@ module OpenShift
       # * Uses Rails.configuration.msg_broker
       # * Uses District
       # * Calls rpc_find_available
-      # 
+      #
       # VALIDATIONS:
       # * If gear_exists_in_district is true, then required_uid cannot be set and has to be nil
       # * If gear_exists_in_district is true, then district_uuid must be passed and cannot be nil
@@ -109,8 +109,8 @@ module OpenShift
 
       # <<factory method>>
       #
-      # Find a single node. Implements superclass find_one() method. 
-      # 
+      # Find a single node. Implements superclass find_one() method.
+      #
       # INPUTS:
       # * node_profile: characteristics for node filtering
       #
@@ -121,7 +121,7 @@ module OpenShift
       # * Uses rpc_find_one() method
       def self.find_one_impl(node_profile=nil)
         current_server = rpc_find_one(node_profile)
-        current_server, capacity, district = rpc_find_available(node_profile) unless current_server 
+        current_server, capacity, district = rpc_find_available(node_profile) unless current_server
 
         raise OpenShift::NodeException.new("No nodes found.", 140) unless current_server
         Rails.logger.debug "DEBUG: find_one_impl: current_server: #{current_server}"
@@ -134,10 +134,10 @@ module OpenShift
       #
       # Return a list of blacklisted namespaces and app names.
       # Implements superclass get_blacklisted() method.
-      # 
+      #
       # INPUTS:
       # * none
-      # 
+      #
       # RETURNS:
       # * empty list
       #
@@ -199,7 +199,7 @@ module OpenShift
       # RETURNS:
       # * an array with following information:
       #
-      # [Filesystem, blocks_used, blocks_soft_limit, blocks_hard_limit, 
+      # [Filesystem, blocks_used, blocks_soft_limit, blocks_hard_limit,
       # inodes_used, inodes_soft_limit, inodes_hard_limit]
       #
       # RAISES:
@@ -237,7 +237,7 @@ module OpenShift
       #
       # Set blocks hard limit and inodes hard limit for uuid.
       # Effects disk quotas on Gear on Node
-      # 
+      #
       # INPUT:
       # * gear: A Gear object
       # * storage_in_gb: integer
@@ -291,7 +291,7 @@ module OpenShift
       #
       # NOTES:
       # * a method on District class of the node.
-      # 
+      #
       def reserve_uid(district_uuid=nil, preferred_uid=nil)
         reserved_uid = nil
         if Rails.configuration.msg_broker[:districts][:enabled]
@@ -367,14 +367,14 @@ module OpenShift
 
       #
       # <<instance method>>
-      # 
+      #
       # Execute the 'app-create' script on a node.
       #
       # INPUTS:
       # * gear: a Gear object
       # * quota_blocks: Integer - max file space in blocks
       # * quota_files: Integer - max files count
-      # 
+      #
       # RETURNS:
       # * MCollective "result", stdout and exit code
       #
@@ -385,11 +385,11 @@ module OpenShift
       #
       # Constructs a shell command line to be executed by the MCollective agent
       # on the node.
-      #      
+      #
       def create(gear, quota_blocks=nil, quota_files=nil)
         app = gear.app
         result = nil
-        (1..10).each do |i|                    
+        (1..10).each do |i|
           args = build_base_gear_args(gear, quota_blocks, quota_files)
           mcoll_reply = execute_direct(@@C_CONTROLLER, 'app-create', args)
 
@@ -456,7 +456,7 @@ module OpenShift
       # * priv_key: String - the private key value
       # * server_alias: String - the name of the server which will offer this key
       # * passphrase: String - the private key passphrase or '' if its unencrypted.
-      # 
+      #
       # RETURNS: a parsed MCollective result
       #
       # NOTES:
@@ -478,7 +478,7 @@ module OpenShift
       # INPUTS:
       # * gear: a Gear object
       # * server_alias: String - the name of the server which will offer this key
-      # 
+      #
       # RETURNS: a parsed MCollective result
       #
       # NOTES:
@@ -491,7 +491,7 @@ module OpenShift
         parse_result(result)
       end
 
-      # 
+      #
       # Add an ssh key to a gear on the remote node.
       # See node/bin/oo-authorized-ssh-key-add.
       #
@@ -580,7 +580,7 @@ module OpenShift
       # NOTES:
       # * uses execute_direct
       # * calls oo-env-var-remove on the node
-      #      
+      #
       def remove_env_var(gear, key)
         args = build_base_gear_args(gear)
         args['--with-key'] = key
@@ -589,7 +589,7 @@ module OpenShift
       end
 
       #
-      # Add a broker auth key.  The broker auth key allows an application 
+      # Add a broker auth key.  The broker auth key allows an application
       # to request scaling and other actions from the broker.
       #
       # INPUTS:
@@ -613,7 +613,7 @@ module OpenShift
       end
 
       #
-      # Remove a broker auth key. The broker auth key allows an application 
+      # Remove a broker auth key. The broker auth key allows an application
       # to request scaling and other actions from the broker.
       #
       # INPUTS:
@@ -625,7 +625,7 @@ module OpenShift
       # NOTES:
       # * uses execute_direct
       # * calls oo-broker-auth-key-remove
-      #    
+      #
       def remove_broker_auth_key(gear)
         args = build_base_gear_args(gear)
         result = execute_direct(@@C_CONTROLLER, 'broker-auth-key-remove', args)
@@ -651,134 +651,6 @@ module OpenShift
         args = build_base_gear_args(gear)
         result = execute_direct(@@C_CONTROLLER, 'app-state-show', args)
         parse_result(result, gear)
-      end
-
-      #
-      # Install a cartridge in a gear.
-      # If the cart is a 'framework' cart, create the gear first.
-      #
-      # A 'framework' cart:
-      # * Runs a service which,
-      # * answers HTTP queries for content
-      # * gets a new DNS record
-      # * does not require an existing gear
-      # 
-      # An 'embedded' cart:
-      # * Requires an existing gear
-      # * depends on an existing framework cart
-      # * Interacts with the service from a framework cart
-      # * does not serve http *content* (can proxy)
-      # 
-      # INPUTS:
-      # * gear: a Gear object
-      # * component: a component_instance object
-      # * template_git_url: a url of a git repo containing a cart overlay
-      #
-      # RETURNS
-      # the result of either run_cartridge_command or add_component
-      #
-      # Framework carts just return result_io
-      # Embedded carts return an array [result_io, cart_data]
-      #
-      # NOTES:
-      # * should return consistant values
-      # * cart data request should be separate method?
-      # * create Gear should be a method on Node object
-      # * should not cause node side Gear side effect
-      # * should be a method on Gear object
-      # * should not include incoherent template install 
-      # * calls *either* run_cartridge_command or add_component
-      #
-      def configure_cartridge(gear, component, template_git_url=nil)
-        result_io = ResultIO.new
-        cart_data = nil
-
-        args = build_base_gear_args(gear)
-        args = build_base_component_args(component, args)
-
-        app = gear.app
-        downloaded_cart =  app.downloaded_cart_map.values.find { |c| c["versioned_name"]==component.cartridge_name}
-        if downloaded_cart
-          args['--with-cartridge-manifest'] = downloaded_cart["original_manifest"]
-          args['--with-software-version'] = downloaded_cart["version"]
-        end
-
-        if !template_git_url.nil?  && !template_git_url.empty?
-          args['--with-template-git-url'] = template_git_url
-        end
-
-        if framework_carts(app).include? component.cartridge_name
-          result_io = run_cartridge_command(component.cartridge_name, gear, "configure", args)
-        elsif embedded_carts(app).include? component.cartridge_name
-          result_io, cart_data = add_component(gear, component.cartridge_name, args)
-        else
-          #no-op
-        end
-
-        return result_io#, cart_data
-      end
-
-      #
-      # Post configuration for a cartridge on a gear.
-      #
-      # INPUTS:
-      # * gear: a Gear object
-      # * component: component_instance object
-      # * template_git_url: a url of a git repo containing a cart overlay
-      #
-      # RETURNS
-      # ResultIO: the result of running post-configuration on the cartridge
-      #
-      def post_configure_cartridge(gear, component, template_git_url=nil)
-        result_io = ResultIO.new
-        cart_data = nil
-        cart = component.cartridge_name
-
-        args = build_base_gear_args(gear)
-        args = build_base_component_args(component, args)
-
-        if !template_git_url.nil?  && !template_git_url.empty?
-          args['--with-template-git-url'] = template_git_url
-        end
-
-        if framework_carts(gear.app).include?(cart) or embedded_carts(gear.app).include?(cart)
-          result_io = run_cartridge_command(cart, gear, "post-configure", args)
-        else
-          #no-op
-        end
-
-        return result_io
-      end
-
-      #
-      # Remove a Gear and the last contained cartridge from a node
-      # 
-      # INPUTS
-      # * gear: a Gear object
-      # * component: a component_instance object
-      # 
-      # RETURNS:
-      # * result of run_cartridge_command 'deconfigure' OR remove_component
-      # * OR an empty result because the cartridge was invalid
-      #
-      # NOTES:
-      # * This is really two operations:
-      # ** remove_cartridge on Gear
-      # ** remove_gear on Node
-      # * should raise an exception for invalid gear?
-      # 
-      def deconfigure_cartridge(gear, component)
-        args = build_base_gear_args(gear)
-        cart = component.cartridge_name
-        args = build_base_component_args(component, args)
-
-        if framework_carts(gear.app).include? cart
-          run_cartridge_command(cart, gear, "deconfigure", args)
-        elsif embedded_carts(gear.app).include? cart
-          remove_component(gear,component)
-        else
-          ResultIO.new
-        end
       end
 
       # <<accessor>>
@@ -895,7 +767,7 @@ module OpenShift
       # NOTES:
       # * method on Node
       # * calls rpc_get_fact_direct
-      #      
+      #
       def get_node_profile
         rpc_get_fact_direct('node_profile')
       end
@@ -938,6 +810,121 @@ module OpenShift
       #
       def get_quota_files
         rpc_get_fact_direct('quota_files')
+      end
+
+      #
+      # Add a component to an existing gear on the node
+      #
+      # INPUTS:
+      # * gear: a Gear object
+      # * cart: string representing cartridge name
+      #
+      # RETURNS:
+      # * Array [ResultIO, String]
+      #
+      # RAISES:
+      # * Exception
+      #
+      # CATCHES:
+      # * Exception
+      #
+      # NOTES:
+      # * uses run_cartridge_command
+      # * runs "configure" on a "component"
+      #
+      def add_component(gear, component, template_git_url=nil)
+        result_io = ResultIO.new
+        cart_data = nil
+
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+
+        app = gear.app
+        downloaded_cart =  app.downloaded_cart_map.values.find { |c| c["versioned_name"]==component.cartridge_name}
+        if downloaded_cart
+          args['--with-cartridge-manifest'] = downloaded_cart["original_manifest"]
+          args['--with-software-version'] = downloaded_cart["version"]
+        end
+
+        if !template_git_url.nil?  && !template_git_url.empty?
+          args['--with-template-git-url'] = template_git_url
+        end
+
+        result_io = run_cartridge_command(component.cartridge_name, gear, "configure", args)
+
+        component_details = result_io.appInfoIO.string.empty? ? '' : result_io.appInfoIO.string
+        result_io.debugIO << "\n\n#{component.cartridge_name}: #{component_details}" unless component_details.blank?
+
+        return result_io
+      end
+
+      #
+      # Post configuration for a cartridge on a gear.
+      #
+      # INPUTS:
+      # * gear: a Gear object
+      # * component: component_instance object
+      # * template_git_url: a url of a git repo containing a cart overlay
+      #
+      # RETURNS
+      # ResultIO: the result of running post-configure on the cartridge
+      #
+      def post_configure_component(gear, component, template_git_url=nil)
+        result_io = ResultIO.new
+        cart_data = nil
+        cart = component.cartridge_name
+
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+
+        if !template_git_url.nil?  && !template_git_url.empty?
+          args['--with-template-git-url'] = template_git_url
+        end
+
+        if framework_carts(gear.app).include?(cart) or embedded_carts(gear.app).include?(cart)
+          result_io = run_cartridge_command(cart, gear, "post-configure", args)
+        else
+          #no-op
+        end
+
+        component_details = result_io.appInfoIO.string.empty? ? '' : result_io.appInfoIO.string
+        result_io.debugIO << "#{cart}: #{component_details}" unless component_details.blank?
+
+        return result_io
+      end
+
+      #
+      # Remove a component from a gear
+      #
+      # INPUTS:
+      # * gear: a Gear object
+      # * component: String: a component name
+      #
+      # RETURNS:
+      # * ResultIO? String?
+      #
+      # NOTES
+      # * method on gear?
+      #
+      def remove_component(gear, component)
+        app = gear.app
+        args = build_base_gear_args(gear)
+        args = build_base_component_args(component, args)
+        cart = component.cartridge_name
+
+        Rails.logger.debug "DEBUG: Deconfiguring cartridge '#{cart}' in application '#{app.name}' on node '#{@id}'"
+
+        resultIO = ResultIO.new
+        begin
+          resultIO = run_cartridge_command(cart, gear, 'deconfigure', args)
+        rescue OpenShift::NodeException => e
+          if has_app_cartridge?(app.uuid, gear.uuid, cart)
+            raise
+          else
+            Rails.logger.debug "DEBUG: Cartridge '#{cart}' not found on within application '#{app.name}/#{gear.uuid}'.  Continuing with deconfigure."
+          end
+        end
+        return resultIO
       end
 
       #
@@ -984,7 +971,7 @@ module OpenShift
       # * uses stop_component
       # * uses start_component
       # * should be a method on Gear?
-      #      
+      #
       def stop(gear, component)
         args = build_base_gear_args(gear)
         cart = component.cartridge_name
@@ -999,9 +986,9 @@ module OpenShift
         RemoteJob.new('openshift-origin-node', 'stop', args)
       end
 
-      # 
+      #
       # Force gear services to stop
-      # 
+      #
       # INPUTS:
       # * gear: Gear object
       # * cart: Cartridge object
@@ -1032,7 +1019,7 @@ module OpenShift
       # INPUTS:
       # * gear: a Gear object
       # * cart: a Cartridge object
-      # 
+      #
       # RETURNS:
       # * a ResultIO of undefined content
       #
@@ -1062,7 +1049,7 @@ module OpenShift
       # INPUTS:
       # * gear: a Gear object
       # * cart: a Cartridge object
-      # 
+      #
       # RETURNS:
       # * a ResultIO of undefined content
       #
@@ -1070,7 +1057,7 @@ module OpenShift
       # * uses run_cartridge_command
       # * uses restart_component
       # * method on Gear?
-      #      
+      #
       def reload(gear, component)
         args = build_base_gear_args(gear)
         cart = component.cartridge_name
@@ -1110,7 +1097,7 @@ module OpenShift
 
       #
       # Clean up unneeded artifacts in a gear
-      # 
+      #
       # INPUTS:
       # * gear: a Gear object
       # * cart: a Cartridge object
@@ -1158,7 +1145,7 @@ module OpenShift
           run_cartridge_command(cart, gear, "threaddump", args)
         else
           ResultIO.new
-        end 
+        end
       end
 
       def get_threaddump_job(gear, component)
@@ -1192,7 +1179,7 @@ module OpenShift
           run_cartridge_command(cart, gear, "system-messages", args)
         else
           ResultIO.new
-        end 
+        end
       end
 
       #
@@ -1375,7 +1362,7 @@ module OpenShift
       # * gear: a Gear object
       # * key: an environment variable name
       # * value: and environment variable value
-      # 
+      #
       # RETURNS:
       # * a RemoteJob object
       #
@@ -1403,7 +1390,7 @@ module OpenShift
       #
       # NOTES:
       # * uses RemoteJob
-      # 
+      #
       def get_env_var_remove_job(gear, key)
         args = build_base_gear_args(gear)
         args['--with-key'] = key
@@ -1676,7 +1663,7 @@ module OpenShift
         source_container = gear.get_proxy
         start_order.each do |cinst|
           next if not gear_components.include? cinst
-          next if cinst.is_singleton? and (not gear.host_singletons)
+          next if cinst.is_sparse? and (not gear.sparse_carts.include? cinst._id) and (not gear.host_singletons)
           cart = cinst.cartridge_name
           idle, leave_stopped = state_map[cart]
           unless leave_stopped
@@ -1725,7 +1712,7 @@ module OpenShift
         start_order,stop_order = app.calculate_component_orders
         stop_order.each { |cinst|
           next if not gi_comps.include? cinst
-          next if cinst.is_singleton? and (not gear.host_singletons)
+          next if cinst.is_sparse? and (not gear.sparse_carts.include? cinst._id) and (not gear.host_singletons)
           cart = cinst.cartridge_name
           idle, leave_stopped = state_map[cart]
           # stop the cartridge if it needs to
@@ -1763,7 +1750,7 @@ module OpenShift
       # * node_profile: String
       #
       # RETURNS:
-      # * ResultIO 
+      # * ResultIO
       #
       # RAISES:
       # * OpenShift::UserException
@@ -1814,7 +1801,7 @@ module OpenShift
         idle, leave_stopped, quota_blocks, quota_files = get_app_status(app)
         gi = gear.group_instance
         gi.all_component_instances.each do |cinst|
-          next if cinst.is_singleton? and (not gear.host_singletons)
+          next if cinst.is_sparse? and (not gear.sparse_carts.include? cinst._id) and (not gear.host_singletons)
           state_map[cinst.cartridge_name] = [idle, leave_stopped]
         end
 
@@ -1834,7 +1821,7 @@ module OpenShift
             gi_comps = gear.group_instance.all_component_instances.to_a
             start_order.each do |cinst|
               next if not gi_comps.include? cinst
-              next if cinst.is_singleton? and (not gear.host_singletons)
+              next if cinst.is_sparse? and (not gear.sparse_carts.include? cinst._id) and (not gear.host_singletons)
               cart = cinst.cartridge_name
               idle, leave_stopped = state_map[cart]
 
@@ -1845,7 +1832,7 @@ module OpenShift
                   # just pass because some embedded cartridges do not have expose-port hook implemented (e.g. jenkins-client)
                 end
               end
-            end 
+            end
 
             # start the gears again and change DNS entry
             reply.append move_gear_post(gear, destination_container, state_map)
@@ -1871,7 +1858,7 @@ module OpenShift
             # remove-httpd-proxy of destination
             log_debug "DEBUG: Moving failed.  Rolling back gear '#{gear.name}' '#{app.name}' with remove-httpd-proxy on '#{destination_container.id}'"
             gi.all_component_instances.each do |cinst|
-              next if cinst.is_singleton? and (not gear.host_singletons)
+              next if cinst.is_sparse? and (not gear.sparse_carts.include? cinst._id) and (not gear.host_singletons)
               cart = cinst.cartridge_name
               if framework_carts(app).include? cart
                 begin
@@ -1895,7 +1882,7 @@ module OpenShift
             # start source
             start_order.each do |cinst|
               next if not gi_comps.include? cinst
-              next if cinst.is_singleton? and (not gear.host_singletons)
+              next if cinst.is_sparse? and (not gear.sparse_carts.include? cinst._id) and (not gear.host_singletons)
               cart = cinst.cartridge_name
               idle, leave_stopped = state_map[cart]
               if not leave_stopped
@@ -2083,7 +2070,7 @@ module OpenShift
         end
 
         component_instances = app.get_components_for_feature(web_framework)
-        gear = component_instances.first.group_instance.gears.first 
+        gear = component_instances.first.group_instance.gears.first
         get_cart_status(gear, component_instances.first)
       end
 
@@ -2137,6 +2124,32 @@ module OpenShift
         end
 
         return [idle, leave_stopped, quota_blocks, quota_files]
+      end
+
+      #
+      # get details about instance's node
+      #
+      # RETURN:
+      # * Map: name => values for one node
+      #
+      # NOTES:
+      # * calls rpc_get_facts_direct
+      #
+      def get_node_details(name_list)
+        rpc_get_facts_direct(name_list)
+      end
+
+      #
+      # get details (in MCollective, facts) about all nodes that respond
+      #
+      # RETURN:
+      # * Hash of hashes: node identity => fact map for each node
+      #
+      # NOTES:
+      # * calls rpc_get_facts_for_all_nodes
+      #
+      def self.get_details_for_all_impl(name_list)
+        rpc_get_facts_for_all_nodes(name_list)
       end
 
       #
@@ -2230,6 +2243,26 @@ module OpenShift
         result
       end
 
+      # Returns a hash of env variables for a given gear uuid
+      #
+      # INPUTS:
+      # * gear_uuid: String
+      #
+      # RETURNS:
+      # * Hash
+      #
+      # NOTES:
+      # * uses rpc_exec
+      #
+      def get_gear_envs(gear_uuid)
+        MCollectiveApplicationContainerProxy.rpc_exec('openshift', @id) do |client|
+          client.get_gear_envs(:uuid => gear_uuid) do |response|
+            output = response[:body][:data][:output]
+            return output
+          end
+        end
+      end
+
       protected
 
       #
@@ -2269,7 +2302,7 @@ module OpenShift
 
       #
       # Initializes the list of cartridges which are "standalone" or framework
-      # 
+      #
       # INPUTS:
       #
       # RETURNS:
@@ -2289,7 +2322,7 @@ module OpenShift
 
       #
       # Initializes the list of cartridges which are "standalone" or framework
-      # 
+      #
       # INPUTS:
       #
       # RETURNS:
@@ -2304,114 +2337,6 @@ module OpenShift
       #
       def embedded_carts(app=nil)
         @embedded_carts ||= CartridgeCache.cartridge_names('embedded',app)
-      end
-
-      # 
-      # Add a component to an existing gear on the node
-      #
-      # INPUTS:
-      # * gear: a Gear object
-      # * cart: string representing cartridge name
-      #
-      # RETURNS:
-      # * Array [ResultIO, String]
-      #
-      # RAISES:
-      # * Exception
-      #
-      # CATCHES:
-      # * Exception
-      #
-      # NOTES:
-      # * uses run_cartridge_command
-      # * runs "configure" on a "component" which used to be called "embedded"
-      #
-      def add_component(gear, cart, args)
-        app = gear.app
-        reply = ResultIO.new
-
-        begin
-          reply.append run_cartridge_command(cart, gear, 'configure', args)
-        rescue Exception => e
-          begin
-            Rails.logger.debug "DEBUG: Failed to embed '#{cart}' in '#{app.name}' for user '#{app.domain.owner.login}'"
-            reply.debugIO << "Failed to embed '#{cart} in '#{app.name}'"
-            reply.append run_cartridge_command(cart, gear, 'deconfigure', args)
-          ensure
-            raise
-          end
-        end
-
-        component_details = reply.appInfoIO.string.empty? ? '' : reply.appInfoIO.string
-        reply.debugIO << "\n\n#{cart}: #{component_details}"
-        [reply, component_details]
-      end
-
-      #
-      # Post configure a component on the gear
-      #
-      # INPUTS:
-      # * gear: a Gear object
-      # * component: String
-      #
-      # RETURNS:
-      # * Array [ResultIO, String]
-      #
-      # RAISES:
-      # * Exception
-      #
-      # CATCHES:
-      # * Exception
-      #
-      # NOTES:
-      # * uses run_cartridge_command
-      # * runs "post-configure" on a "component" which used to be called "embedded"
-      #
-      def post_configure_component(gear, component)
-        app = gear.app
-        reply = ResultIO.new
-        cart = component.cartridge_name
-
-        args = build_base_gear_args(gear)
-        args = build_base_component_args(component, args)
-
-        begin
-          reply.append run_cartridge_command(cart, gear, 'post-configure', args)
-        rescue Exception => e
-          begin
-            Rails.logger.debug "DEBUG: Failed to run post-configure on '#{cart}' in '#{app.name}' for user '#{app.domain.owner.login}'"
-            reply.debugIO << "Failed to run post-configure on '#{cart} in '#{app.name}'"
-          ensure
-            raise
-          end
-        end
-
-        component_details = reply.appInfoIO.string.empty? ? '' : reply.appInfoIO.string
-        reply.debugIO << "Embedded app details: #{component_details}"
-        [reply, component_details]
-      end
-
-      #
-      # Remove a component from a gear
-      #
-      # INPUTS:
-      # * gear: a Gear object
-      # * component: String: a component name
-      #
-      # RETURNS:
-      # * ResultIO? String?
-      #
-      # NOTES
-      # * method on gear?
-      #
-      def remove_component(gear, component)
-        app = gear.app
-        args = build_base_gear_args(gear)
-        args = build_base_component_args(component, args)
-        cart = component.cartridge_name
-
-        Rails.logger.debug "DEBUG: Deconfiguring embedded application '#{cart}' in application '#{app.name}' on node '#{@id}'"
-        return run_cartridge_command(cart, gear, 'deconfigure', args)
       end
 
       #
@@ -2678,6 +2603,7 @@ module OpenShift
       # NOTES:
       # * uses rpc_exec
       # * loops over all nodes
+      # * No longer being used
       #
       def has_app?(app_uuid, app_name)
         MCollectiveApplicationContainerProxy.rpc_exec('openshift', @id) do |client|
@@ -2701,6 +2627,7 @@ module OpenShift
       #
       # NOTES:
       # * uses rpc_exec
+      # * No longer being used
       #
       def has_embedded_app?(app_uuid, embedded_type)
         MCollectiveApplicationContainerProxy.rpc_exec('openshift', @id) do |client|
@@ -2734,12 +2661,34 @@ module OpenShift
         end
       end
 
+      #
+      # Returns whether this gear has the specified cartridge
+      #
+      # INPUTS:
+      # * gear_uuid: String
+      # * cartridge: String
+      #
+      # RETURNS:
+      # * Boolean
+      #
+      # NOTES:
+      # * uses rpc_exec
+      #
+      def has_app_cartridge?(app_uuid, gear_uuid, cart)
+        MCollectiveApplicationContainerProxy.rpc_exec('openshift', @id) do |client|
+          client.has_app_cartridge(:app_uuid => app_uuid, :gear_uuid => gear_uuid, :cartridge => cart) do |response|
+            output = response[:body][:data][:output]
+            return output == true
+          end
+        end
+      end
+
       # This method wraps run_cartridge_command to acknowledge and consistently support the behavior
       # until cartridges and components are handled as distinct concepts within the runtime.
       #
       # If the cart specified is in the framework_carts or embedded_carts list, the arguments will pass
       # through to run_cartridge_command. Otherwise, a new ResultIO will be returned.
-      def run_cartridge_command_ignore_components(cart, gear, command, arguments, allow_move=true)       
+      def run_cartridge_command_ignore_components(cart, gear, command, arguments, allow_move=true)
         if framework_carts(gear.app).include?(cart) || embedded_carts(gear.app).include?(cart)
           result = run_cartridge_command(cart, gear, command, arguments, allow_move)
         else
@@ -2760,7 +2709,7 @@ module OpenShift
       #
       # RETURNS:
       # * ResultIO
-      # 
+      #
       # RAISES:
       # * Exception
       #
@@ -2794,26 +2743,6 @@ module OpenShift
             else
               raise
             end
-          end
-        rescue OpenShift::NodeException => e
-          if command == 'deconfigure'
-            if framework.start_with?('embedded/')
-              if has_embedded_app?(app.uuid, framework[9..-1])
-                raise
-              else
-                Rails.logger.debug "DEBUG: Component '#{framework}' in application '#{app.name}' not found on node '#{@id}'.  Continuing with deconfigure."
-                resultIO = ResultIO.new
-              end
-            else
-              if has_app?(app.uuid, app.name)
-                raise
-              else
-                Rails.logger.debug "DEBUG: Application '#{app.name}' not found on node '#{@id}'.  Continuing with deconfigure."
-                resultIO = ResultIO.new
-              end
-            end
-          else
-            raise
           end
         end
 
@@ -2855,11 +2784,11 @@ module OpenShift
       # * district_uuid: String identifier for the district
       # * least_preferred_server_identities: list of server identities that are least preferred. These could be the ones that won't allow the gear group to be highly available
       # * force_rediscovery: Boolean
-      # * gear_exists_in_district: Boolean - true if the gear belongs to a node in the same district  
+      # * gear_exists_in_district: Boolean - true if the gear belongs to a node in the same district
       # * required_uid: String - the uid that is required to be available in the destination district
       #
       # RETURNS:
-      # * Array: [server, capacity, district] 
+      # * Array: [server, capacity, district]
       #
       # NOTES:
       # * are the return values String?
@@ -2894,9 +2823,9 @@ module OpenShift
         current_server, current_capacity = nil, nil
         server_infos = []
 
-        # First find the most available nodes and match 
-        # to their districts.  Take out the almost full nodes if possible and return one of 
-        # the nodes within a district with a lot of space. 
+        # First find the most available nodes and match
+        # to their districts.  Take out the almost full nodes if possible and return one of
+        # the nodes within a district with a lot of space.
         additional_filters = [{:fact => "active_capacity",
                                :value => '100',
                                :operator => "<"}]
@@ -2937,7 +2866,7 @@ module OpenShift
           districts.each do |district|
             if district.server_identities_hash.has_key?(server)
               next if required_uid and !district.available_uids.include?(required_uid)
-              if (gear_exists_in_district || district.available_capacity > 0) && district.server_identities_hash[server]["active"] 
+              if (gear_exists_in_district || district.available_capacity > 0) && district.server_identities_hash[server]["active"]
                 server_infos << [server, capacity.to_f, district]
               end
               found_district = true
@@ -3062,7 +2991,7 @@ module OpenShift
       #
       # NOTES:
       # * returns value from body or data
-      # 
+      #
       def self.rvalue(response)
         result = nil
 
@@ -3095,7 +3024,7 @@ module OpenShift
       # Returns the fact value from the specified server.
       # Yields to the supplied block if there is a non-nil
       # value for the fact.
-      # 
+      #
       # INPUTS:
       # * fact: String - a fact name
       # * servers: String|Array - a node name or an array of node names
@@ -3108,7 +3037,7 @@ module OpenShift
       #
       # NOTES:
       # * uses rpc_exec
-      # 
+      #
 
       def self.rpc_get_fact(fact, servers=nil, force_rediscovery=false, additional_filters=nil, custom_rpc_opts=nil)
         result = nil
@@ -3144,9 +3073,9 @@ module OpenShift
       # * OpenShift::NodeException
       #
       # NOTES
-      # * uses MCollectiveApplicationContainerProxxy.rpc_options
+      # * uses MCollectiveApplicationContainerProxy.rpc_options
       # * uses MCollective::RPC::Client
-      # 
+      #
       def rpc_get_fact_direct(fact)
           options = MCollectiveApplicationContainerProxy.rpc_options
 
@@ -3163,6 +3092,73 @@ module OpenShift
           end
 
           return value
+      end
+
+      #
+      # Given a list of facts, get the facts directly for instance's node.
+      # This is significantly faster then the get_facts method.
+      # If multiple nodes of the same name exist, it will pick just one.
+      #
+      # INPUTS:
+      # * facts: Enumerable of Strings (fact names)
+      #
+      # RETURNS:
+      # * Map of fact name to fact value for this instance's node
+      #
+      # RAISES:
+      # * OpenShift::NodeException
+      #
+      # NOTES
+      # * uses MCollectiveApplicationContainerProxy.rpc_options
+      # * uses MCollective::RPC::Client
+      #
+      def rpc_get_facts_direct(facts)
+          options = MCollectiveApplicationContainerProxy.rpc_options
+
+          rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('openshift', options)
+          begin
+            result = rpc_client.custom_request('get_facts', {:facts => facts}, @id, {'identity' => @id})[0]
+            if (result && defined? result.results && result.results.has_key?(:data))
+              value = result.results[:data][:output]
+            else
+              raise OpenShift::NodeException.new("Node execution failure (error getting facts).  If the problem persists please contact Red Hat support.", 143)
+            end
+          ensure
+            rpc_client.disconnect
+          end
+
+          return value
+      end
+
+      #
+      # Given a list of facts, get those facts for all nodes that respond.
+      #
+      # INPUTS:
+      # * facts: Enumerable of Strings (fact names)
+      #
+      # RETURNS:
+      # * Map of Fact to String
+      #
+      # RAISES:
+      # * OpenShift::NodeException
+      #
+      # NOTES
+      # * uses MCollectiveApplicationContainerProxy.rpc_options
+      # * uses MCollective::RPC::Client
+      #
+      def self.rpc_get_facts_for_all_nodes(fact_list)
+        node_fact_map = {}
+        rpc_exec('openshift', nil, true) do |client|
+          client.get_facts(:facts => fact_list) do |response|
+            if response[:body][:statuscode] == 0
+              fact_map = response[:body][:data][:output]
+              sender = response[:senderid]
+              fact_map[:id] = sender
+              node_fact_map[sender] = fact_map
+            end
+          end
+        end
+        return node_fact_map
       end
 
       #
@@ -3309,7 +3305,7 @@ module OpenShift
             mc_args = handle.clone
             identities = handle.keys
             rpc_client.custom_request('execute_parallel', mc_args, identities, {'identity' => identities}).each { |mcoll_reply|
-              if mcoll_reply.results[:statuscode] == 0 
+              if mcoll_reply.results[:statuscode] == 0
                 output = mcoll_reply.results[:data][:output]
                 exitcode = mcoll_reply.results[:data][:exitcode]
                 sender = mcoll_reply.results[:sender]

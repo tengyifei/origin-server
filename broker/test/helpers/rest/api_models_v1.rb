@@ -40,7 +40,7 @@ class OptionalParam_V1 < BaseObj
     if (self.name != obj.name) ||
        (self.type != obj.type) ||
        ((self.valid_options.length > 0) && (self.valid_options.size > obj.valid_options.size)) ||
-       (self.default_value != obj.default_value)
+       (self.default_value && (self.default_value != obj.default_value))
       raise_ex("Link Optional Param '#{self.name}' inconsistent")
     end
     self.valid_options.each do |opt|
@@ -151,9 +151,8 @@ end
 
 class RestUser_V1 < BaseObj_V1
   attr_accessor :login, :consumed_gears, :max_gears, :capabilities, :plan_id, :usage_account_id, :links
-  KEY_TYPES = ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256-cert-v01@openssh.com', 'ecdsa-sha2-nistp384-cert-v01@openssh.com',
-               'ecdsa-sha2-nistp521-cert-v01@openssh.com', 'ssh-rsa-cert-v01@openssh.com', 'ssh-dss-cert-v01@openssh.com',
-               'ssh-rsa-cert-v00@openssh.com', 'ssh-dss-cert-v00@openssh.com', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521']
+  KEY_TYPES = ['ssh-rsa', 'ssh-dss', 'ssh-rsa-cert-v01@openssh.com', 'ssh-dss-cert-v01@openssh.com',
+               'ssh-rsa-cert-v00@openssh.com', 'ssh-dss-cert-v00@openssh.com']
                                                                                                        
   def initialize
     self.login = nil
@@ -239,7 +238,9 @@ class RestDomain_V1 < BaseObj_V1
         [Param_V1.new("name", "string")],
         [OptionalParam_V1.new("cartridge", "string"),
          OptionalParam_V1.new("scale", "boolean", [true, false], false),
-         OptionalParam_V1.new("gear_profile", "string", ["small"], "small")]),
+         OptionalParam_V1.new("gear_profile", "string"),
+         OptionalParam_V1.new("initial_git_url", "string", ["*", "empty"]),
+        ]),
       "UPDATE" => Link_V1.new("PUT", "domains/#{id}",
         [ Param_V1.new("id", "string") ]),
       "DELETE" => Link_V1.new("DELETE", "domains/#{id}", nil,
@@ -250,9 +251,8 @@ end
 
 class RestKey_V1 < BaseObj_V1
   attr_accessor :name, :content, :type, :links
-  KEY_TYPES = ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256-cert-v01@openssh.com', 'ecdsa-sha2-nistp384-cert-v01@openssh.com',
-               'ecdsa-sha2-nistp521-cert-v01@openssh.com', 'ssh-rsa-cert-v01@openssh.com', 'ssh-dss-cert-v01@openssh.com',
-               'ssh-rsa-cert-v00@openssh.com', 'ssh-dss-cert-v00@openssh.com', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521']
+  KEY_TYPES = ['ssh-rsa', 'ssh-dss', 'ssh-rsa-cert-v01@openssh.com', 'ssh-dss-cert-v01@openssh.com',
+               'ssh-rsa-cert-v00@openssh.com', 'ssh-dss-cert-v00@openssh.com']
 
   def initialize(name=nil, content=nil, type=nil)
     self.name = name

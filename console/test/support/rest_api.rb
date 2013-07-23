@@ -83,6 +83,32 @@ class ActiveSupport::TestCase
     end
   end
 
+  def response_messages(klass=nil, &block)
+    yield
+    fail "Did not raise"    
+  rescue RestApi::ResourceNotFound => e
+    e.messages
+  end  
+
+  def assert_messages(*cond)
+    to = cond.pop
+    if cond.first.is_a? Numeric
+      count = cond.shift 
+      assert_equal count, to.length
+    elsif cond.empty?
+      raise "Must specify one or more conditions"
+    end
+    assert(to.any? do |m|
+      cond.all? do |c|
+        case c
+        when Regexp then m.to_s =~ c
+        when String then m.to_s.include?(c)
+        else raise "Unsupported condition #{c.inspect}"
+        end
+      end
+    end, "None of the messages #{to.inspect} matched #{cond.inspect}")
+  end
+
   def setup_from_app(app)
     set_domain Domain.new({:id => app.domain_id, :as => app.as}, true)
     set_user app.as
@@ -197,6 +223,7 @@ class ActiveSupport::TestCase
   end
 
   def anonymous_json_header(is_post=false, nolinks=true)
-    {(is_post ? 'Content-Type' : 'Accept') => "application/json#{nolinks ? ';nolinks' : ''};version=1.4", 'User-Agent' => Console.config.api[:user_agent]}
+    mime = "application/json#{nolinks ? ';nolinks' : ''};version=1.4"
+    (is_post ? {'Content-Type' => mime} : {}).merge('Accept' => mime, 'User-Agent' => Console.config.api[:user_agent])
   end
 end

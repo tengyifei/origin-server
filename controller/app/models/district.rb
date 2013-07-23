@@ -14,7 +14,6 @@ class District
 
   index({:name => 1}, {:unique => true})
   create_indexes
-#  attr_accessor :server_identities, :active_server_identities_size, :uuid, :creation_time, :available_capacity, :available_uids, :max_uid, :max_capacity, :externally_reserved_uids_size, :node_profile, :name
 
   def self.create_district(name, gear_size=nil)
     
@@ -124,7 +123,7 @@ class District
   
   def reserve_given_uid(uid)
     District.where(:uuid => self.uuid, :available_uids => uid).update( {"$pull" => { "available_uids" => uid }, "$inc" => { "available_capacity" => -1 }})
-    self.with(consistency: :strong).reload
+    self.reload
     self.available_uids.include? uid
   end
 
@@ -133,7 +132,7 @@ class District
     if server_map.has_key?(server_identity)
       if server_map[server_identity]["active"]
         District.where("_id" => self._id, "server_identities.name" => server_identity ).update({ "$set" => { "server_identities.$.active" => false }, "$inc" => { "active_server_identities_size" => -1 } })
-        self.with(consistency: :strong).reload
+        self.reload
         container = OpenShift::ApplicationContainerProxy.instance(server_identity)
         container.set_district("#{uuid}", false)
       else
@@ -149,7 +148,7 @@ class District
     if server_map.has_key?(server_identity)
       unless server_map[server_identity]["active"]
         District.where("_id" => self._id, "server_identities.name" => server_identity ).update({ "$set" => { "server_identities.$.active" => true}, "$inc" => { "active_server_identities_size" => 1 } })
-        self.with(consistency: :strong).reload
+        self.reload
         container = OpenShift::ApplicationContainerProxy.instance(server_identity)
         container.set_district("#{uuid}", true)
       else
@@ -186,7 +185,7 @@ class District
         raise OpenShift::OOException.new("Could not add capacity to district: #{uuid}")
       end
       
-      return self.with(consistency: :strong).reload
+      return self.reload
     else
       raise OpenShift::OOException.new("You must supply a positive number of uids to add")
     end
@@ -207,7 +206,7 @@ class District
         raise OpenShift::OOException.new("Specified number of UIDs not found in order in available_uids.  Can not continue!")
       end
       
-      return self.with(consistency: :strong).reload
+      return self.reload
     else
       raise OpenShift::OOException.new("You must supply a positive number of uids to remove")
     end

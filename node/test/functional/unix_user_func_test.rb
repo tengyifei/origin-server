@@ -43,17 +43,14 @@ class UnixUserModelFunctionalTest < OpenShift::NodeTestCase
     FileUtils.mkdir_p @user_homedir
     `useradd -u #{@user_uid} -d #{@user_homedir} #{@user_uid} 1>/dev/null 2>&1`
 
-    @config = mock('OpenShift::Config')
-    @config.stubs(:get).returns(nil)
     @config.stubs(:get).with("GEAR_BASE_DIR").returns("/tmp")
     @config.stubs(:get).with("CLOUD_DOMAIN").returns("rhcloud.com")
     @config.stubs(:get).with("OPENSHIFT_HTTP_CONF_DIR").returns("/tmp")
-    OpenShift::Config.stubs(:new).returns(@config)
-
-    @frontend = mock('OpenShift::FrontendHttpServer')
+    
+    @frontend = mock('OpenShift::Runtime::FrontendHttpServer')
     @frontend.stubs(:create)
     @frontend.stubs(:destroy)
-    OpenShift::FrontendHttpServer.stubs(:new).returns(@frontend)
+    OpenShift::Runtime::FrontendHttpServer.stubs(:new).returns(@frontend)
   end
 
   def teardown
@@ -62,9 +59,7 @@ class UnixUserModelFunctionalTest < OpenShift::NodeTestCase
 
   def test_initialize
     FileUtils.rm_rf(@user_homedir, :verbose => @verbose) if File.directory?(@user_homedir)
-    o = OpenShift::UnixUser.new(@gear_uuid, @gear_uuid, @user_uid, @app_name,
-                                @gear_name, @namespace,
-                                nil, nil, @verbose)
+    o = OpenShift::Runtime::ApplicationContainer.new(@gear_uuid, @gear_uuid, @user_uid, @app_name, @gear_name, @namespace)
     refute_nil o
 
     o.initialize_homedir("/tmp/", "#{@user_homedir}/")

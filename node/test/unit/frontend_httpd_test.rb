@@ -39,14 +39,28 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
     @http_conf_dir = "/tmp/frontend_httpd_test/.httpd.d"
 
     @cloud_domain = "example.com"
+    @fqdn = "#{@container_name}-#{@namespace}.#{@cloud_domain}"
+
+    Etc.stubs(:getpwnam).returns(
+      OpenStruct.new(
+        uid: 5005,
+        gid: 5005,
+        gecos: "OO application container",
+        dir: "#{@gear_base_dir}/#{@container_uuid}"
+      )
+    )
+    OpenShift::Runtime::Utils::Environ.stubs(:for_gear).with("#{@gear_base_dir}/#{@container_uuid}").returns(
+        {
+          "OPENSHIFT_APP_UUID" => @container_uuid,
+          "OPENSHIFT_APP_NAME" => @container_uuid,
+          "OPENSHIFT_GEAR_NAME"=> @container_name,
+          "OPENSHIFT_GEAR_DNS" => @fqdn
+        })
 
     @ip = "127.0.0.1"
     @port = 8080
 
-
     @sts_max_age = 15768000
-
-    @fqdn = "#{@container_name}-#{@namespace}.#{@cloud_domain}"
 
     @test_alias = "foo.example.com"
 
@@ -65,32 +79,29 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
     end
     Syslog.stubs(:new).returns(syslog_mock)
 
-    @config_mock = mock('OpenShift::Config')
-    @config_mock.stubs(:get).returns(nil)
-    @config_mock.stubs(:get).with("GEAR_BASE_DIR").returns(@gear_base_dir)
-    @config_mock.stubs(:get).with("OPENSHIFT_HTTP_CONF_DIR").returns(@http_conf_dir)
-    @config_mock.stubs(:get).with("CLOUD_DOMAIN").returns(@cloud_domain)
-    OpenShift::Config.stubs(:new).returns(@config_mock)
+    @config.stubs(:get).with("GEAR_BASE_DIR").returns(@gear_base_dir)
+    @config.stubs(:get).with("OPENSHIFT_HTTP_CONF_DIR").returns(@http_conf_dir)
+    @config.stubs(:get).with("CLOUD_DOMAIN").returns(@cloud_domain)
 
     @apache_db_nodes = FauxApacheDB.new
     @apache_db_nodes_full = { @fqdn => "#{@ip}:#{@port}" }
-    OpenShift::ApacheDBNodes.stubs(:open).yields(@apache_db_nodes)
+    OpenShift::Runtime::ApacheDBNodes.stubs(:open).yields(@apache_db_nodes)
 
     @apache_db_aliases = FauxApacheDB.new
     @apache_db_aliases_full = { @test_alias => @fqdn }
-    OpenShift::ApacheDBAliases.stubs(:open).yields(@apache_db_aliases)
+    OpenShift::Runtime::ApacheDBAliases.stubs(:open).yields(@apache_db_aliases)
 
     @apache_db_idler = FauxApacheDB.new
     @apache_db_idler_full = { @fqdn => @container_uuid }
-    OpenShift::ApacheDBIdler.stubs(:open).yields(@apache_db_idler)
+    OpenShift::Runtime::ApacheDBIdler.stubs(:open).yields(@apache_db_idler)
 
     @apache_db_sts = FauxApacheDB.new
     @apache_db_sts_full = { @fqdn => @sts_max_age }
-    OpenShift::ApacheDBSTS.stubs(:open).yields(@apache_db_sts)
+    OpenShift::Runtime::ApacheDBSTS.stubs(:open).yields(@apache_db_sts)
 
     @gear_db = FauxApacheDB.new
     @gear_db_full = {@container_uuid => {'fqdn' => @fqdn, 'container_name' => @container_name, 'namespace' => @namespace}}
-    OpenShift::GearDB.stubs(:open).yields(@gear_db)
+    OpenShift::Runtime::GearDB.stubs(:open).yields(@gear_db)
 
     @nodejs_db_routes = FauxApacheDB.new
     @nodejs_db_routes_full = {
@@ -110,7 +121,8 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
         }
       }
     }
-    OpenShift::NodeJSDBRoutes.stubs(:open).yields(@nodejs_db_routes)
+
+    OpenShift::Runtime::NodeJSDBRoutes.stubs(:open).yields(@nodejs_db_routes)
   end
 
   def set_dbs_empty
@@ -159,11 +171,11 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
   end
 
   def test_clean_server_name
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     
     assert_equal "#{@test_alias}", frontend.clean_server_name("#{@test_alias}")
     assert_equal "#{@test_alias}", frontend.clean_server_name("#{@test_alias}".upcase)
-    assert_raise OpenShift::FrontendHttpServerNameException do
+    assert_raise OpenShift::Runtime::FrontendHttpServerNameException do
       frontend.clean_server_name("../../../../../../../etc/passwd")
     end
   end
@@ -171,7 +183,7 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
   def test_create
     set_dbs_empty
 
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     frontend.create
 
     # Does nothing.
@@ -181,10 +193,10 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
     set_dbs_full
 
     t_environ = { 'OPENSHIFT_GEAR_NAME' => @container_name, 'OPENSHIFT_GEAR_DNS' => @fqdn }
-    OpenShift::Utils::Environ.stubs(:for_gear).returns(t_environ).never
+    OpenShift::Runtime::Utils::Environ.stubs(:for_gear).returns(t_environ).never
 
     frontend = nil
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
 
     assert_equal @container_name, frontend.container_name
     assert_equal @namespace, frontend.namespace
@@ -194,23 +206,14 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
     set_dbs_empty
 
     t_environ = { 'OPENSHIFT_GEAR_NAME' => @container_name, 'OPENSHIFT_GEAR_DNS' => @fqdn }
-    OpenShift::Utils::Environ.stubs(:for_gear).returns(t_environ).once
+    OpenShift::Runtime::Utils::Environ.stubs(:for_gear).returns(t_environ).once
 
     frontend = nil
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
 
     assert_equal @container_name, frontend.container_name
     assert_equal @namespace, frontend.namespace
   end
-
-  def test_initialize_uncreated
-    set_dbs_empty
-
-    assert_raise OpenShift::FrontendHttpServerException do
-      frontend = OpenShift::FrontendHttpServer.new(@container_uuid)
-    end
-  end
-
 
   def test_destroy
     set_dbs_full
@@ -218,9 +221,9 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
     Dir.stubs(:glob).returns(["foo.conf"]).once
     FileUtils.stubs(:rm_rf).once
 
-    OpenShift::Utils.stubs(:oo_spawn).returns(["", "", 0]).once
+    OpenShift::Runtime::Utils.stubs(:oo_spawn).returns(["", "", 0]).once
 
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     frontend.destroy
 
     check_dbs_empty
@@ -238,7 +241,7 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
                     ["/file", "/dest.html", { "file" => 1 }],
                     ["/tohttps", "/dest", { "tohttps" => 1 }] ]
 
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     frontend.create
     frontend.connect(connections)
 
@@ -273,7 +276,7 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
   def test_idle
     set_dbs_empty
 
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     frontend.create
 
     frontend.idle
@@ -288,7 +291,7 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
   def test_sts
     set_dbs_empty
 
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     frontend.create
 
     frontend.sts(@sts_max_age)
@@ -303,7 +306,7 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
   def test_aliases
     set_dbs_empty
 
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     frontend.create
     frontend.connect("", "#{@ip}:#{@port}", { "websocket" => 1})
     frontend.add_alias("#{@test_alias}")
@@ -351,9 +354,9 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
     FileUtils.stubs(:rm_rf).with(@test_ssl_path).once
     FileUtils.stubs(:rm_rf).with("#{@test_ssl_path}.conf").once
 
-    OpenShift::Utils.stubs(:oo_spawn).returns(["", "", 0]).twice
+    OpenShift::Runtime::Utils.stubs(:oo_spawn).returns(["", "", 0]).twice
 
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     frontend.create
     frontend.connect("", "#{@ip}:#{@port}", { "websocket" => 1})
     frontend.add_alias("#{@test_alias}")
@@ -365,12 +368,12 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
     frontend.remove_ssl_cert(@test_alias)
 
     # check_private_key returns false
-    assert_raise OpenShift::FrontendHttpServerException do
+    assert_raise OpenShift::Runtime::FrontendHttpServerException do
       frontend.add_ssl_cert(@test_ssl_cert, @test_ssl_key, @test_alias)
     end
 
     # bad alias
-    assert_raise OpenShift::FrontendHttpServerException do
+    assert_raise OpenShift::Runtime::FrontendHttpServerException do
       frontend.add_ssl_cert(@test_ssl_cert, @test_ssl_key, @test_alias.reverse)
     end
   end
@@ -379,7 +382,7 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
   def test_serialization
     set_dbs_empty
 
-    frontend = OpenShift::FrontendHttpServer.new(@container_uuid, @container_name, @namespace)
+    frontend = OpenShift::Runtime::FrontendHttpServer.new(OpenShift::Runtime::ApplicationContainer.from_uuid(@container_uuid))
     frontend.create
     frontend.connect("", "#{@ip}:#{@port}", { "websocket" => 1})
     frontend.add_alias("#{@test_alias}")
@@ -388,7 +391,7 @@ class FrontendHttpServerModelTest < OpenShift::NodeTestCase
 
     set_dbs_empty
 
-    new_frontend = OpenShift::FrontendHttpServer.json_create( { 'data' => fehash } )
+    new_frontend = OpenShift::Runtime::FrontendHttpServer.json_create( { 'data' => fehash } )
 
     assert_equal @container_uuid, new_frontend.container_uuid
     assert_equal @container_name, new_frontend.container_name
@@ -422,13 +425,9 @@ class TestApacheDB < OpenShift::NodeTestCase
     @gear_base_dir = "/tmp/apachedb_test"
     @http_conf_dir = "/tmp/apachedb_test/.httpd.d"
     
-    @config_mock = mock('OpenShift::Config')
-    @config_mock.stubs(:get).returns(nil)
-    @config_mock.stubs(:get).with("GEAR_BASE_DIR").returns(@gear_base_dir)
-    @config_mock.stubs(:get).with("OPENSHIFT_HTTP_CONF_DIR").returns(@http_conf_dir)
-    OpenShift::Config.stubs(:new).returns(@config_mock)
+    @config.stubs(:get).with("GEAR_BASE_DIR").returns(@gear_base_dir)
+    @config.stubs(:get).with("OPENSHIFT_HTTP_CONF_DIR").returns(@http_conf_dir)
     
-
     @apachedb_lockfiles = Hash[["nodes",
                                 "aliases",
                                 "idler",
@@ -452,6 +451,7 @@ class TestApacheDB < OpenShift::NodeTestCase
     lockfile_mock = mock('FileLockfile') do
       stubs(:flock).with(File::LOCK_SH).once
       stubs(:flock).with(File::LOCK_EX).never
+      stubs(:fcntl)
       stubs(:closed?).returns(false)
       stubs(:close).once
     end
@@ -465,10 +465,10 @@ class TestApacheDB < OpenShift::NodeTestCase
 
     File.stubs(:open).never
 
-    OpenShift::ApacheDBNodes.stubs(:callout).never
+    OpenShift::Runtime::ApacheDBNodes.stubs(:callout).never
 
     dest = nil
-    OpenShift::ApacheDBNodes.open(OpenShift::ApacheDBNodes::READER) do |d|
+    OpenShift::Runtime::ApacheDBNodes.open(OpenShift::Runtime::ApacheDBNodes::READER) do |d|
       dest = d.fetch("www.example.com")
     end
     assert_equal "127.0.0.1:8080", dest
@@ -478,6 +478,7 @@ class TestApacheDB < OpenShift::NodeTestCase
     lockfile_mock = mock('FileLockfile') do
       stubs(:flock).with(File::LOCK_SH).never
       stubs(:flock).with(File::LOCK_EX).once
+      stubs(:fcntl)
       stubs(:closed?).returns(false)
       stubs(:close).once
     end
@@ -495,9 +496,9 @@ class TestApacheDB < OpenShift::NodeTestCase
     FileUtils.stubs(:rm).never
     FileUtils.stubs(:mv).once
 
-    OpenShift::ApacheDBNodes.any_instance.stubs(:callout).once
+    OpenShift::Runtime::ApacheDBNodes.any_instance.stubs(:callout).once
 
-    OpenShift::ApacheDBNodes.open(OpenShift::ApacheDBNodes::NEWDB) do |d|
+    OpenShift::Runtime::ApacheDBNodes.open(OpenShift::Runtime::ApacheDBNodes::NEWDB) do |d|
       d.store("www.example.com", "127.0.0.1:8080")
     end
 

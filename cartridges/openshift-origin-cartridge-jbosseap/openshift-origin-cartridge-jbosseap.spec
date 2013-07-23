@@ -1,10 +1,10 @@
-%global cartridgedir %{_libexecdir}/openshift/cartridges/v2/jbosseap
+%global cartridgedir %{_libexecdir}/openshift/cartridges/jbosseap
 %global jbossver 6.0.1.GA
 %global oldjbossver 6.0.0.GA
 
 Summary:       Provides JBossEAP6.0 support
 Name:          openshift-origin-cartridge-jbosseap
-Version: 2.4.6
+Version: 2.6.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -88,6 +88,28 @@ cp -p %{cartridgedir}/versions/6.0/modules/postgresql_module.xml /etc/alternativ
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Fri Jul 12 2013 Adam Miller <admiller@redhat.com> 2.6.1-1
+- bump_minor_versions for sprint 31 (admiller@redhat.com)
+
+* Wed Jul 10 2013 Adam Miller <admiller@redhat.com> 2.5.4-1
+- Bug 980321: Sync repo dir with live deployments dir on initial install
+  (ironcladlou@gmail.com)
+- Bug 980487: Add jboss-cli.sh to the jboss* cartridges (ironcladlou@gmail.com)
+
+* Tue Jul 09 2013 Adam Miller <admiller@redhat.com> 2.5.3-1
+- Explicitly specify ERB files to process in jboss cartridges
+  (ironcladlou@gmail.com)
+
+* Tue Jul 02 2013 Adam Miller <admiller@redhat.com> 2.5.2-1
+- remove v2 folder from cart install (dmcphers@redhat.com)
+
+* Tue Jun 25 2013 Adam Miller <admiller@redhat.com> 2.5.1-1
+- bump_minor_versions for sprint 30 (admiller@redhat.com)
+
+* Mon Jun 24 2013 Adam Miller <admiller@redhat.com> 2.4.7-1
+- Bug 975794: Move oo-admin-cartridge operations to %%posttrans
+  (ironcladlou@gmail.com)
+
 * Fri Jun 21 2013 Adam Miller <admiller@redhat.com> 2.4.6-1
 - WIP Cartridge - Updated manifest.yml versions for compatibility
   (jhonce@redhat.com)

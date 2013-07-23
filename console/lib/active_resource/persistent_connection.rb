@@ -7,15 +7,18 @@ require 'net/http/persistent'
 
 # Derived from ActiveResource::Connection
 module ActiveResource
+  class ResetConnectionError < ConnectionError
+  end
+
   # Class to handle connections to remote web services.
   # This class is used by ActiveResource::Base to interface with REST
   # services.
   class PersistentConnection
 
     HTTP_FORMAT_HEADER_NAMES = {  :get => 'Accept',
-      :put => 'Content-Type',
-      :post => 'Content-Type',
-      :patch => 'Content-Type',
+      :put => ['Content-Type', 'Accept'],
+      :post => ['Content-Type', 'Accept'],
+      :patch => ['Content-Type', 'Accept'],
       :delete => 'Accept',
       :head => 'Accept'
     }
@@ -175,7 +178,13 @@ module ActiveResource
       rescue OpenSSL::SSL::SSLError => e
         raise SSLError.new(e.message)
       rescue Net::HTTP::Persistent::Error => e
-        raise e.message.present? && e.message.include?('Timeout::Error') ? TimeoutError.new(e.message) : ConnectionError.new(e.message)
+        if e.message.present? && e.message.include?('Timeout::Error')
+          raise TimeoutError.new(e.message)
+        elsif e.message.present? && e.message.include?('too many connection resets')
+          raise ResetConnectionError.new(e.message)
+        else
+          raise ConnectionError.new(e.message)
+        end
       rescue Errno::ECONNREFUSED => e
         raise ServerRefusedConnection.new(site, req.path)
       end
@@ -329,7 +338,8 @@ module ActiveResource
       end
 
       def http_format_header(http_method)
-        {HTTP_FORMAT_HEADER_NAMES[http_method] => format.mime_type}
+        v = format.mime_type
+        Array(HTTP_FORMAT_HEADER_NAMES[http_method]).inject({}){ |h,k| h[k] = v; h }
       end
 
       def legitimize_auth_type(auth_type)

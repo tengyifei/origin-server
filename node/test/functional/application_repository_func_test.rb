@@ -25,8 +25,6 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
     super
     @uid = 5997
 
-    @config = mock('OpenShift::Config')
-    @config.stubs(:get).returns(nil)
     @config.stubs(:get).with("GEAR_BASE_DIR").returns(GEAR_BASE_DIR)
     @config.stubs(:get).with("GEAR_GECOS").returns('Functional Test')
     @config.stubs(:get).with("CREATE_APP_SYMLINKS").returns('0')
@@ -40,7 +38,6 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
     @config.stubs(:get).with("UID_BEGIN").returns(@uid)
     @config.stubs(:get).with("BROKER_HOST").returns('localhost')
     @config.stubs(:get).with("CARTRIDGE_BASE_PATH").returns('.')
-    OpenShift::Config.stubs(:new).returns(@config)
 
     @uuid = `uuidgen -r |sed -e s/-//g`.chomp
 
@@ -49,53 +46,53 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
     rescue ArgumentError
     end
 
-    @user = OpenShift::UnixUser.new(@uuid, @uuid,
-                                    @uid,
-                                    'AppRepoFuncTest',
-                                    'AppRepoFuncTest',
-                                    'functional-test')
-    @user.create
+    @container = OpenShift::Runtime::ApplicationContainer.new(@uuid, @uuid, @uid, "AppRepoFuncTest", "AppRepoFuncTest", "functional-test")
+    @container.create
 
-    OpenShift::CartridgeRepository.instance.clear
-    OpenShift::CartridgeRepository.instance.load
+    OpenShift::Runtime::CartridgeRepository.instance.clear
+    OpenShift::Runtime::CartridgeRepository.instance.load
 
-    @state = mock('OpenShift::Utils::ApplicationState')
+    @state = mock('::OpenShift::Runtime::Utils::ApplicationState')
     @state.stubs(:value=).with('started').returns('started')
 
     @hourglass = mock()
     @hourglass.stubs(:remaining).returns(3600)
 
-    @model               = OpenShift::V2CartridgeModel.new(@config, @user, @state, @hourglass)
+    @model               = OpenShift::Runtime::V2CartridgeModel.new(@config, @container, @state, @hourglass)
     @cartridge_name      = 'mock-0.1'
     @cartridge_directory = 'mock'
-    @cartridge_home      = File.join(@user.homedir, @cartridge_directory)
+    @cartridge_home      = File.join(@container.container_dir, @cartridge_directory)
     @model.configure(@cartridge_name)
     teardown
   end
 
   def after_teardown
-    @user.destroy
+    @container.destroy
   end
 
   def teardown
-    FileUtils.rm_rf(File.join(@user.homedir, @cartridge_directory, 'template'))
-    FileUtils.rm_rf(File.join(@user.homedir, @cartridge_directory, 'template.git'))
-    FileUtils.rm_rf(File.join(@user.homedir, @cartridge_directory, 'usr', 'template'))
-    FileUtils.rm_rf(File.join(@user.homedir, @cartridge_directory, 'usr', 'template.git'))
+    FileUtils.rm_rf(File.join(@container.container_dir, @cartridge_directory, 'template'))
+    FileUtils.rm_rf(File.join(@container.container_dir, @cartridge_directory, 'template.git'))
+    FileUtils.rm_rf(File.join(@container.container_dir, @cartridge_directory, 'usr', 'template'))
+    FileUtils.rm_rf(File.join(@container.container_dir, @cartridge_directory, 'usr', 'template.git'))
   end
 
-  def assert_bare_repository(repo)
+  def assert_bare_repository(repo, empty=false)
     assert_path_exist repo.path
     assert_path_exist File.join(repo.path, 'description')
-    assert_path_exist File.join(@user.homedir, '.gitconfig')
+    assert_path_exist File.join(@container.container_dir, '.gitconfig')
     assert_path_exist File.join(repo.path, 'hooks', 'pre-receive')
     assert_path_exist File.join(repo.path, 'hooks', 'post-receive')
 
-    files = Dir[repo.path + '/objects/**/*']
-    assert files.count > 0, 'Error: Git repository missing objects'
+    files = Dir[repo.path + '/objects/**/*'].select{ |p| File.file?(p) }
+    if empty
+      assert_equal 0, files.count, "Error: Git repository should be empty"
+    else
+      assert files.count > 0, 'Error: Git repository missing objects'
+    end
     files.each { |f|
       stat = File.stat(f)
-      assert_equal @user.uid, stat.uid, 'Error: Git object wrong ownership'
+      assert_equal @container.uid, stat.uid, 'Error: Git object wrong ownership'
     }
 
     stat = File.stat(File.join(repo.path, 'hooks'))
@@ -105,15 +102,20 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
     assert_equal 0, stat.uid, 'Error: Git hook post-receive not owned by root'
   end
 
+  def assert_repo_reset(repo)
+    reflog = Dir.chdir(repo.path){ `git reflog | head -1` }
+    assert reflog.include?("reset: moving to HEAD~1") || reflog.include?("HEAD~1: updating HEAD"), "Repository was not reset or reflog was not enabled (#{reflog})"
+  end
+
   def test_new
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     refute_nil repo
   end
 
   def test_no_template
-    template = File.join(@user.homedir, @cartridge_directory, 'template')
+    template = File.join(@container.container_dir, @cartridge_directory, 'template')
     FileUtils.rm_rf template
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     refute_path_exist template
     repo.archive
   end
@@ -126,9 +128,9 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
     assert_path_exist cartridge_template_git
     refute_path_exist File.join(@cartridge_home, 'usr', 'template')
 
-    expected_path = File.join(@user.homedir, 'git', @user.app_name + '.git')
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
 
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     repo.destroy
 
     repo.populate_from_cartridge(@cartridge_directory)
@@ -147,14 +149,14 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
     assert_path_exist cartridge_template_git
     refute_path_exist File.join(@cartridge_home, 'template')
 
-    expected_path = File.join(@user.homedir, 'git', @user.app_name + '.git')
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
 
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     repo.destroy
 
     begin
       repo.populate_from_cartridge(@cartridge_directory)
-    rescue OpenShift::Utils::ShellExecutionException => e
+    rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
       puts %Q{
         Failed to create git repo from cartridge template: rc(#{e.rc})
         stdout ==> #{e.stdout}
@@ -178,14 +180,14 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
     refute_path_exist File.join(@cartridge_home, 'template')
     cartridge_template_url = "file://#{cartridge_template_git}"
 
-    expected_path = File.join(@user.homedir, 'git', @user.app_name + '.git')
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
 
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     repo.destroy
 
     begin
       repo.populate_from_url(@cartridge_name, cartridge_template_url)
-    rescue OpenShift::Utils::ShellExecutionException => e
+    rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
       puts %Q{
         Failed to create git repo from cartridge template: rc(#{e.rc})
         stdout ==> #{e.stdout}
@@ -199,23 +201,46 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
   end
 
   def test_from_ssh_url
-    e = assert_raise(OpenShift::Utils::ShellExecutionException) do
-      repo = OpenShift::ApplicationRepository.new(@user)
-      repo.destroy
-      repo.populate_from_url(@cartridge_name, 'git@github.com:jwhonce/origin-server.git')
-    end
-
-    assert_equal 130, e.rc
-    assert e.message.start_with?('CLIENT_ERROR:')
+    skip "Restore this test using webmock"
+    #e = assert_raise(::OpenShift::Runtime::Utils::ShellExecutionException) do
+    #  repo = OpenShift::Runtime::ApplicationRepository.new(@container)
+    #  repo.destroy
+    #  repo.populate_from_url(@cartridge_name, 'git@github.com:jwhonce/origin-server.git')
+    #end
+    #
+    #assert_equal expected_path, repo.path
+    #assert_bare_repository(repo)
+    #assert_repo_reset(repo)
   end
+
+  def test_from_ssh_url_with_reset
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
+
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
+    repo.destroy
+    begin
+      repo.populate_from_url(@cartridge_name, 'git://github.com/openshift/downloadable-mock.git#HEAD~1')
+    rescue OpenShift::Runtime::Utils::ShellExecutionException => e
+      puts %Q{
+        Failed to create git repo from cartridge template: rc(#{e.rc})
+        stdout ==> #{e.stdout}
+        stderr ==> #{e.stderr}
+           #{e.backtrace.join("\n")}}
+      raise
+    end    
+
+    assert_equal expected_path, repo.path
+    assert_bare_repository(repo)
+    assert_repo_reset(repo)
+  end  
 
   def test_source_usr
     refute_path_exist File.join(@cartridge_home, 'template.git')
 
     create_template(File.join(@cartridge_home, 'usr', 'template', 'perl'))
-    expected_path = File.join(@user.homedir, 'git', @user.app_name + '.git')
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
 
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     repo.destroy
     refute_path_exist(expected_path)
 
@@ -225,11 +250,11 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
       assert_equal expected_path, repo.path
       assert_bare_repository(repo)
 
-      runtime_repo = "#{@user.homedir}/app-root/runtime/repo"
+      runtime_repo = "#{@container.container_dir}/app-root/runtime/repo"
       FileUtils.mkpath(runtime_repo)
       repo.archive
       assert_path_exist File.join(runtime_repo, 'perl', 'health_check.pl')
-    rescue OpenShift::Utils::ShellExecutionException => e
+    rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
       puts %Q{
         Failed to create git repo from cartridge template: rc(#{e.rc})
         stdout ==> #{e.stdout}
@@ -241,10 +266,10 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
 
   def test_source
     create_template(File.join(@cartridge_home, 'template', 'perl'))
-    expected_path = File.join(@user.homedir, 'git', @user.app_name + '.git')
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
     refute_path_exist File.join(@cartridge_home, 'template.git')
 
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     repo.destroy
     refute_path_exist(expected_path)
 
@@ -254,13 +279,40 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
       assert_equal expected_path, repo.path
       assert_bare_repository(repo)
 
-      runtime_repo = "#{@user.homedir}/app-root/runtime/repo"
+      runtime_repo = "#{@container.container_dir}/app-root/runtime/repo"
       FileUtils.mkpath(runtime_repo)
       repo.archive
       assert_path_exist File.join(runtime_repo, 'perl', 'health_check.pl')
-    rescue OpenShift::Utils::ShellExecutionException => e
+    rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
       puts %Q{
         Failed to create git repo from cartridge template: rc(#{e.rc})
+        stdout ==> #{e.stdout}
+        stderr ==> #{e.stderr}
+           #{e.backtrace.join("\n")}}
+      raise
+    end
+  end
+
+  def test_empty_repository
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
+
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
+    repo.destroy
+    refute_path_exist(expected_path)
+
+    begin
+      repo.populate_empty(@cartridge_directory)
+
+      assert_equal expected_path, repo.path
+      assert_bare_repository(repo, true)
+
+      runtime_repo = "#{@container.container_dir}/app-root/runtime/repo"
+      FileUtils.mkpath(runtime_repo)
+      repo.archive
+      assert_equal ['.', '..'].sort, Dir.entries(runtime_repo).sort
+    rescue OpenShift::Runtime::Utils::ShellExecutionException => e
+      puts %Q{
+        Failed to create empty git repo: rc(#{e.rc})
         stdout ==> #{e.stdout}
         stderr ==> #{e.stderr}
            #{e.backtrace.join("\n")}}
@@ -271,9 +323,9 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
   def test_bare_submodule
     create_template(File.join(@cartridge_home, 'template', 'perl'))
     create_bare_submodule
-    expected_path = File.join(@user.homedir, 'git', @user.app_name + '.git')
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
 
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     repo.destroy
     refute_path_exist(expected_path)
 
@@ -283,12 +335,12 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
       assert_equal expected_path, repo.path
       assert_bare_repository(repo)
 
-      runtime_repo = "#{@user.homedir}/app-root/runtime/repo"
+      runtime_repo = "#{@container.container_dir}/app-root/runtime/repo"
       FileUtils.mkpath(runtime_repo)
       repo.archive
       assert_path_exist File.join(runtime_repo, 'perl', 'health_check.pl')
       assert_path_exist File.join(runtime_repo, 'module001', 'README.md')
-    rescue OpenShift::Utils::ShellExecutionException => e
+    rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
       puts %Q{
         Failed to create git repo from cartridge template: rc(#{e.rc})
         stdout ==> #{e.stdout}
@@ -301,9 +353,9 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
   def test_bare_nested_submodule
     create_template(File.join(@cartridge_home, 'template', 'perl'))
     create_bare_nested_submodule
-    expected_path = File.join(@user.homedir, 'git', @user.app_name + '.git')
+    expected_path = File.join(@container.container_dir, 'git', @container.application_name + '.git')
 
-    repo = OpenShift::ApplicationRepository.new(@user)
+    repo = OpenShift::Runtime::ApplicationRepository.new(@container)
     repo.destroy
     refute_path_exist(expected_path)
 
@@ -313,13 +365,13 @@ class ApplicationRepositoryFuncTest < OpenShift::NodeTestCase
       assert_equal expected_path, repo.path
       assert_bare_repository(repo)
 
-      runtime_repo = "#{@user.homedir}/app-root/runtime/repo"
+      runtime_repo = "#{@container.container_dir}/app-root/runtime/repo"
       FileUtils.mkpath(runtime_repo)
       repo.archive
       assert_path_exist File.join(runtime_repo, 'perl', 'health_check.pl')
       assert_path_exist File.join(runtime_repo, 'lib', 'module001', 'README.md')
       assert_path_exist File.join(runtime_repo, 'lib', 'module001', 'module002', 'README.md')
-    rescue OpenShift::Utils::ShellExecutionException => e
+    rescue OpenShift::Runtime::Utils::ShellExecutionException => e
       puts %Q{
         Failed to create git repo from cartridge template: rc(#{e.rc})
         stdout ==> #{e.stdout}
@@ -357,7 +409,7 @@ print <<EOF
   </html>
 EOF
 })
-      FileUtils.chown_R(@user.uid, @user.uid, path)
+      FileUtils.chown_R(@container.uid, @container.uid, path)
     }
   end
 
@@ -370,9 +422,12 @@ git config user.email "mocker@example.com";
 git config user.name "Mock Template builder";
 git add -f .;
 git </dev/null commit -a -m "Creating mocking template" 2>&1;
+touch secondcommit
+git add -f .;
+git </dev/null commit -a -m "Second commit" 2>&1;
 cd ..;
 git </dev/null clone --bare --no-hardlinks template template.git 2>&1;
-chown -R #{@user.uid}:#{@user.uid} template template.git;
+chown -R #{@container.uid}:#{@container.uid} template template.git;
 popd;
 }
 
@@ -409,9 +464,9 @@ git submodule update --init
 git </dev/null commit -m 'Added submodule module001'
 popd;
 git </dev/null clone --bare --no-hardlinks template template.git 2>&1;
-chown -R #{@user.uid}:#{@user.uid} template template.git
+chown -R #{@container.uid}:#{@container.uid} template template.git
 }
-      FileUtils.chown_R(@user.uid, @user.uid, template)
+      FileUtils.chown_R(@container.uid, @container.uid, template)
       #puts "\ncreate_bare_submodule: #{output}"
 
       FileUtils.rm_r(template)
@@ -462,9 +517,9 @@ git submodule update --init
 git </dev/null commit -m 'Added submodule module001'
 popd;
 git </dev/null clone --bare --no-hardlinks template template.git 2>&1;
-chown -R #{@user.uid}:#{@user.uid} template template.git
+chown -R #{@container.uid}:#{@container.uid} template template.git
 }
-      FileUtils.chown_R(@user.uid, @user.uid, template)
+      FileUtils.chown_R(@container.uid, @container.uid, template)
       #puts "\ncreate_bare_submodule: #{output}"
 
       FileUtils.rm_r(template)

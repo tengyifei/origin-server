@@ -5,8 +5,8 @@ Broker::Application.configure do
   # test suite.  You never need to work with it otherwise.  Remember that
   # your test database is "scratch space" for the test suite and is wiped
   # and recreated between test runs.  Don't rely on the data there!
-  config.cache_classes = ENV['SOURCE'] ? false : true
-  config.reload_plugins = ENV['SOURCE'] ? true : false
+  config.cache_classes = ENV['BROKER_SOURCE'] ? false : true
+  config.reload_plugins = ENV['BROKER_SOURCE'] ? true : false
 
   # Log error messages when you accidentally call methods on nil.
   config.whiny_nils = true
@@ -74,7 +74,7 @@ Broker::Application.configure do
     :domain_suffix => conf.get("CLOUD_DOMAIN", "example.com"),
     :default_max_gears => (conf.get("DEFAULT_MAX_GEARS", "100")).to_i,
     :default_gear_size => conf.get("DEFAULT_GEAR_SIZE", "small"),
-    :gear_sizes => conf.get("VALID_GEAR_SIZES", "small,medium").split(","),
+    :gear_sizes => conf.get("VALID_GEAR_SIZES", "small").split(","),
     :default_gear_capabilities => conf.get("DEFAULT_GEAR_CAPABILITIES", "small").split(","),
     :community_quickstarts_url => conf.get('COMMUNITY_QUICKSTARTS_URL'),
     :scopes => ['Scope::Session', 'Scope::Read', 'Scope::Application', 'Scope::Userinfo'],
@@ -98,4 +98,18 @@ Broker::Application.configure do
     :max_cart_size => conf.get("MAX_CART_SIZE", "20480").to_i,
     :max_download_time => conf.get("MAX_DOWNLOAD_TIME", "10").to_i
   }
+
+  # Enable the asset pipeline
+  config.assets.enabled = true
+
+  # Version of your assets, change this if you want to expire all your assets
+  config.assets.version = '1.0'
+
+  # Do not compress assets
+  config.assets.compress = false
+
+  # Expands the lines which load the assets
+  config.assets.debug = true
+  config.assets.logger = false
+
 end

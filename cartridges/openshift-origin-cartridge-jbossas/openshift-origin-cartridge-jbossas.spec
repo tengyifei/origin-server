@@ -1,10 +1,10 @@
-%global cartridgedir %{_libexecdir}/openshift/cartridges/v2/jbossas
+%global cartridgedir %{_libexecdir}/openshift/cartridges/jbossas
 %global jbossver 7.1.1.Final
 %global oldjbossver 7.1.0.Final
 
 Summary:       Provides JBossAS7 support
 Name:          openshift-origin-cartridge-jbossas
-Version: 1.3.6
+Version: 1.5.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -92,6 +92,28 @@ cp -p %{cartridgedir}/versions/7/modules/postgresql_module.xml /etc/alternatives
 
 
 %changelog
+* Fri Jul 12 2013 Adam Miller <admiller@redhat.com> 1.5.1-1
+- bump_minor_versions for sprint 31 (admiller@redhat.com)
+
+* Wed Jul 10 2013 Adam Miller <admiller@redhat.com> 1.4.4-1
+- Bug 980321: Sync repo dir with live deployments dir on initial install
+  (ironcladlou@gmail.com)
+- Bug 980487: Add jboss-cli.sh to the jboss* cartridges (ironcladlou@gmail.com)
+
+* Tue Jul 09 2013 Adam Miller <admiller@redhat.com> 1.4.3-1
+- Explicitly specify ERB files to process in jboss cartridges
+  (ironcladlou@gmail.com)
+
+* Tue Jul 02 2013 Adam Miller <admiller@redhat.com> 1.4.2-1
+- remove v2 folder from cart install (dmcphers@redhat.com)
+
+* Tue Jun 25 2013 Adam Miller <admiller@redhat.com> 1.4.1-1
+- bump_minor_versions for sprint 30 (admiller@redhat.com)
+
+* Mon Jun 24 2013 Adam Miller <admiller@redhat.com> 1.3.7-1
+- Bug 975794: Move oo-admin-cartridge operations to %%posttrans
+  (ironcladlou@gmail.com)
+
 * Fri Jun 21 2013 Adam Miller <admiller@redhat.com> 1.3.6-1
 - WIP Cartridge - Updated manifest.yml versions for compatibility
   (jhonce@redhat.com)

@@ -17,7 +17,7 @@
 require_relative 'coverage_helper'
 
 require 'test/unit'
-require 'mocha'
+require 'mocha/setup'
 require 'logger'
 
 require_relative '../lib/openshift-origin-node'
@@ -28,7 +28,7 @@ module OpenShift
     alias assert_raise assert_raises
 
     def assert_path_exist(path, message=nil)
-      assert File.exist?(path),  "#{path} expected to exist #{message}"
+      assert File.exist?(path), "#{path} expected to exist #{message}"
     end
 
     def refute_path_exist(path, message=nil)
@@ -38,16 +38,16 @@ module OpenShift
     def before_setup
       log_config = mock()
       log_config.stubs(:get).with("PLATFORM_LOG_CLASS").returns("StdoutLogger")
-      OpenShift::NodeLogger.stubs(:load_config).returns(log_config)
+      ::OpenShift::Runtime::NodeLogger.stubs(:load_config).returns(log_config)
 
-      OpenShift::Utils::Sdk.stubs(:new_sdk_app?).returns(true)
-      OpenShift::Utils::Sdk.stubs(:node_default_model).returns(:v2)
+      @config = mock('OpenShift::Config')
+      @config.stubs(:get).returns(nil)
+      @config.stubs(:get).with("CONTAINERIZATION_PLUGIN").returns('openshift-origin-container-selinux')
+      OpenShift::Config.stubs(:new).returns(@config)
       super
     end
 
     def after_teardown
-      OpenShift::Utils::Sdk.unstub(:new_sdk_app?)
-      OpenShift::Utils::Sdk.unstub(:node_default_model)
       super
     end
 

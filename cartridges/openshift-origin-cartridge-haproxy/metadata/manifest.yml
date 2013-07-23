@@ -6,7 +6,7 @@ Version: '1.4'
 License: GPLv2+
 License-Url: http://www.gnu.org/licenses/gpl-2.0.html
 Vendor: http://haproxy.1wt.eu/
-Cartridge-Version: '0.0.2'
+Cartridge-Version: '0.0.3'
 Cartridge-Vendor: redhat
 Categories:
   - web_proxy
@@ -36,9 +36,14 @@ Components:
     Scaling:
       Min: 1
       Max: 1
+      Multiplier: -1
 Configure-Order:
   - web_framework
   - web_proxy
+Group-Overrides:
+  - components:
+    - web_framework
+    - web_proxy
 Endpoints:
   - Private-IP-Name:   IP
     Private-Port-Name: PORT

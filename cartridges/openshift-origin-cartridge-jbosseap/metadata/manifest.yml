@@ -6,7 +6,7 @@ Version: '6.0'
 License: LGPL
 License-Url: http://www.gnu.org/copyleft/lesser.txt
 Vendor: Red Hat
-Cartridge-Version: 0.0.2
+Cartridge-Version: '0.0.3'
 Cartridge-Vendor: redhat
 Categories:
   - service
@@ -90,10 +90,6 @@ Subscribes:
 Scaling:
   Min: 1
   Max: -1
-Group-Overrides:
-  - components:
-    - jbosseap-6.0
-    - web_proxy
 Endpoints:
   - Private-IP-Name:   IP
     Private-Port-Name: HTTP_PORT
