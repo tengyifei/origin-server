@@ -34,8 +34,8 @@ module Console::UserManagerHelper
     user_manager_get session[:authentication].login + _url('billing_address')
   end
 
-  def user_manager_billing_address_update(country_code, state, city, line1, line2, postal_code, phone)
-    user_manager_post session[:authentication].login + _url('billing_address'), :country_code => country_code, :state => state, :city => city, :line1 => line1, :line2 => line2, :postal_code => postal_code, :phone => phone
+  def user_manager_billing_address_update(country_code, state, city, line1, line2, postal_code, phone, cpf, cnpj)
+    user_manager_post session[:authentication].login + _url('billing_address'), :country_code => country_code, :state => state, :city => city, :line1 => line1, :line2 => line2, :postal_code => postal_code, :phone => phone, :cpf => cpf, :cnpj => cnpj
   end
 
   private

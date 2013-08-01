@@ -45,6 +45,16 @@
       .controls
         = text_field_tag 'phone', @address[:phone], :placeholder => "Phone", :class => 'input-medium'
 
+    .string.required.control-group
+      %label.control-label CPF
+      .controls
+        = text_field_tag 'cpf', @address[:cpf], :placeholder => "CPF (Brazil only)", :class => 'input-medium'
+
+    .string.required.control-group
+      %label.control-label CNPJ
+      .controls
+        = text_field_tag 'cnpj', @address[:cnpj], :placeholder => "CPNJ (Brazil only)", :class => 'input-medium'
+
   %fieldset.form-actions
     = link_to "Cancel", billing_index_path, :class => 'btn'
     %button.btn.btn-danger.update{:type => 'submit'} Change    
