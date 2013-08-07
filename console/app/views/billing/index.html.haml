@@ -3,22 +3,22 @@
 
 = flashes
 
-.row.billing-history
-  .span6
-    %section
-      %h2 Recent Activity
-
-      %dl
-        %dt
-          You have no invoices yet
-        %dd
-
-        %dt Payments
-        %dd US$ 0.0
-
-        %dt
-          %big Current Balance
-        %dd US$ 0.0
+//.row.billing-history
+//  .span6
+//    %section
+//      %h2 Recent Activity
+//
+//      %dl
+//        %dt
+//          You have no invoices yet
+//        %dd
+//
+//        %dt Payments
+//        %dd US$ 0.0
+//
+//        %dt
+//          %big Current Balance
+//        %dd US$ 0.0
 
 //.span6
 //  %section
@@ -46,42 +46,20 @@
             %th{:scope => 'col'} Processed
             %th{:scope => 'col'} Due Date
             %th{:scope => 'col'} Status
-            %th{:scope => 'col'} Amount
+            %th{:scope => 'col'} Amount (#{@currency})
             %th{:scope => 'col'} PDF
-//      %tbody
-//          %tr
-//          %td
-//            = link_to "2031", billing_path(2031)
-//          %td May, 2013
-//          %td May 17, 2013
-//          %td May 20, 2013
-//          %td Paid
-//          %td US$ 250.23
-//          %td -
-//          %tr
-//            %td
-//              = link_to "2032", billing_path(2032)
-//            %td Apr, 2013
-//            %td Apr 20, 2013
-//            %td Apr 20, 2013
-//            %td Paid
-//            %td US$ 2,350.23
-//            %td - 
-//          %tr
-//            %td
-//              = link_to "2033", billing_path(2033)
-//            %td June, 2013
-//            %td June 20, 2013
-//            %td June 20, 2013
-//            %td Failed
-//            %td US$ 10,350.23
-//            %td - 
-//          %tr
-//            %td
-//              = link_to "2034", billing_path(2034)
-//            %td Apr, 2013
-//            %td Apr 20, 2013
-//            %td June 20, 2013
-//            %td Payback
-//            %td US$ 50.23
-//            %td -             
+        %tbody
+          - @history.each do |h|
+            %tr
+              %td
+                = link_to "#{h[:number]}", billing_path(h[:number])
+              - ref_date = !h[:ref_date].nil? ? Date.strptime("#{h[:ref_date]}","%Y-%m-%d").strftime("%h, %Y") : '-'
+              %td #{ref_date}
+              - proc_date = !h[:proc_date].nil? ? Date.strptime("#{h[:proc_date]}","%Y-%m-%d").strftime("%h %d, %Y") : '-'
+              %td #{proc_date}
+              - due_date = !h[:due_date].nil? ? Date.strptime("#{h[:due_date]}","%Y-%m-%d").strftime("%h %d, %Y") : '-'
+              %td #{due_date}
+              %td #{h[:status].capitalize}
+              %td #{number_with_precision(h[:amount].to_f, :precision => 2)}
+              %td
+                = link_to "PDF", "/getup/billing/#{h[:number]}.pdf"

@@ -29,6 +29,10 @@ module Console::UserManagerHelper
   def user_manager_subscription_cancel
     user_manager_get session[:authentication].login + _url('subscription_cancel')
   end
+  
+  def user_manager_subscription_prices
+    user_manager_get session[:authentication].login + _url('subscription_prices')
+  end
 
   def user_manager_billing_address
     user_manager_get session[:authentication].login + _url('billing_address')
@@ -36,6 +40,14 @@ module Console::UserManagerHelper
 
   def user_manager_billing_address_update(country_code, state, city, line1, line2, postal_code, phone)
     user_manager_post session[:authentication].login + _url('billing_address'), :country_code => country_code, :state => state, :city => city, :line1 => line1, :line2 => line2, :postal_code => postal_code, :phone => phone
+  end
+  
+  def user_manager_billing_history
+    user_manager_get session[:authentication].login + _url('billing_history')
+  end
+  
+  def user_manager_billing_invoice(id)
+    user_manager_get session[:authentication].login + _url('billing_invoice') + id + '/'
   end
 
   private
