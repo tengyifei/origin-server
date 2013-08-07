@@ -193,7 +193,10 @@ module Console
             :subscription => config[:USER_MANAGER_SUBSCRIPTION_URL],
             :subscription_confirm => config[:USER_MANAGER_SUBSCRIPTION_CONFIRM_URL],
             :subscription_cancel  => config[:USER_MANAGER_SUBSCRIPTION_CANCEL_URL],
-            :billing_address => config[:USER_MANAGER_BILLING_ADDRESS_URL]
+            :subscription_prices  => config[:USER_MANAGER_SUBSCRIPTION_PRICES_URL],
+            :billing_address => config[:USER_MANAGER_BILLING_ADDRESS_URL],
+            :billing_history => config[:USER_MANAGER_BILLING_HISTORY_URL],
+            :billing_invoice => config[:USER_MANAGER_BILLING_INVOICE_URL],
           }
         })
       end
