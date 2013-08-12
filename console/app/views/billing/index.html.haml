@@ -50,9 +50,10 @@
             %th{:scope => 'col'} PDF
         %tbody
           - @history.each do |h|
-            %tr
-              %td
-                = link_to "#{h[:number]}", billing_path(h[:number])
+            %tr{:style => 'cursor: pointer; cursor: hand;', :data => {:href => billing_path(h[:number])}}
+              %td 
+                #{h[:number]}
+                //= link_to "#{h[:number]}", billing_path(h[:number])
               - ref_date = !h[:ref_date].nil? ? Date.strptime("#{h[:ref_date]}","%Y-%m-%d").strftime("%h, %Y") : '-'
               %td #{ref_date}
               - proc_date = !h[:proc_date].nil? ? Date.strptime("#{h[:proc_date]}","%Y-%m-%d").strftime("%h %d, %Y") : '-'
@@ -63,3 +64,14 @@
               %td #{number_with_precision(h[:amount].to_f, :precision => 2)}
               %td
                 = link_to "PDF", "/getup/billing/#{h[:number]}.pdf"
+
+- content_for :javascripts do
+  :javascript
+    $('.table-fixed tbody tr td').on('click', function() {
+      var td = $(this)
+      var tr = td.parent()
+      var href = tr.attr('data-href')
+      if ($(tr).find(td).index() != 6) {
+        window.location.href = href
+      }
+    });
