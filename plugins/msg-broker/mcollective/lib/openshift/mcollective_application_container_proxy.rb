@@ -144,7 +144,7 @@ module OpenShift
       # * Is this really a function of the broker
       #
       def self.get_blacklisted_in_impl
-        []
+        Rails.configuration.openshift[:blacklist]
       end
 
       # <<orphan>>
@@ -161,7 +161,7 @@ module OpenShift
       # * This is really a function of the broker
       #
       def self.blacklisted_in_impl?(name)
-        false
+        Rails.configuration.openshift[:blacklist].include?(name)
       end
 
       # <<class method>>
