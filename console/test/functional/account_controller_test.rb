@@ -8,5 +8,7 @@ class AccountControllerTest < ActionController::TestCase
 
     assert_response :success
     assert assigns(:user).login.present?
+    assert !assigns(:keys).nil?
+    assert assigns(:domain).nil?
   end
 end

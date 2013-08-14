@@ -4,7 +4,7 @@ class ApplicationType
   include RestApi::Cacheable
   extend ActiveModel::Naming
 
-  PROTECTED_TAGS = [:new, :premium, :blacklist, :featured, :custom]
+  PROTECTED_TAGS = [:new, :premium, :blacklist, :featured]
   def self.user_tags(tags)
     tags - PROTECTED_TAGS
   end
@@ -25,13 +25,11 @@ class ApplicationType
   attr_accessor :priority
   attr_accessor :scalable
   alias_method :scalable?, :scalable
-  attr_accessor :may_not_scale
-  alias_method :may_not_scale?, :may_not_scale
   attr_accessor :provider
   attr_accessor :source
   attr_accessor :usage_rates
 
-  attr_accessible :initial_git_url, :cartridges, :initial_git_branch, :scalable, :may_not_scale
+  attr_accessible :initial_git_url, :cartridges, :initial_git_branch, :scalable
   alias_attribute :categories, :tags
 
   def initialize(attributes={}, persisted=false)
@@ -69,7 +67,7 @@ class ApplicationType
       else
         s = s.strip
         if s[0] == '['
-          ActiveSupport::JSON.decode(s)
+          ActiveSupport::JSON.decode(s).map{ |s| s.is_a?(Hash) ? s['name'] : s }
         else
           s.split(',').map(&:strip)
         end
@@ -113,25 +111,16 @@ class ApplicationType
 
   def cartridge?; source == :cartridge; end
   def quickstart?; source == :quickstart; end
-  def custom?; id == 'custom'; end
 
   def matching_cartridges
     self.class.matching_cartridges(cartridge_specs)
   end
 
   def >>(app)
-    app.cartridges = cartridges.map{ |s| to_cart(s) } if cartridges.present?
+    app.cartridges = cartridges if cartridges.present?
     app.initial_git_url = initial_git_url if initial_git_url
     app.initial_git_branch = initial_git_branch if initial_git_branch
     app
-  end
-
-  def to_cart(c)
-    if c.is_a?(String) && (c.start_with? 'http://' or c.start_with? 'https://')
-      CartridgeType.for_url(c)
-    else
-      c
-    end
   end
 
   #
@@ -175,21 +164,7 @@ class ApplicationType
   def self.matching_cartridges(cartridge_specs)
     valid, invalid = {}, []
     Array(cartridge_specs).uniq.each do |c|
-      if c.is_a? Hash
-        if c['name'].present?
-          if cart = CartridgeType.cached.find(c['name']) rescue nil
-            valid[c['name']] = [cart]
-          else
-            invalid << c['name']
-          end
-        elsif c['url'].present?
-          valid[c['url']] = [CartridgeType.for_url(c['url'])]
-        else
-          invalid << '-- Unknown'
-        end
-      elsif c.start_with? 'http://' or c.start_with? 'https://'
-        valid[c] = [CartridgeType.for_url(c)]
-      elsif (matches = CartridgeType.cached.matches(c)).present?
+      if (matches = CartridgeType.cached.matches(c)).present?
         valid[c] = matches
       else
         invalid << c
@@ -258,7 +233,7 @@ class ApplicationType
     end
     def self.from_quickstart(type)
       attrs = { :id => "quickstart!#{type.id}", :source => :quickstart }
-      [:display_name, :tags, :description, :website, :initial_git_url, :initial_git_branch, :cartridges_spec, :priority, :scalable, :may_not_scale, :learn_more_url, :provider].each do |m|
+      [:display_name, :tags, :description, :website, :initial_git_url, :initial_git_branch, :cartridges_spec, :priority, :scalable, :learn_more_url, :provider].each do |m|
         attrs[m] = type.send(m)
       end
 

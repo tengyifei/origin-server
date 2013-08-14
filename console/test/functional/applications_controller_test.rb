@@ -111,64 +111,6 @@ class ApplicationsControllerTest < ActionController::TestCase
     assert_select "select[name='application[cartridges][]'] > option[selected]", 'Ruby 1.8'
   end
 
-  test "should assign errors when advanced form with url carts" do
-    with_domain
-    app_params = get_post_form
-    app_type = {
-      :id => 'custom',
-      :cartridges => ['https://foo.bar'],
-    }
-    app_params[:name] = ''
-    app_params[:cartridges] = ['https://foo.bar']
-    post(:create, {:application => app_params, :application_type => app_type, :advanced => true})
-
-    assert_template 'application_types/show'
-    assert app = assigns(:application)
-    assert !app.errors.empty?
-    assert app.errors[:name].present?, app.errors.inspect
-    assert_equal 1, app.errors[:name].length
-
-    assert_select '.error .help-inline', /Application name is required/i
-    assert_select 'h3 > a', 'https://foo.bar'
-    assert_select '.text-warning', /Downloaded cartridges do not receive updates automatically/
-    assert_select "input[type=hidden][name='application[cartridges][][url]'][value=https://foo.bar]"
-  end
-
-  test "should send URL to server" do
-    with_domain
-    app_params = get_post_form
-    app_type = {
-      :id => 'custom',
-      :cartridges => ['https://foo.bar'],
-    }
-    app_params[:name] = ''
-    app_params[:cartridges] = [{:url => 'https://foo.bar'}]
-    Application.any_instance.expects(:save).returns(true)
-    Application.any_instance.expects(:persisted?).at_least_once.returns(true)
-
-    post(:create, {:application => app_params, :application_type => app_type, :advanced => true})
-    
-    assert app = assigns(:application)
-    assert_equal [{'url' => 'https://foo.bar'}], app.cartridges
-  end
-
-  test "should send app type URL to server" do
-    with_domain
-    app_params = get_post_form
-    app_type = {
-      :id => 'custom',
-      :cartridges => 'https://foo.bar',
-    }
-    app_params[:name] = ''
-    Application.any_instance.expects(:save).returns(true)
-    Application.any_instance.expects(:persisted?).at_least_once.returns(true)
-
-    post(:create, {:application => app_params, :application_type => app_type, :advanced => true})
-    
-    assert app = assigns(:application)
-    assert_equal [CartridgeType.for_url('https://foo.bar')], app.attributes['cartridges']
-  end
-
   test "should assign errors on long name" do
     with_domain
     app_params = get_post_form
@@ -219,10 +161,9 @@ class ApplicationsControllerTest < ActionController::TestCase
     get(:index)
     apps = assigns(:applications)
     assert apps
-    assert apps.length > 0
-    assert apps.any?{ |a| a.name == app.name }
+    assert_equal apps.length, 1
+    apps[0].name == app.name
     assert_response :success
-    assert_select 'h2 > a', app.name
   end
 
   test "should filter application list with name" do
@@ -259,26 +200,6 @@ class ApplicationsControllerTest < ActionController::TestCase
     assert groups[0].cartridges[0].display_name
     assert domain = assigns(:domain)
     assert !assigns(:has_keys)
-
-    assert_select 'h1', with_app.name
-    with_app.cartridges.map(&:display_name).each do |name|
-      assert_select 'h2', name
-    end
-  end
-
-  test "should retrieve downloaded application details" do
-    cart = with_downloaded_app.reload.cartridges.first
-
-    get :show, :id => with_downloaded_app.name
-    assert_response :success
-    assert app = assigns(:application)
-    assert groups = assigns(:gear_groups)
-
-    assert_select 'h1', with_downloaded_app.name
-    assert_select 'p', /Created from/ do |p|
-      assert_select 'a', :href => cart.url
-    end
-    assert_select 'h2', cart.name
   end
 
   test "should retrieve application details with has_sshkey cache set" do
@@ -336,17 +257,6 @@ class ApplicationsControllerTest < ActionController::TestCase
     assert_select 'h1', /Application 'idontexist' does not exist/
   end
 
-  test "should result in error message when app creation times out" do
-    with_domain
-    Application.any_instance.expects(:save).raises(ActiveResource::TimeoutError.new('Timeout'))
-    post(:create, {:application => get_post_form})
-    assert app = assigns(:application)
-    assert !app.persisted?
-    assert !flash[:error].empty?
-    assert_match /Application creation is taking longer than expected./i, flash[:error]
-    assert_redirected_to applications_path
-  end
-
   test 'invalid destroy should render page' do
     Application.any_instance.expects(:destroy).returns(false)
     delete :destroy, :id => with_app.name
@@ -388,8 +298,6 @@ class ApplicationsControllerTest < ActionController::TestCase
     assert_equal 'true', app.scale.to_s
     assert app.persisted?
 
-    assert_redirected_to get_started_application_path(app, :wizard => true)
-
     app.destroy
   end
 
@@ -413,6 +321,23 @@ class ApplicationsControllerTest < ActionController::TestCase
     # This space intentionally left blank;
     # Testing this end-to-end would be relatively time consuming right now.
   end
+
+#  test "should check for empty name" do
+#    form = get_post_form
+#    form[:name]=''
+#    post(:create, {:application => form})
+#    assert assigns(:application)
+#    assert assigns(:application).errors[:name].length > 0
+#    assert_response :success
+#  end
+
+#  test "should redirect on success" do
+#    post(:create, :application => get_post_form)
+#    assert assigns(:application)
+#    assert assigns(:application).errors.empty?
+#    assert_redirected_to :action => 'show'
+#    assert_template
+#  end
 
   def get_post_form(name = 'cart!diy-0.1')
     {:name => 'test1', :application_type => name}

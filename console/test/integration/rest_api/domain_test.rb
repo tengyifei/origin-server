@@ -17,40 +17,11 @@ class RestApiDomainTest < ActiveSupport::TestCase
     assert @domain.errors.empty?
   end
 
-  def test_domain_not_found
-    m = response_messages(RestApi::ResourceNotFound){ Domain.find("_missing!_", :as => @user) }
-    assert_messages 1, /domain/i, /_missing\!_/i, m
-
-    m = response_messages(RestApi::ResourceNotFound){ Domain.find("notreal", :as => @user) }
-    assert_messages 1, /domain/i, /notreal/i, m
-  end
-
-  def test_domain_app_not_found
-    setup_domain
-
-    m = response_messages{ @domain.find_application('_missing!_') }
-    assert_messages 1, /application/i, /_missing\!_/i, m
-
-    m = response_messages{ @domain.find_application('notreal') }
-    assert_messages 1, /application/i, /notreal/i, m
-  end
-
   def test_domains_get
     setup_domain
     domains = Domain.find :all, :as => @user
     assert_equal 1, domains.length
     assert_equal "#{uuid}", domains[0].name
-  end
-
-  def test_domains_get_by_owner
-    assert RestApi.info.link('LIST_DOMAINS_BY_OWNER')
-    setup_domain
-    domains = Domain.find :all, :as => @user
-    owned_domains = Domain.find :all, :params => {:owner => '@self'}, :as => @user
-    assert_equal 1, domains.length
-    assert_equal domains, owned_domains
-
-    assert_raises(ActiveResource::BadRequest, "Other filters are now supported"){ Domain.find :all, :params => {:owner => 'other'}, :as => @user }
   end
 
   def test_domains_first

@@ -30,7 +30,6 @@ class ScalingControllerTest < ActionController::TestCase
   end
 
   def with_mock_app(app=app_without_scaling, cartridges=cartridges_without_scaling)
-    Rails.cache.clear
     with_unique_user
 
     allow_http_mock
@@ -38,9 +37,9 @@ class ScalingControllerTest < ActionController::TestCase
       mock.get '/broker/rest/cartridges.json', anonymous_json_header, [].to_json
       mock.get '/broker/rest/user.json', json_header, {:max_gears => 16}.to_json
       mock.get '/broker/rest/domains.json', json_header, [mock_domain].to_json
-      mock.get '/broker/rest/domain/test/application/test.json', json_header, app.to_json
-      mock.get '/broker/rest/domain/test/applications.json', json_header, [app].compact.to_json
-      mock.get '/broker/rest/domain/test/application/test/cartridges.json', json_header, cartridges.to_json
+      mock.get '/broker/rest/domains/test/applications/test.json', json_header, app.to_json
+      mock.get '/broker/rest/domains/test/applications.json', json_header, [app].compact.to_json
+      mock.get '/broker/rest/domains/test/applications/test/cartridges.json', json_header, cartridges.to_json
     end
     {:application_id => 'test'}
   end

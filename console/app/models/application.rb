@@ -9,15 +9,12 @@ class Application < RestApi::Base
     string :server_identity
     string :gear_profile, :scale
     string :building_with, :build_job_url, :building_app
-    string :framework
   end
 
   custom_id :name
   def id #FIXME provided as legacy support for accessing .name via .id
     name
   end
-
-  singular_resource
 
   belongs_to :domain
   alias_attribute :domain_name, :domain_id
@@ -27,7 +24,7 @@ class Application < RestApi::Base
   has_many :cartridges
   has_many :gears
   has_many :gear_groups
-  has_one  :embedded, :class_name => as_indifferent_hash
+  has_one  :embedded, :class_name => 'rest_api/base/attribute_hash'
 
   attr_accessible :name, :scale, :gear_profile, :cartridges, :cartridge_names, :initial_git_url, :initial_git_branch
 
@@ -38,6 +35,9 @@ class Application < RestApi::Base
   def cartridges
     attributes[:cartridges] ||= persisted? ? Cartridge.find(:all, child_options) : []
   end
+  #def cartridges=(arr)
+  #  attributes[:cartridges] = Array(arr)
+  #end
 
   def cartridge_names
     persisted? ? cartridges.map(&:name) : Array(attributes[:cartridges])
@@ -65,9 +65,7 @@ class Application < RestApi::Base
   end
 
   def restart!
-    self.messages.clear
-    response = post(:events, nil, {:event => :restart}.to_json)
-    self.messages = extract_messages(response)
+    post(:events, nil, {:event => :restart}.to_json)
     true
   end
 
@@ -77,16 +75,16 @@ class Application < RestApi::Base
   def find_alias(id)
     Alias.find id, child_options
   end
-
   def remove_alias(alias_name)
     begin
-      self.messages.clear
       response = post(:events, nil, {:event => 'remove-alias', :alias => alias_name}.to_json)
-      self.messages = extract_messages(response)
       response.is_a? Net::HTTPOK
     rescue
       false
     end
+  end
+  def remove_aliases
+    self.aliases.each {|a| self.remove_alias(a.id) }
   end
 
   def web_url
@@ -141,25 +139,21 @@ class Application < RestApi::Base
   end
 
   def reload
-    [:@gear_groups, :@cartridge_gear_groups, :@framework_name].each{ |s| instance_variable_set(s, nil) }
-    attributes.delete(:cartridges) if persisted?
+    @gear_groups = nil
+    @cartridge_gear_groups = nil
     super
   end
 
   protected
-    def extract_messages(response)
-      RestApi::Base.format.decode(response.body)['messages'] || []
-    rescue
-      []
-    end
-
     def child_options
       { :params => { :domain_id => domain_id, :application_name => self.name},
         :as => as }
     end
 
-    def self.rescue_parent_missing(e, options=nil)
-      parent = RestApi::ResourceNotFound.new(Domain.model_name, (options[:params][:domain_id] rescue nil), e.response)
-      raise parent if parent.domain_missing?
+    class << self
+      def rescue_parent_missing(e, options=nil)
+        parent = RestApi::ResourceNotFound.new(Domain.model_name, (options[:params][:domain_id] rescue nil), e.response)
+        raise parent if parent.domain_missing?
+      end
     end
 end

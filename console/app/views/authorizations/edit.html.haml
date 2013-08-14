@@ -1,5 +1,5 @@
 - content_for :title, "Edit Authorization"
-- breadcrumb_for_settings 'Edit Authorization'
+- breadcrumb_for_account_settings 'Edit Authorization'
 %h1 Authorization Token
 = flashes
 
@@ -14,18 +14,18 @@
       %table.table
         %thead
           %tr
-            %th.nowrap{:scope => 'col'} Scope
-            %th.nowrap{:scope => 'col'} Description
+            %th{:scope => 'col'} Scope
+            %th{:scope => 'col'} Description
         %tbody
           - @authorization.scopes.each do |s|
             - if scope = @scope_definitions.find{ |scope| scope[:match] ? s.match(scope[:match]) : scope[:id].to_s == s.to_s }
               %tr
-                %td.nowrap{:scope => 'row'}= scope[:id]
+                %td{:scope => 'row'}= scope[:id]
                 %td= scope[:description]
 
       = f.input :note, :as => :text, :label => 'Change the description of this authorization token', :input_html => {:class => 'span6', :rows => 2}
 
   = f.buttons do
-    = link_to "Cancel", settings_path, :class => 'btn'
+    = link_to "Cancel", account_settings_redirect, :class => 'btn'
     = f.commit_button :label => 'Save', :button_html => {:title => 'Update this authorization token'}
     = f.loading

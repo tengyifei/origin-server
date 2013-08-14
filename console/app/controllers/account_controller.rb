@@ -1,5 +1,3 @@
 class AccountController < ConsoleController
-  def show
-    @user = current_user
-  end
+  include Account::Dashboard
 end

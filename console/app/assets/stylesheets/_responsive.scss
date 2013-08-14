@@ -251,11 +251,6 @@
   .box-content {
     padding: $gridGutterWidthPhone/2 $gridGutterWidthPhone;
   }
-
-  // Reset style defined in grid
-  .pull-right[class*="span"] {
-    float: none;
-  }
 }
 
 
@@ -382,11 +377,6 @@
     overflow: hidden;
     height: 0;
   }
-
-  p.larger {
-    font-size: $baseFontSize + 1;
-    line-height: $baseLineHeight + 2;
-  }
 }
 
 
@@ -405,7 +395,7 @@
 // LARGE DESKTOP & UP
 // ------------------
 
-@media (min-width: 1240px) {
+@media (min-width: 1200px) {
   .is-above-1200 { content: 'true'; }
 
   // Fixed grid

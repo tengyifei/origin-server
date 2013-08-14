@@ -17,67 +17,66 @@
 @import "variables";
 
 // Core variables and mixins
-@import "twitter/variables"; // Modify this for custom colors, font-sizes, etc
-@import "twitter/mixins";
+@import "bootstrap/variables"; // Modify this for custom colors, font-sizes, etc
+@import "bootstrap/mixins";
 @import "mixins";
 
 // CSS Reset
-@import "twitter/reset";
+@import "bootstrap/reset";
 
 // Grid system and page structure
-@import "twitter/scaffolding";
+@import "bootstrap/scaffolding";
 @import "grid"; // our grid defaults should have lower CSS priority than grids
-@import "twitter/grid";
-@import "twitter/layouts";
+@import "bootstrap/grid";
+@import "bootstrap/layouts";
 
 // Base CSS
-//@import "twitter/type";
+//@import "bootstrap/type";
 @import "type";
-//@import "twitter/code";
+//@import "bootstrap/code";
 @import "code";
-//@import "twitter/forms";
+//@import "bootstrap/forms";
 @import "forms";
 //@import "input-prepend-append";
-@import "twitter/tables";
+@import "bootstrap/tables";
 
 // Components: common
-//@import "twitter/sprites";
-@import "twitter/wells";
-@import "twitter/component-animations";
-@import "twitter/close";
+//@import "bootstrap/sprites";
+@import "bootstrap/wells";
+@import "bootstrap/component-animations";
+@import "bootstrap/close";
 
 // Components: Buttons & Alerts
 @import "buttons";
-@import "twitter/button-groups";
+@import "bootstrap/button-groups";
 @import "alerts"; // Note: alerts share common CSS with buttons and thus have styles in buttons.scss
 
 // Components: Nav
-//@import "twitter/navs";
-//@import "twitter/navbar";
-//@import "twitter/breadcrumbs";
-@import "twitter/pagination";
-@import "twitter/pager";
+@import "bootstrap/navs";
+//@import "bootstrap/navbar";
+//@import "bootstrap/breadcrumbs";
+@import "bootstrap/pagination";
+@import "bootstrap/pager";
 @import "footer";
 
 // Components: Popovers
-//@import "twitter/modals";
-@import "twitter/tooltip";
-@import "twitter/dropdowns";
-@import "twitter/popovers";
+//@import "bootstrap/modals";
+@import "bootstrap/tooltip";
+@import "bootstrap/popovers";
 
 // Components: Misc
-@import "twitter/thumbnails";
+@import "bootstrap/thumbnails";
 @import "labels";
-//@import "twitter/progress-bars";
-//@import "twitter/accordion";
-//@import "twitter/carousel";
-//@import "twitter/hero-unit";
+//@import "bootstrap/progress-bars";
+//@import "bootstrap/accordion";
+//@import "bootstrap/carousel";
+@import "bootstrap/hero-unit";
 
 // Utility classes
-@import "twitter/utilities"; // Has to be last to override when necessary
+@import "bootstrap/utilities"; // Has to be last to override when necessary
 @import "utilities"; // Has to be last to override when necessary
 
-//@import "twitter/responsive";
+//@import "bootstrap/responsive";
 @import "responsive";
 
 @import "custom";

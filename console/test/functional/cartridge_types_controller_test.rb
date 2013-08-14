@@ -3,8 +3,6 @@ require File.expand_path('../../test_helper', __FILE__)
 class CartridgeTypesControllerTest < ActionController::TestCase
 
   test "should show index" do
-    RestApi.stubs(:download_cartridges_enabled?).returns(true)
-
     get :index, :application_id => with_app.name
     assert_response :success
 
@@ -26,9 +24,6 @@ class CartridgeTypesControllerTest < ActionController::TestCase
 
     cached = CartridgeType.cached.all
     assert cached.all? {|t| (t.tags & [:installed, :inactive, 'inactive']).empty? }, cached.pretty_inspect
-
-    assert_select "h3", 'Install your own cartridge'
-    assert_select "input[type=submit][title='Download a cartridge into this app']"
   end
 
   test "should show type page" do
@@ -40,23 +35,6 @@ class CartridgeTypesControllerTest < ActionController::TestCase
     assert assigns(:cartridge)
     assert assigns(:application)
     assert assigns(:domain)
-  end
-
-  test "should show custom url page" do
-    get :show, :application_id => with_app.name, :id => 'custom', :url => 'https://foo.com#bar'
-
-    assert_response :success
-    assert type = assigns(:cartridge_type)
-    assert_equal 'https://foo.com#bar', type.url
-    assert assigns(:cartridge)
-    assert assigns(:application)
-    assert assigns(:domain)
-
-    assert_select 'h3', 'bar'
-    assert_select 'p', /This cartridge will be downloaded/
-    assert_select 'span', 'https://foo.com#bar'
-    assert_select '.text-warning', /Downloaded cartridges do not receive updates automatically/
-    assert_select 'a[href=https://foo.com#bar]', 'bar'
   end
 
   test "should not raise on missing type" do

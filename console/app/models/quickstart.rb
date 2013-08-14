@@ -1,8 +1,7 @@
 class Quickstart < RestApi::Base
   include RestApi::Cacheable
   allow_anonymous
-  singular_resource
-  
+
   instance_variable_set(:@connection, nil)
 
   schema do
@@ -47,14 +46,9 @@ class Quickstart < RestApi::Base
   end
 
   def scalable
-    true
+    (not tags.include?(:not_scalable) rescue true)
   end
   alias_method :scalable?, :scalable
-
-  def may_not_scale
-    (tags.include?(:not_scalable) rescue false)
-  end
-  alias_method :may_not_scale?, :may_not_scale
 
   def >>(application)
     #application.cartridges = cartridges
@@ -117,7 +111,7 @@ class Quickstart < RestApi::Base
             :list => (info.link("LIST_QUICKSTARTS").path rescue nil),
             :get => (info.link("SHOW_QUICKSTART").path rescue nil),
             :search => (info.link("SEARCH_QUICKSTARTS").path rescue nil),
-            :search_param => (info.required_params('SEARCH_QUICKSTARTS').first['name'] rescue nil),
+            :search_param => (info.required_params('SEARCH_QUICKSTARTS').first[:name] rescue nil),
           }
         end
       end

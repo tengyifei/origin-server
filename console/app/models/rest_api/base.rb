@@ -64,7 +64,7 @@ class ActiveResource::Base
   private
     def find_or_create_resource_for_collection(name)
       return reflections[name.to_sym].klass if reflections.key?(name.to_sym)
-      nil
+      find_or_create_resource_for(ActiveSupport::Inflector.singularize(name.to_s))
     end
 
     alias_method :original_find_or_create_resource_for, :find_or_create_resource_for
@@ -74,7 +74,7 @@ class ActiveResource::Base
       name = name.to_s.gsub(/[^\w\:]/, '_')
       # association support
       return reflections[name.to_sym].klass if reflections.key?(name.to_sym)
-      nil
+      original_find_or_create_resource_for(name)
     end
 end
 
@@ -206,33 +206,16 @@ module RestApi
       resource
     end
 
-    class HashWithSimpleIndifferentAccess < Hash
-      def [](s)
-        super s.to_s
-      end
-      def []=(s, v)
-        super s.to_s, v
-      end
-      def delete(s)
-        super s.to_s
-      end
-    end
-
     def initialize(attributes = {}, persisted=false)
       @as = attributes.delete :as
-      @attributes     = HashWithSimpleIndifferentAccess.new
-      @prefix_options = {}
-      @persisted = persisted
-      load(attributes)
+      super attributes, persisted
     end
 
     def load(attributes, remove_root=false)
       raise ArgumentError, "expected an attributes Hash, got #{attributes.inspect}" unless attributes.is_a?(Hash)
       self.prefix_options, attributes = split_options(attributes)
 
-      # Clear calculated messages
-      self.messages = nil
-
+      attributes = attributes.dup
       aliased = self.class.aliased_attributes
       calculated = self.class.calculated_attributes
       known = self.class.known_attributes
@@ -246,34 +229,25 @@ module RestApi
         if !known.include? key.to_s and !calculated.include? key and self.class.method_defined?("#{key}=")
           send("#{key}=", value)
         else
-          @attributes[key.to_s] =
+          self.attributes[key.to_s] =
             case value
               when Array
-                if value.length > 0
-                  if resource = find_or_create_resource_for_collection(key)
-                    value.map do |attrs|
-                      if attrs.is_a?(Hash)
-                        attrs[:as] = as if resource.method_defined? :as=
-                        resource.new(attrs)
-                      else
-                        attrs
-                      end
-                    end
+                resource = nil
+                value.map do |attrs|
+                  if attrs.is_a?(Hash)
+                    resource ||= find_or_create_resource_for_collection(key)
+                    attrs[:as] = as if resource.method_defined? :as=
+                    resource.new(attrs)
                   else
-                    value
+                    attrs.duplicable? ? attrs.dup : attrs
                   end
-                else
-                  value
                 end
               when Hash
-                if resource = find_or_create_resource_for(key)
-                  value[:as] = as if resource.method_defined? :as=
-                  resource.new(value)
-                else
-                  value
-                end
+                resource = find_or_create_resource_for(key)
+                value[:as] = as if resource.method_defined? :as=
+                resource.new(value)
               else
-                value
+                value.duplicable? ? value.dup : value
             end
         end
       end
@@ -317,23 +291,11 @@ module RestApi
       # Aggressively raise the error - TODO, parse codes or specialize
       raise
     rescue ActiveResource::ConnectionError => error
-      # If the server returns a body that has messages, filter them through
+      # if the server returns a body that has messages, filter them through
       # the error handler.  If one or more errors were set, assume that the message
-      # is more useful than the exception and return false. Special case is "server under
-      # maintenance" where we raise even having messages, to be able to logout with 
-      # :cause => :server_unavailable. As an improvement the broker could return an exit_code
-      # for us to handle on translate_api_error. Otherwise throw as ActiveResource would.
-      server_unavailable = error.response.present? && 
-        error.response.respond_to?(:code) && 
-        error.response.code.to_i == 503
-
-      remote_errors = set_remote_errors(error, true)
-
-      if server_unavailable 
-        raise ServerUnavailable.new(error.response)
-      elsif !remote_errors 
-        raise
-      end
+      # is more useful than the exception and return false. Otherwise throw as ActiveResource
+      # would
+      raise unless set_remote_errors(error, true)
     end
     alias_method_chain :save, :change_tracking
 
@@ -355,12 +317,6 @@ module RestApi
           errors.add(from, error) unless errors.has_key?(from) && errors[:from].include?(error)
         end
       end
-    end
-
-    def destroy
-      super
-    rescue ActiveResource::ResourceNotFound => e
-      raise ResourceNotFound.new(self.class.model_name, id, e.response)
     end
 
     class << self
@@ -400,12 +356,7 @@ module RestApi
         prefix_options, query_options = split_options(prefix_options) if query_options.nil?
 
         #begin changes
-        path = "#{prefix(prefix_options)}"
-        if singular_resource? && !id.nil?
-          path << "#{element_name}"
-        else
-          path << "#{collection_name}"
-        end
+        path = "#{prefix(prefix_options)}#{collection_name}"
         unless singleton?
           raise ArgumentError, "id is required for non-singleton resources #{self}" if id.nil?
           path << "/#{URI.parser.escape id.to_s}"
@@ -456,9 +407,6 @@ module RestApi
       def use_patch_on_update?
         self.use_patch_api?
       end
-      def singular_resource?
-        self.singular_resource_api
-      end
 
       protected
         def allow_anonymous
@@ -469,9 +417,6 @@ module RestApi
         end
         def use_patch_on_update
           self.use_patch_api = true
-        end
-        def singular_resource
-          self.singular_resource_api = true
         end
     end
 
@@ -516,60 +461,11 @@ module RestApi
         hash.each_pair{ |k,v| self[k] = v }
       end
     end
-    #
-    # Provides indifferent access to a backing Hash with String keys.
-    #
-    class IndifferentAccess < SimpleDelegator
-      def [](s)
-        v = __getobj__[s.to_s]
-        v = __getobj__[s] if v.nil? && !(String === s)
-        v
-      end
-      def []=(s, v)
-        __getobj__[s.to_s] = v
-      end
-    end
-    def self.as_indifferent_hash
-      IndifferentAccess
-    end
-
-    class Message < Struct.new(:exit_code, :field, :severity, :text)
-      def self.from_array(messages)
-        Array(messages).map do |m|
-          Message.new(
-            m['exit_code'].to_i,
-            m['field'],
-            m['severity'],
-            m['text']
-          ) if m['text'].present?
-        end.compact
-      end
-
-      def to_s
-        text
-      end
-    end
-
-    def self.messages_for(response)
-      Message.from_array(format.decode(response.body)['messages']) rescue []
-    end
-    
-    def messages
-      @messages ||= (Message.from_array(attributes[:messages]) rescue [])
-    end
-
-    def messages=(messages)
-      @messages = nil
-      if messages.present?
-        attributes[:messages] = messages
-      else
-        attributes.delete(:messages)
-      end
-    end
+    has_many :messages, :class_name => 'rest_api/base/attribute_hash'
 
     #FIXME may be refactored
     def remote_results
-      (attributes[:messages] || []).select{ |m| m['severity'] == 'result' }.map{ |m| m['text'].presence }.compact
+      (attributes[:messages] || []).select{ |m| m['field'] == 'result' }.map{ |m| m['text'].presence }.compact
     end
     def has_exit_code?(code, opts=nil)
       codes = errors.instance_variable_get(:@codes) || {}
@@ -595,7 +491,7 @@ module RestApi
           end
         end
         message = I18n.t(code, :scope => [:rest_api, :errors], :default => text.to_s)
-        field = (field && field.respond_to?(:to_sym) ? field : 'base').to_sym
+        field = (field || 'base').to_sym
         errors.add(field, message) unless message.blank?
 
         codes = errors.instance_variable_get(:@codes)
@@ -617,18 +513,6 @@ module RestApi
     #
     def get(custom_method_name, options = {})
       self.class.send(:instantiate_collection, self.class.format.decode(connection.get(custom_method_element_url(custom_method_name, options), self.class.headers).body), as, prefix_options ) #changed
-    rescue ActiveResource::ResourceNotFound => e
-      raise ResourceNotFound.new(self.class.model_name, id, e.response)
-    end
-
-    [:post, :delete, :put, :patch].each do |sym|
-      define_method sym do |*args|
-        begin
-          super *args
-        rescue ActiveResource::ResourceNotFound => e
-          raise ResourceNotFound.new(self.class.model_name, id, e.response)
-        end
-      end
     end
 
     #
@@ -639,40 +523,12 @@ module RestApi
       self.load(prefix_options.merge(self.class.find(to_param, :params => prefix_options, :as => as).attributes))
     end
 
-    #
-    # Override method from CustomMethods to handle singular resource paths
-    #
-    def custom_method_element_url(method_name, options = {})
-        path = "#{self.class.prefix(prefix_options)}"
-        if self.class.singular_resource?
-          path << "#{self.class.element_name}"
-        else
-          path << "#{self.class.collection_name}"
-        end
-        path << "/#{id}/#{method_name}.#{self.class.format.extension}#{self.class.__send__(:query_string, options)}"
-    end
-
-    def custom_method_collection_url(method_name, options = {})
-      prefix_options, query_options = split_options(options)
-      path = "#{self.class.prefix(prefix_options)}"
-      if self.class.singular_resource?
-        path << "#{self.class.element_name}"
-      else
-        path << "#{self.class.collection_name}"
-      end
-      path << "/#{method_name}.#{self.class.format.extension}#{self.class.__send__(:query_string, options)}"
-    end
-
     class << self
       def get(custom_method_name, options = {}, call_options = {})
         connection(call_options).get(custom_method_collection_url(custom_method_name, options), headers)
-      rescue ActiveResource::ResourceNotFound => e
-        raise ResourceNotFound.new(self.model_name, id, e.response)
       end
       def delete(id, options = {})
         connection(options).delete(element_path(id, options)) #changed
-      rescue ActiveResource::ResourceNotFound => e
-        raise ResourceNotFound.new(self.model_name, id, e.response)
       end
 
       #
@@ -829,11 +685,11 @@ module RestApi
       class_attribute :anonymous_api, :instance_writer => false
       class_attribute :singleton_api, :instance_writer => false
       class_attribute :use_patch_api, :instance_writer => false
-      class_attribute :singular_resource_api, :instance_writer => false
 
       # supports presence of AttributeMethods and Dirty
       def attribute(s)
-        attributes[s.to_s]
+        #puts "attribute[#{s}] #{caller.join("  \n")}"
+        attributes[s]
       end
 
       def method_missing(method_symbol, *arguments) #:nodoc:
@@ -894,7 +750,7 @@ module RestApi
   class Base
     self.idle_timeout = 4
     self.open_timeout = 3
-    self.read_timeout = 240
+    self.read_timeout = 180
 
     #
     # Update the configuration of the Rest API.  Use instead of

@@ -11,14 +11,6 @@ class RestartsControllerTest < ActionController::TestCase
 
   test 'should set the default flash message' do
     app = with_app
-
-    allow_http_mock
-    ActiveResource::HttpMock.respond_to do |mock|
-      mock.get '/broker/rest/domains.json', json_header, [@domain].to_json
-      mock.get "/broker/rest/domain/#{@domain.name}/application/#{app.name}.json", json_header, app.to_json
-      mock.post "/broker/rest/domain/#{@domain.name}/application/#{app.name}/events.json", json_header(true) # No messages on restart
-    end
-
     put :update, :application_id => app.name
 
     assert_equal "The application '#{app.name}' has been restarted", flash[:success]
@@ -26,14 +18,13 @@ class RestartsControllerTest < ActionController::TestCase
 
   test 'should set custom flash message if provided' do
     app = with_app
-
-    restart_response = {:messages => [{:text => 'Test message'}]}
+    app.messages = ['Test message']
 
     allow_http_mock
     ActiveResource::HttpMock.respond_to do |mock|
       mock.get '/broker/rest/domains.json', json_header, [@domain].to_json
-      mock.get "/broker/rest/domain/#{@domain.name}/application/#{app.name}.json", json_header, app.to_json
-      mock.post "/broker/rest/domain/#{@domain.name}/application/#{app.name}/events.json", json_header(true), restart_response.to_json
+      mock.get "/broker/rest/domains/#{@domain.name}/applications/#{app.name}.json", json_header, app.to_json
+      mock.post "/broker/rest/domains/#{@domain.name}/applications/#{app.name}/events.json", json_header(true)
     end
 
     put :update, :application_id => app.name
@@ -50,12 +41,12 @@ class RestartsControllerTest < ActionController::TestCase
 
   test 'should actually restart the application' do
     app = with_app
-    uri = "/broker/rest/domain/#{@domain.name}/application/#{app.name}/events.json"
+    uri = "/broker/rest/domains/#{@domain.name}/applications/#{app.name}/events.json"
 
     allow_http_mock
     ActiveResource::HttpMock.respond_to do |mock|
       mock.get '/broker/rest/domains.json', json_header, [@domain].to_json
-      mock.get "/broker/rest/domain/#{@domain.name}/application/#{app.name}.json", json_header, app.to_json
+      mock.get "/broker/rest/domains/#{@domain.name}/applications/#{app.name}.json", json_header, app.to_json
       mock.post uri, json_header(true)
     end
 

@@ -37,7 +37,6 @@ module Console
 
     config_accessor :community_url
     config_accessor :cache_store
-    config_accessor :prohibited_email_domains
 
     #
     # A class that represents the capabilities object
@@ -66,7 +65,7 @@ module Console
           source = config
           Builtin[config]
         when config == :external
-          source = ENV['CONSOLE_CONFIG_FILE'].presence || '~/.openshift/console.conf'
+          source = '~/.openshift/console.conf'
           api_config_from(Console::ConfigFile.new(source))
         when config.respond_to?(:[])
           source = 'object in config'
@@ -115,26 +114,10 @@ module Console
       @capabilities_model = name
     end
 
-    #
-    # Retrieve a configuration value from the default environment
-    #
-    # Pass an optional block to modify the value
-    #
-    def env(sym, default=nil, &block)
-      env = if @config
-        v = @config[sym]
-        v.nil? ? default : to_ruby_value(v)
-      else
-        default
-      end
-      env = yield env if block_given? && !env.nil?
-      env
-    end
-
     protected
 
       def load(file)
-        config = @config = Console::ConfigFile.new(file)
+        config = Console::ConfigFile.new(file)
         raise InvalidConfiguration, "BROKER_URL not specified in #{file}" unless config[:BROKER_URL]
 
         freeze_api(api_config_from(config), file)
@@ -143,8 +126,6 @@ module Console
         if self.community_url && !self.community_url.end_with?('/')
           raise InvalidConfiguration, "COMMUNITY_URL must end in '/'"
         end
-
-        self.prohibited_email_domains = config[:PROHIBITED_EMAIL_DOMAINS].split(',').map { |email| email.strip } rescue []
 
         if cache_store = config[:CACHE_STORE]
           Rails.configuration.send(:cache_store=, eval("[#{cache_store}]"))
@@ -168,16 +149,12 @@ module Console
         case
         when s == nil
           nil
-        when s[0] == '{', s[0] == '[', s[0] == '"', s[0] == "'"
+        when s[0] == '{'
           eval(s)
         when s[0] == ':'
           s[1..-1].to_sym
         when s =~ /^\d+$/
           s.to_i
-        when s == 'true'
-          true
-        when s == 'false'
-          false
         else
           s
         end

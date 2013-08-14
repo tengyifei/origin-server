@@ -25,7 +25,6 @@ class GenerateConsoleViewTask < Rake::TaskLib
     def controller
       controller = controller_class.new
       controller.request = ActionDispatch::TestRequest.new({'SCRIPT_NAME' => ENV['RAILS_RELATIVE_URL_ROOT']})
-      controller.request.host = host
       controller.env = controller.request.env
       controller
     end
@@ -54,14 +53,13 @@ class GenerateConsoleViewTask < Rake::TaskLib
     end
 
     def subclass_view(view, routes)
-      host = self.host
       view.class_eval do
         def protect_against_forgery?
           false
         end
 
         def default_url_options
-           {:host => host}
+           {:host => 'localhost'}
         end
       end
     end
@@ -70,16 +68,12 @@ class GenerateConsoleViewTask < Rake::TaskLib
       view = ActionView::Base.new(ActionController::Base.view_paths, {}, controller)
 
       routes = Rails.application.routes
-      routes.default_url_options = {:host => self.host}
+      routes.default_url_options = {:host => 'localhost'}
 
       add_view_helpers(view, routes)
       subclass_view(view, routes)
 
       view
-    end
-
-    def host
-      ENV['RAILS_HOST'] || 'localhost'
     end
 end
 

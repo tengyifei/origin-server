@@ -1,5 +1,5 @@
 class ConsoleIndexController < ConsoleController
-  skip_before_filter :authenticate_user!, :only => [:unauthorized, :server_unavailable]
+  skip_before_filter :authenticate_user!, :only => :unauthorized
 
   def index
     redirect_to applications_path
@@ -7,9 +7,7 @@ class ConsoleIndexController < ConsoleController
   def unauthorized
     render 'console/unauthorized'
   end
-  def server_unavailable
-    render 'console/server_unavailable'
-  end
+
   def help
     render 'console/help'
   end

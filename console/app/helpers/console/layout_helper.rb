@@ -48,7 +48,15 @@ module Console::LayoutHelper
     flash.each do |key, value|
       (value.kind_of?(Array) ? value : [value]).each do |value|
         next if value.blank?
-        tags << content_tag(flash_element_for(key), value, :class => alert_class_for(key))
+        # This will allow us to pass flash messages only intended for noscript tags
+        if key =~ /^noscript/
+          matches = key.to_s.match(/^noscript(?:(?:_)?(.*))?/)
+          key = (matches[1].empty? ? "notice" : matches[1]).to_sym
+          tag = content_tag(flash_element_for(key), value, :class => alert_class_for(key))
+          tags << content_tag(:noscript, tag)
+        else
+          tags << content_tag(flash_element_for(key), value, :class => alert_class_for(key))
+        end
       end
     end
     content_tag(:div, tags.join.html_safe, :id => 'flash') unless tags.empty?
@@ -213,9 +221,10 @@ module Console::LayoutHelper
     ] + args
   end
 
-  def breadcrumb_for_settings(*args)
+  def breadcrumb_for_account_settings(*args)
     breadcrumbs_for_each [
-      link_to('Settings', settings_path),
+      link_to('My Account', account_path),
+      link_to('Settings', settings_account_path),
     ] + args
   end
 
@@ -236,7 +245,7 @@ module Console::LayoutHelper
     items.map{ |c| capture_haml{ yield c }.strip }.to_sentence.html_safe
   end
 
-  HIDDEN_TAGS = [:featured, :framework, :web_framework, :experimental, :in_development, :cartridge, :service, :domain_scope]
+  HIDDEN_TAGS = [:featured, :framework, :web_framework, :experimental, :in_development, :cartridge, :service]
   IMPORTANT_TAGS = [:new, :premium]
 
   def application_type_tags(tags)
@@ -301,6 +310,11 @@ module Console::LayoutHelper
       ['Wyoming', 'WY']
     ]
   end
+
+  def js_required(msg = "to use this page")
+    flash[:noscript_warning] = ["You need JavaScript enabled",msg].join(" ").squeeze(" ").strip
+  end
+
 
   #
   # Only use in content that will be generated to asset form, significant

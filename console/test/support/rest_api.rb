@@ -53,9 +53,8 @@ class ActiveSupport::TestCase
 
   def cleanup_domain
     if cleanup_domain? 
-      @domain.destroy_recursive if @domain 
+      @domain.destroy_recursive if @domain
     end
-  rescue RestApi::ResourceNotFound
   end
 
   def with_unique_domain
@@ -82,32 +81,6 @@ class ActiveSupport::TestCase
         assert_equal o1.attributes, o2.attributes, "Attributes do not match"
       end
     end
-  end
-
-  def response_messages(klass=nil, &block)
-    yield
-    fail "Did not raise"    
-  rescue RestApi::ResourceNotFound => e
-    e.messages
-  end  
-
-  def assert_messages(*cond)
-    to = cond.pop
-    if cond.first.is_a? Numeric
-      count = cond.shift 
-      assert_equal count, to.length
-    elsif cond.empty?
-      raise "Must specify one or more conditions"
-    end
-    assert(to.any? do |m|
-      cond.all? do |c|
-        case c
-        when Regexp then m.to_s =~ c
-        when String then m.to_s.include?(c)
-        else raise "Unsupported condition #{c.inspect}"
-        end
-      end
-    end, "None of the messages #{to.inspect} matched #{cond.inspect}")
   end
 
   def setup_from_app(app)
@@ -187,17 +160,8 @@ class ActiveSupport::TestCase
     end
   end
 
-  # Needs to be an accessible web cart definition on devenv or public web
-  DOWNLOADED_CART_URL = 'https://github.com/openshift/downloadable-mock/raw/master/metadata/manifest.yml'
-  DOWNLOADED_CART_NAME = 'openshift-downloadable-mock-0.1'
-
   def with_app
     use_app(:readable_app) { Application.new({:name => "normal", :cartridge => 'ruby-1.8', :as => new_named_user('user_with_normal_app')}) }
-  end
-
-  def with_downloaded_app
-    skip "Downloadable cartridges are disabled" unless RestApi.download_cartridges_enabled?
-    use_app(:downloadable_app) { Application.new({:name => "downloaded", :cartridges => {:url => DOWNLOADED_CART_URL}, :as => new_named_user('user_with_normal_app')}) }
   end
 
   def with_scalable_app
@@ -224,7 +188,6 @@ class ActiveSupport::TestCase
   end
 
   def anonymous_json_header(is_post=false, nolinks=true)
-    mime = "application/json#{nolinks ? ';nolinks' : ''};version=1.4"
-    (is_post ? {'Content-Type' => mime} : {}).merge('Accept' => mime, 'User-Agent' => Console.config.api[:user_agent])
+    {(is_post ? 'Content-Type' : 'Accept') => "application/json#{nolinks ? ';nolinks' : ''};version=1.4", 'User-Agent' => Console.config.api[:user_agent]}
   end
 end

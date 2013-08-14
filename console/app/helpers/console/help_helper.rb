@@ -2,12 +2,8 @@ module Console::HelpHelper
 
   # Given a relative path within the user guide, display the topic
   def user_guide_topic_url(topic)
-    # locale = 'en-US'
-    # "http://access.redhat.com/knowledge/docs/#{locale}/OpenShift/2.0/html/User_Guide/#{topic}"
-    
-    # Use the community redirect to get to the user guide
-    # No deep-linking of help topics is allowed
-    community_base_url 'user-guide'
+    locale = 'en-US'
+    "http://access.redhat.com/knowledge/docs/#{locale}/OpenShift/2.0/html/User_Guide/#{topic}"
   end
 
   def user_guide_url
@@ -27,7 +23,7 @@ module Console::HelpHelper
   end
 
   def add_domains_user_guide_topic_url
-    user_guide_topic_url 'chap-OpenShift-User_Guide-Namespaces.html'
+    user_guide_topic_url 'sect-OpenShift-User_Guide-Working_With_Namespaces.html'
   end
 
   def cartridge_list_url
@@ -44,18 +40,6 @@ module Console::HelpHelper
 
   def openshift_blog_url
     community_base_url 'blogs'
-  end
-
-  def openshift_twitter_url
-    "http://twitter.com/openshift"
-  end
-
-  def openshift_facebook_url
-    "http://facebook.com/openshift"
-  end
-
-  def openshift_google_plus_url
-    "https://plus.google.com/b/108052331678796731786/108052331678796731786/posts"
   end
 
   def opensource_community_url
@@ -82,10 +66,6 @@ module Console::HelpHelper
     community_base_url 'developers'
   end
 
-  def support_path
-    community_base_url 'support'
-  end
-
   def ssh_help_url
     community_base_url 'developers/remote-access'
   end
@@ -104,10 +84,6 @@ module Console::HelpHelper
 
   def developers_get_started_path
     community_base_url 'developers/get-started'
-  end
-
-  def downloadable_cartridges_help_url
-    community_base_url 'developers/download-cartridges'
   end
 
   def livecd_wiki_url(anchor=nil)
@@ -195,7 +171,7 @@ module Console::HelpHelper
   end
 
   def product_overview_path(opts=nil)
-    community_base_url "products", opts
+    community_base_url "paas", opts
   end
 
   def opensource_process_url

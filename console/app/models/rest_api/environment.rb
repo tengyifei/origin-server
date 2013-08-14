@@ -6,7 +6,6 @@ module RestApi
 
     schema do
       string :domain_suffix
-      boolean :download_cartridges_enabled
     end
 
     cache_find_method :one
