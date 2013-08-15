@@ -22,10 +22,12 @@ class BillingController < ConsoleController
       @amount       = result[:invoice][:amount]
       @period       = result[:invoice][:period]
       @payment      = result[:invoice][:payment_data]
-      @user         = result[:user]
+      @getup        = result[:invoice][:getup]
+      @user         = result[:invoice][:user]
+      @address      = result[:invoice][:billing_address]
       @applications = result[:invoice][:applications]
       currency      = result[:invoice][:amount][:total][:currency]
-      
+
       @prices = user_manager_subscription_prices.content
       
       @price  = @prices.find(currency).next[1]
