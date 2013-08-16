@@ -17,20 +17,20 @@
               %td.top
                 %h5 #{@getup[:name]}
                 %ul.unstyled
-                  - if @getup[:address][0] != ''
-                    %li #{@getup[:address][0]}
-                  - if @getup[:address][1] != ''
-                    %li #{@getup[:address][1]}
+                  - if @getup[:line1] != ''
+                    %li #{@getup[:line1]}
+                  - if @getup[:line2] != ''
+                    %li #{@getup[:line2]}
                   %li #{@getup[:city]}/#{@getup[:state]} - #{@getup[:country_code]}
                   %li CEP: #{@getup[:postal_code]}
                   %li CNPJ: #{@getup[:cnpj]}
               %td.top
                 %h5 #{@user[:first_name]}
                 %ul.unstyled
-                  - if @address[:address][0] != ''
-                    %li #{@address[:address][0]}
-                  - if @address[:address][1] != ''
-                    %li #{@address[:address][1]}
+                  - if @address[:line1] != ''
+                    %li #{@address[:line1]}
+                  - if @address[:line2] != ''
+                    %li #{@address[:line2]}
                   %li #{@address[:city]}/#{@address[:state]} - #{@address[:country_code]}
                   %li CEP: #{@address[:postal_code]}
                   - if @address[:type] == 'pf'

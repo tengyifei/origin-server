@@ -1,6 +1,6 @@
-- content_for :title, "Edit billing address"
+- content_for :title, "Edit address"
 - breadcrumb_for_account_billing 'Edit address'
-%h1 Edit billing address
+%h1 Edit address
 = flashes
 
 %form.form-horizontal.formtastic{:action => address_path, :id => 'form-billing-address', :method => 'post'}
@@ -28,12 +28,12 @@
     .string.required.control-group
       %label.control-label Address
       .controls
-        = text_field_tag 'line1', @address[:address][0], :placeholder => "Address", :class => 'input-xlarge'
+        = text_field_tag 'line1', @address[:line1], :placeholder => "Address", :class => 'input-xlarge'
 
     .string.required.control-group
       %label.control-label 
       .controls
-        = text_field_tag 'line2', @address[:address][1], :placeholder => "Address", :class => 'input-xlarge'
+        = text_field_tag 'line2', @address[:line2], :placeholder => "Address", :class => 'input-xlarge'
 
     .string.required.control-group
       %label.control-label Postal code
@@ -45,16 +45,16 @@
       .controls
         = text_field_tag 'phone', @address[:phone], :placeholder => "Phone", :class => 'input-medium'
 
-    .string.required.control-group
-      %label.control-label CPF
-      .controls
-        = text_field_tag 'cpf', @address[:cpf], :placeholder => "CPF (Brazil only)", :class => 'input-medium'
+    //.string.required.control-group
+    //  %label.control-label CPF
+    //  .controls
+    //    = text_field_tag 'cpf', @address[:cpf], :placeholder => "CPF (Brazil only)", :class => 'input-medium'
 
-    .string.required.control-group
-      %label.control-label CNPJ
-      .controls
-        = text_field_tag 'cnpj', @address[:cnpj], :placeholder => "CPNJ (Brazil only)", :class => 'input-medium'
+    //.string.required.control-group
+    //  %label.control-label CNPJ
+    //  .controls
+    //    = text_field_tag 'cnpj', @address[:cnpj], :placeholder => "CPNJ (Brazil only)", :class => 'input-medium'
 
   %fieldset.form-actions
     = link_to "Cancel", billing_index_path, :class => 'btn'
-    %button.btn.btn-danger.update{:type => 'submit'} Change    
+    %button.btn.btn-danger.update{:type => 'submit'} Save
