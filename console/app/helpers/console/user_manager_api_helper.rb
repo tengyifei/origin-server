@@ -43,8 +43,6 @@ module Console::UserManagerApiHelper
   private
     def call(path, params, method='GET')
 
-      print path
-
       path = format_path path
 
       uri = URI.parse get_user_manager_url + path[:address]
@@ -69,7 +67,8 @@ module Console::UserManagerApiHelper
       response_code = response.code.to_i
 
       if response_code == 500
-        render inline: response.body.html_safe
+        raise "Error retrieving resource: #{path}"
+        #render inline: response.body.html_safe
       else
         GetupResponse.new response
       end

@@ -10,12 +10,16 @@ class BillingController < ConsoleController
 
   def show
     id = params[:id]
-    
-    result = user_manager_billing_invoice(id).content
-    prices = user_manager_subscription_prices   
-    
+
+    begin
+      result = user_manager_billing_invoice(id).content
+      raise result[:data][0] if result[:status] != 'ok'
+    rescue Exception => e
+      return redirect_to billing_index_path, :flash => {:error => e.message}
+    end
+
     @status = result ? true : false
-    
+
     if @status
       result        = result[:data][0]
       @id           = id
@@ -27,7 +31,7 @@ class BillingController < ConsoleController
       @address      = result[:invoice][:billing_address]
       @applications = result[:invoice][:applications]
       currency      = result[:invoice][:amount][:total][:currency]
-
+  
       @prices = user_manager_subscription_prices.content
       
       @price  = @prices.find(currency).next[1]

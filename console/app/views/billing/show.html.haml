@@ -1,6 +1,9 @@
 - content_for :title, "Invoice"
 - breadcrumb_for_account_billing 'Invoice'
-%h1 Invoice
+- end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
+- start_date = !@period[:start].nil? ? Date.strptime("#{@period[:start]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
+%h1 Invoice ##{@id}
+%h3 Period: #{start_date} - #{end_date}
 = flashes
 
 - if @status
@@ -11,9 +14,8 @@
         %table.table.table-fixed.info
           %tbody
             %tr
-              %td.center.middle Number #{@id.rjust(4, '0')}
               %td.top
-                %h5 FROM: #{@getup[:name]}
+                %h5 #{@getup[:name]}
                 %ul.unstyled
                   - if @getup[:address][0] != ''
                     %li #{@getup[:address][0]}
@@ -23,7 +25,7 @@
                   %li CEP: #{@getup[:postal_code]}
                   %li CNPJ: #{@getup[:cnpj]}
               %td.top
-                %h5 TO: #{@user[:first_name]}
+                %h5 #{@user[:first_name]}
                 %ul.unstyled
                   - if @address[:address][0] != ''
                     %li #{@address[:address][0]}
@@ -40,11 +42,14 @@
 
               %td.top
                 %dl
-                  %dt Client:
-                  %dd #{@user[:id].to_s.rjust(4, '0')}
+                  %dt Invoice:
+                  %dd ##{@id}
 
-                  %dt Date:
-                  - end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%h %d, %Y") : '-'
+                  %dt Client:
+                  %dd ##{@user[:id]}
+
+                  %dt Reference:
+                  - end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
                   %dd #{end_date}
   
                   %dt Total:
