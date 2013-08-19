@@ -1,0 +1,12 @@
+- content_for :page_title, 'My Account'
+%h1 My Account
+= flashes
+
+.row
+  .span7
+    %section
+      = render :partial => 'gears', :locals => {:capabilities => @capabilities}
+
+  .span5
+    %section
+      = render :partial => 'billing'

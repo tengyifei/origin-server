@@ -1,0 +1,136 @@
+// If an element has a background and should stretch across the 
+// width of the page on a phone, include this mixin.
+@mixin expand_for_phone($padding:true) {
+  margin-left: -$gridGutterWidthPhone;
+  margin-right: -$gridGutterWidthPhone;
+  @if $padding {
+    padding-left: $gridGutterWidthPhone;
+    padding-right: $gridGutterWidthPhone;
+  }
+}
+
+@mixin font-family-monospace() {
+  font-family: Menlo, Monaco, "Liberation Mono", Consolas, monospace;
+}
+
+
+// Override Mixin for generating button backgrounds
+// ---------------------------------------
+@mixin buttonBackground($startColor, $endColor) {
+  // gradientBar will set the background to a pleasing blend of these, to support IE<=9
+  @include gradientBar($startColor, $endColor);
+  @include reset-filter();
+
+  &:hover, &:focus {
+    background-color: $endColor;
+  }
+  
+   &:active, &.active, &.disabled, &[disabled] {
+    background-color: $startColor;
+  }
+ 
+}
+
+@mixin buttonBackgroundConsole($startColor, $endColor) {
+  // gradientBar will set the background to a pleasing blend of these, to support IE<=9
+  @include gradientBar($startColor, $endColor);
+  @include reset-filter();
+
+  &:hover, &:focus {
+    background-color: $startColor;
+    color: #fff;
+  }
+  
+   &:active, &.active, &.disabled, &[disabled] {
+    background-color: $startColor;
+    color: #ccc;
+    border-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.1) rgba(255, 255, 255, 0.1);
+  }
+
+}
+
+
+// IE7 inline-block
+// ----------------
+@mixin ie7-inline-block() {
+  *display: inline; /* IE7 inline-block hack */
+  *zoom: 1;
+}
+
+
+// Block-level 
+// -----------
+@mixin block-level() {
+  display: block;
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+  @include box-sizing(border-box);
+} 
+.block-level {
+  @include block-level();
+}
+// Vertically space out multiple blocks
+.block-level + .block-level {
+  margin-top: 8px;
+}
+
+
+// POPOVER ARROWS
+// -------------------------
+// For tipsies and popovers
+@mixin popoverArrow-top($arrowWidth: 5px) {
+  bottom: -5px;
+  left: 50%;
+  margin-left: -$arrowWidth;
+  border-left: $arrowWidth solid transparent;
+  border-right: $arrowWidth solid transparent;
+  border-top: $arrowWidth solid $subtleTextDarkBackground;
+}
+@mixin popoverArrow-left($arrowWidth: 5px) {
+  top: 50%;
+  right: 0;
+  margin-top: -$arrowWidth;
+  border-top: $arrowWidth solid transparent;
+  border-bottom: $arrowWidth solid transparent;
+  border-left: $arrowWidth solid $subtleTextDarkBackground;
+}
+@mixin popoverArrow-bottom($arrowWidth: 5px) {
+  top: -5px;
+  left: 50%;
+  margin-left: -$arrowWidth;
+  border-left: $arrowWidth solid transparent;
+  border-right: $arrowWidth solid transparent;
+  border-bottom: $arrowWidth solid $subtleTextDarkBackground;
+}
+@mixin popoverArrow-right($arrowWidth: 5px) {
+  top: 50%;
+  left: 0;
+  margin-top: -$arrowWidth;
+  border-top: $arrowWidth solid transparent;
+  border-bottom: $arrowWidth solid transparent;
+  border-right: $arrowWidth solid $subtleTextDarkBackground;
+}
+
+@mixin tab-focus() {
+  // Default
+  outline: thin dotted currentColor;
+  // Webkit
+  outline: 5px auto -webkit-focus-ring-color;
+  outline-offset: -2px;
+}
+
+
+@mixin icon-text-shadow($color: rgba(0, 0, 0, 0.75)) {
+  text-shadow: 0 1px 0 $color;
+}
+
+// Requires inline-block or block
+@mixin truncate() {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.truncate {
+  @include truncate();
+}

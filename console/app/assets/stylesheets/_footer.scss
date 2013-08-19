@@ -1,0 +1,65 @@
+#footer-nav {
+  padding: 35px 0;
+  
+  a {
+ 		color: #666;
+ 	}
+
+	address p { font-family: 'roboto regular'; font-size: 16px; color: #666; }
+	address p strong { display: block; font-family: 'ostrich medium'; line-height: 90px; font-size: 90px; color: #fff; font-weight: normal; }
+}
+#copyright {
+  padding: 10px 20px;
+  color: #666;
+  background-color: black;
+  
+  > .container > div {
+  	margin-top: 15px;
+  }
+}
+  
+
+
+@media (max-width:479px) {
+	#copyright {
+		text-align:center;
+	
+		> .container > div {
+			float: none;
+	  	font-size: 11px;
+			margin-top: 15px;
+		}
+	}
+	
+	#footer-nav {
+  	nav header h3 {
+    	display: block;
+    	text-align: center;
+  	}
+  	nav ul {
+  	 display: block;
+    	text-align: center;
+  	}
+	}
+}
+
+@media (max-width:767px) {
+	footer nav {margin-bottom: 15px !important;}
+	footer nav > header { display: inline; }
+	footer nav ul { margin-bottom: 5px; }
+	footer nav h3,
+	footer nav h4,
+	footer nav h5 { display: inline; font-size: 14px; }
+	footer nav ul { margin: 0; padding: 0; display: inline; }
+	footer nav li { margin: 0; padding: 0; display: inline; list-style-image: none; list-style: none; }
+	footer nav a { margin-left: 5px; white-space: nowrap}
+	footer nav > header a { margin-left: 0; }
+	footer nav address { float: right; font-style: normal; margin-top: 70px; }
+
+	#footer-nav {
+		address p { font-size: 12px; color: #666; }
+		address p strong { line-height: 60px; font-size: 60px; }
+	}
+}
+
+

@@ -1,0 +1,27 @@
+#footer-nav
+  .container
+    .row
+      %nav.span4
+        %header
+          %h3 Developers
+        %ul.unstyled
+          %li= link_to 'Get Started', getting_started_path
+          %li= link_to 'User Guide', user_guide_url
+          %li= link_to 'FAQ', faq_url
+          %li= link_to 'IRC Channel', irc_web_url
+
+      %nav.span8
+        %address
+          %p
+            = link_to 'Getupcloud.com', getupcloud_url
+            %strong GROW IN THE CLOUD.
+
+
+%section#copyright
+  .container
+    Source code for the OpenShift Origin management console is
+    #{link_to "available on Github", openshift_github_project_url('origin-server/tree/master/console')}. See
+    #{link_to "README.md", openshift_github_project_url('origin-server/blob/master/README.md')}
+    for copyright and source information. OpenShift, OpenShift Origin and the OpenShift Logo are 
+    trademarks of Red Hat, Inc.
+

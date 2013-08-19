@@ -1,0 +1,50 @@
+- content_for :title, "Edit billing address"
+- breadcrumb_for_account_billing 'Edit address'
+%h1 Edit billing address
+= flashes
+
+%form.form-horizontal.formtastic{:action => address_path, :id => 'form-billing-address', :method => 'post'}
+  = token_tag(nil)
+  %p
+    Fill in any information you want to appear on your next invoice.
+
+  %fieldset.inputs
+
+    .string.required.control-group
+      %label.control-label Country
+      .controls
+        = select_tag :country_code, options_for_select(country_list, @address[:country_code])
+
+    .string.required.control-group
+      %label.control-label State
+      .controls
+        = text_field_tag 'state', @address[:state], :placeholder => "State", :class => 'input-medium'
+
+    .string.required.control-group
+      %label.control-label City
+      .controls
+        = text_field_tag 'city', @address[:city], :placeholder => "City", :class => 'input-xlarge'
+
+    .string.required.control-group
+      %label.control-label Address
+      .controls
+        = text_field_tag 'line1', @address[:address][0], :placeholder => "Address", :class => 'input-xlarge'
+
+    .string.required.control-group
+      %label.control-label 
+      .controls
+        = text_field_tag 'line2', @address[:address][1], :placeholder => "Address", :class => 'input-xlarge'
+
+    .string.required.control-group
+      %label.control-label Postal code
+      .controls
+        = text_field_tag 'postal_code', @address[:postal_code], :placeholder => "Postal code", :class => 'input-small'
+
+    .string.required.control-group
+      %label.control-label Phone
+      .controls
+        = text_field_tag 'phone', @address[:phone], :placeholder => "Phone", :class => 'input-medium'
+
+  %fieldset.form-actions
+    = link_to "Cancel", billing_index_path, :class => 'btn'
+    %button.btn.btn-danger.update{:type => 'submit'} Change    
