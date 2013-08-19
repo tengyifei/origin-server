@@ -38,6 +38,12 @@ module Console
     config_accessor :community_url
     config_accessor :cache_store
 
+    config_accessor :authentication_session_key
+    config_accessor :authentication_session_expire
+    config_accessor :session_user_name
+
+    config_accessor :user_manager
+
     #
     # A class that represents the capabilities object
     #
@@ -100,7 +106,7 @@ module Console
     end
 
     def user_agent
-      @user_agent ||= "openshift_console/#{Console::VERSION::STRING} (ruby #{RUBY_VERSION}; #{RUBY_PLATFORM})"
+      @user_agent ||= "auth_openshift_console/#{Console::VERSION::STRING} (ruby #{RUBY_VERSION}; #{RUBY_PLATFORM})"
     end
     def user_agent=(agent)
       @user_agent = agent
@@ -119,6 +125,7 @@ module Console
       def load(file)
         config = Console::ConfigFile.new(file)
         raise InvalidConfiguration, "BROKER_URL not specified in #{file}" unless config[:BROKER_URL]
+        raise InvalidConfiguration, "LOCAL_BROKER_BASE_URL not specified in #{file}" unless config[:LOCAL_BROKER_BASE_URL]
 
         freeze_api(api_config_from(config), file)
 
@@ -140,6 +147,14 @@ module Console
             value = config[s.upcase]
             self.send(:"#{s}=", s.to_s.ends_with?('s') ? value.split(',') : value) if value
           end
+        when 'session'
+          raise InvalidConfiguration, "SESSION_KEY not specified in #{file}" unless config[:AUTH_SESSION_KEY]
+
+          self.authentication_session_key = config[:AUTH_SESSION_KEY]
+          self.authentication_session_expire = config[:AUTH_SESSION_EXPIRE] || 3600
+                    
+          self.security_controller = 'Console::Auth::Session'
+          self.session_user_name = config[:SESSION_USER_NAME] || 'X-Remote-User'          
         when String
           self.security_controller = config[:CONSOLE_SECURITY]
         end
@@ -169,6 +184,17 @@ module Console
         end.merge({
           :url    => config[:BROKER_URL],
           :proxy  => config[:BROKER_PROXY_URL],
+          :user_manager => {
+            :api => config[:LOCAL_BROKER_BASE_URL],
+            :account_plan => config[:USER_MANAGER_ACCOUNT_PLAN_URL],
+            :account_password_change => config[:USER_MANAGER_ACCOUNT_PASSWORD_CHANGE_URL],
+            :account_password_reset => config[:USER_MANAGER_ACCOUNT_PASSWORD_RESET_URL],
+            :account_password_reset_key => config[:USER_MANAGER_ACCOUNT_PASSWORD_RESET_KEY_URL],
+            :subscription => config[:USER_MANAGER_SUBSCRIPTION_URL],
+            :subscription_confirm => config[:USER_MANAGER_SUBSCRIPTION_CONFIRM_URL],
+            :subscription_cancel  => config[:USER_MANAGER_SUBSCRIPTION_CANCEL_URL],
+            :billing_address => config[:USER_MANAGER_BILLING_ADDRESS_URL]
+          }
         })
       end
 
@@ -188,5 +214,7 @@ module Console
     config.security_controller = 'Console::Auth::Basic'
     config.include_helpers = true
     config.capabilities_model = 'Capabilities::Cacheable'
+    config.authentication_session_expire = 3600
+    config.session_user_name = 'X-Remote-User'
   end
 end

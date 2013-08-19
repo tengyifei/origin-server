@@ -1,0 +1,169 @@
+- content_for :title, "Invoice info"
+- breadcrumb_for_account_billing 'Invoice info'
+%h1 Invoice info
+= flashes
+
+.row.billing-info
+  .span12
+    %section
+
+      %table.table.table-fixed.info
+        %tbody
+          %tr
+            %td.center.middle Fatura 0001
+            %td.middle
+              %h5 Getup
+              %ul.unstyled
+                %li R. Dom Pedro Osório, 191
+                %li Porto Alegre - RS - 94036-45
+                %li Brasil
+            %td.middle
+              %h5 To
+              %ul.unstyled
+                %li Safari Produtora de Mídia
+                %li financial@testing.com
+            %td.middle
+              %dl
+                %dt Date:
+                %dd May 29, 2013
+
+                %dt Total:
+                %dd US$ 45.00
+
+                %dt Client Id:
+                %dd 00002
+
+      %h3 Application Name
+      %table.table.table-fixed.invoice
+        %thead
+          %tr
+            %th{:scope => 'col'} Item
+            %th{:scope => 'col'} Type
+            %th{:scope => 'col'} Quantity
+            %th{:scope => 'col'} Unit
+            %th{:scope => 'col'} Unit cost
+            %th{:scope => 'col'} Total cost
+        %tbody
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 700
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 350
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 350
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td{:colspan => 5}
+            %td US$ 200,00
+
+      %h3 Application 2 Name
+      %table.table.table-fixed.invoice
+        %thead
+          %tr
+            %th{:scope => 'col'} Item
+            %th{:scope => 'col'} Type
+            %th{:scope => 'col'} Quantity
+            %th{:scope => 'col'} Unit
+            %th{:scope => 'col'} Unit cost
+            %th{:scope => 'col'} Total cost
+        %tbody
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 700
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td{:colspan => 5}
+            %td US$ 200,00
+
+      %h3 Application 3 Name
+      %table.table.table-fixed.invoice
+        %thead
+          %tr
+            %th{:scope => 'col'} Item
+            %th{:scope => 'col'} Type
+            %th{:scope => 'col'} Quantity
+            %th{:scope => 'col'} Unit
+            %th{:scope => 'col'} Unit cost
+            %th{:scope => 'col'} Total cost
+        %tbody
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 700
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 350
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 350
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 700
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 350
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td Description of invoice value integration
+            %td Gear
+            %td 350
+            %td hour
+            %td US$ 0,179
+            %td US$ 200,00
+          %tr
+            %td{:colspan => 5}
+            %td US$ 200,00    
+
+      %h3 Bonus
+      %table.table.table-fixed.invoice
+        %thead
+          %tr
+            %th{:scope => 'col'} Item
+            %th{:scope => 'col'} Type
+            %th{:scope => 'col'} Quantity
+            %th{:scope => 'col'} Unit
+            %th{:scope => 'col'} Unit cost
+            %th{:scope => 'col'} Total cost
+        %tbody
+          %tr
+            %td Free gear early access
+            %td Credit
+            %td -700
+            %td hour
+            %td US$ 0,179
+            %td US$ -200,00
+

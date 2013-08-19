@@ -4,6 +4,9 @@
   a {
  		color: #666;
  	}
+
+	address p { font-family: 'roboto regular'; font-size: 16px; color: #666; }
+	address p strong { display: block; font-family: 'ostrich medium'; line-height: 90px; font-size: 90px; color: #fff; font-weight: normal; }
 }
 #copyright {
   padding: 10px 20px;
@@ -51,4 +54,12 @@
 	footer nav li { margin: 0; padding: 0; display: inline; list-style-image: none; list-style: none; }
 	footer nav a { margin-left: 5px; white-space: nowrap}
 	footer nav > header a { margin-left: 0; }
+	footer nav address { float: right; font-style: normal; margin-top: 70px; }
+
+	#footer-nav {
+		address p { font-size: 12px; color: #666; }
+		address p strong { line-height: 60px; font-size: 60px; }
+	}
 }
+
+

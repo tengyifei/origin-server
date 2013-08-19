@@ -47,7 +47,7 @@ class KeysControllerTest < ActionController::TestCase
 
     assert key = assigns(:key)
     assert key.errors.empty?, key.errors.inspect
-    assert_redirected_to account_path
+    assert_redirected_to settings_path
     assert flash[:success]
 
     #since this is only key the user has then it cannot be deleted (because of the old client tools)
@@ -59,7 +59,7 @@ class KeysControllerTest < ActionController::TestCase
 
     post :create, {:key => {:name => 'default', :raw_content => 'ssh-rsa defaultkey2'}, :first => true}
 
-    assert_redirected_to account_path
+    assert_redirected_to settings_path
     assert key = assigns(:key)
     assert_equal 'defaultkey2', key.content
     assert key.errors.empty?, key.errors.inspect
@@ -73,7 +73,7 @@ class KeysControllerTest < ActionController::TestCase
 
     post :create, {:key => {:name => 'test', :raw_content => 'ssh-rsa nameuniquekey2'}, :first => true}
 
-    assert_redirected_to account_path
+    assert_redirected_to settings_path
     assert assigns(:first)
     assert key = assigns(:key)
     assert_equal 'test2', key.name

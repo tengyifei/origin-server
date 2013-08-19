@@ -1,3 +1,5 @@
 class AccountController < ConsoleController
-  include Account::Dashboard
+  def show
+  	@capabilities = user_capabilities :refresh => true
+  end
 end

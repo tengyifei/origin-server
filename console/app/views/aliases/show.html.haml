@@ -67,7 +67,7 @@
     - if !@private_ssl_certificates_supported
       .alert.alert-warning
         Your account does not allow custom SSL certificates.
-        = link_to 'View your account →', account_path
+        = link_to 'View your account →', settings_path
 
     = semantic_form_for @alias, :url => application_alias_path(@application, @alias), :html => {:method => :put, :class => 'form-horizontal', :multipart => true} do |f|
 

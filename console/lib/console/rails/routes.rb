@@ -4,7 +4,9 @@ module ActionDispatch::Routing
     def openshift_console(*args)
       opts = args.extract_options!
       openshift_console_routes
-      openshift_account_routes unless (Array(opts[:skip]).include? :account || Console.config.disable_account)
+      openshift_authentication_routes
+      openshift_account_routes
+      openshift_settings_routes unless (Array(opts[:skip]).include? :settings || Console.config.disable_account)
       root :to => 'console_index#index', :via => :get, :as => :console
     end
 
@@ -45,10 +47,9 @@ module ActionDispatch::Routing
       end
 
       def openshift_account_routes
-        # Account specific resources
-        resource :account,
-                 :controller => :account,
-                 :only => [:show]
+        # Billing specific resources
+
+        resource :account, :controller => :account, :only => [:show]
 
         scope 'account' do
           openshift_account_resource_routes
@@ -56,10 +57,52 @@ module ActionDispatch::Routing
       end
 
       def openshift_account_resource_routes
+        resources :billing, :only => [:show, :index], :format => false
+        resource :gears, :controller => :gears, :only => [:show, :create] do
+          get :confirm
+        end
+
+        match 'payment/confirm' => 'payments_proxy#confirm', :format => false
+        match 'payment/cancel' => 'payments_proxy#cancel', :format => false
+
+        scope 'billing' do
+          resource :address, :controller => :billing_address, :only => [:edit, :create]
+        end
+      end
+
+      def openshift_settings_routes
+        # Account specific resources
+        resource :settings, :controller => :settings, :only => [:show] do
+          get 'password' => 'settings#password'
+          post 'password' => 'settings#update_password'
+        end
+
+        scope 'settings' do
+          openshift_settings_resource_routes
+        end
+      end
+
+      def openshift_settings_resource_routes
         resource :domain, :only => [:new, :create, :edit, :update]
         resources :keys, :only => [:new, :create, :destroy]
         resources :authorizations, :except => [:index]
         match 'authorizations' => 'authorizations#destroy_all', :via => :delete
       end
+      def openshift_authentication_routes
+        # Authentication specific resources
+        resource :authentication, :only => [:new]
+
+        match 'signin' => 'authentication#signin', :via => :get, :format => false
+        match 'signout' => 'authentication#signout', :via => :get, :format => false
+        match 'auth' => 'authentication#auth', :via => :post, :format => false
+
+        match 'password_reset/*token' => 'authentication#change_password', :via => :get, :format => false
+
+        scope 'password' do
+          get 'change/*token' => 'authentication#change_password', :format => false
+          post 'reset' => 'authentication#send_token', :format => false
+          post 'update' => 'authentication#update_password', :format => false
+        end
+      end      
   end
 end

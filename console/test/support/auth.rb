@@ -114,6 +114,6 @@ class ActionController::TestCase
   end
 
   def account_settings_redirect
-    account_path
+    settings_path
   end
 end
