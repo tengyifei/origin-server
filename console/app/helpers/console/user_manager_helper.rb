@@ -15,7 +15,7 @@ module Console::UserManagerHelper
   end
 
   def user_manager_account_password_reset_key(token, password)
-    user_manager_post _url('account_password_reset_key') + token + "/", :password1 => password, :password2 => password    
+    user_manager_post _url('account_password_reset_key') + token + "/", :password1 => password, :password2 => password
   end
 
   def user_manager_subscription(max_gears)
@@ -34,16 +34,21 @@ module Console::UserManagerHelper
     user_manager_get session[:authentication].login + _url('subscription_prices')
   end
 
+  def user_manager_primary_address
+    user_manager_get session[:authentication].login + _url('primary_address')
+  end
+
+  def user_manager_primary_address_update(params = {})
+    user_manager_post session[:authentication].login + _url('primary_address'), params
+  end
+  
   def user_manager_billing_address
     user_manager_get session[:authentication].login + _url('billing_address')
   end
 
-  def user_manager_billing_address_update(country_code, state, city, line1, line2, postal_code, phone, type, cpf, cnpj, ie)
-    if type == 'pf'
-      user_manager_post session[:authentication].login + _url('billing_address'), :country_code => country_code, :state => state, :city => city, :line1 => line1, :line2 => line2, :postal_code => postal_code, :phone => phone, :type => 'pf', :cpf => cpf
-    else
-      user_manager_post session[:authentication].login + _url('billing_address'), :country_code => country_code, :state => state, :city => city, :line1 => line1, :line2 => line2, :postal_code => postal_code, :phone => phone, :type => 'pj', :cnpj => cnpj, :ie => ie
-    end
+  def user_manager_billing_address_update(params = {})
+    params[:is_billing] = !params[:is_billing]
+    user_manager_post session[:authentication].login + _url('billing_address'), params
   end
   
   def user_manager_billing_history

@@ -66,7 +66,8 @@ module ActionDispatch::Routing
         match 'payment/cancel' => 'payments_proxy#cancel', :format => false
 
         scope 'billing' do
-          resource :address, :controller => :billing_address, :only => [:edit, :create]
+          resource :primary_address, :controller => :primary_address, :only => [:edit, :create]
+          resource :billing_address, :controller => :billing_address, :only => [:edit, :create]
         end
       end
 

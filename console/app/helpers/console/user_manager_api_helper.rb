@@ -55,9 +55,9 @@ module Console::UserManagerApiHelper
       end
 
       request = if method === 'GET'
-        Net::HTTP::Get.new uri.request_uri 
+        Net::HTTP::Get.new uri.request_uri
       else
-        Net::HTTP::Post.new uri.request_uri 
+        Net::HTTP::Post.new uri.request_uri
       end
 
       request['X-Remote-User'] = path[:user] if path[:user]
