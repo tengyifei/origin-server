@@ -42,7 +42,6 @@ module Console::UserManagerApiHelper
 
   private
     def call(path, params, method='GET')
-
       path = format_path path
 
       uri = URI.parse get_user_manager_url + path[:address]
@@ -63,8 +62,14 @@ module Console::UserManagerApiHelper
       request['X-Remote-User'] = path[:user] if path[:user]
       request.set_form_data(params)
 
+      #puts "User Manager API Helper Req: #{method} #{uri.request_uri}"
+      #if method == 'POST'
+      #  puts "User Manager API Helper Data: #{params}"
+      #end
       response = http.request request
+      #puts "response: #{response}"
       response_code = response.code.to_i
+      #puts "User Manager API Helper Res: #{response} => #{response.body}"
 
       if response_code == 500
         raise "Error retrieving resource: #{path}"

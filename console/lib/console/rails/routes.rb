@@ -68,6 +68,7 @@ module ActionDispatch::Routing
         scope 'billing' do
           resource :primary_address, :controller => :primary_address, :only => [:edit, :create]
           resource :billing_address, :controller => :billing_address, :only => [:edit, :create]
+          resources :pdf, :controller => :pdf, :only => [:show], :id => /[^\/]+/, :format => false #, :format => /json|csv|xml|yaml/
         end
       end
 

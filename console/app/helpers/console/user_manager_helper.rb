@@ -59,6 +59,10 @@ module Console::UserManagerHelper
     user_manager_get session[:authentication].login + _url('billing_invoice') + id + '/'
   end
 
+  def user_manager_billing_invoice_pdf(id)
+    user_manager_get session[:authentication].login + _url('billing_invoice') + 'pdf/' + id + '/'
+  end
+
   private
     def _url(url)
       Console.config.api[:user_manager][url]
