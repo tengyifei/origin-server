@@ -4,7 +4,7 @@ class BillingController < ConsoleController
   def index
       result  = user_manager_billing_history.content
       data = result[:data][0]
-      @currency = data[:payment_data].nil? ? '' : data[:payment_data][:preapproval][:currency]
+      @currency = data[:payment_data].nil? ? '' : data[:payment_data][:currency]
       @history  = data[:history]
   end
 
