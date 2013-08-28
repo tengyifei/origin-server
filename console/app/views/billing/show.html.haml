@@ -17,28 +17,28 @@
               %td.top
                 %h5 #{@getup[:name]}
                 %ul.unstyled
+                  %li CNPJ: #{@getup[:pj_cnpj]}
                   - if @getup[:line1] != ''
                     %li #{@getup[:line1]}
                   - if @getup[:line2] != ''
                     %li #{@getup[:line2]}
-                  %li #{@getup[:city]}/#{@getup[:state]} - #{@getup[:country_code]}
+                  %li #{@getup[:city]}/#{@getup[:state]} - #{@getup[:country_name]}
                   %li CEP: #{@getup[:postal_code]}
-                  %li CNPJ: #{@getup[:pj_cnpj]}
               %td.top
                 %h5 #{@user[:first_name]}
                 %ul.unstyled
-                  - if @address[:line1] != ''
-                    %li #{@address[:line1]}
-                  - if @address[:line2] != ''
-                    %li #{@address[:line2]}
-                  %li #{@address[:city]}/#{@address[:state]} - #{@address[:country_code]}
-                  %li CEP: #{@address[:postal_code]}
                   - if @address[:type] == 'pf'
                     %li CPF: #{@address[:pf_cpf]}
                   - if @address[:type] == 'pj'
                     %li CNPJ: #{@address[:pj_cnpj]}
                     - if @address[:ie] != ''
-                      %li Insc. Est.: #{@address[:ie]}
+                      %li Insc. Est.: #{@address[:pj_ie]}
+                  - if @address[:line1] != ''
+                    %li #{@address[:line1]}
+                  - if @address[:line2] != ''
+                    %li #{@address[:line2]}
+                  %li #{@address[:city]}/#{@address[:state]} - #{@address[:country_name]}
+                  %li CEP: #{@address[:postal_code]}
 
               %td.top
                 %dl
