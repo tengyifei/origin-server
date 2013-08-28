@@ -23,7 +23,7 @@
                     %li #{@getup[:line2]}
                   %li #{@getup[:city]}/#{@getup[:state]} - #{@getup[:country_code]}
                   %li CEP: #{@getup[:postal_code]}
-                  %li CNPJ: #{@getup[:cnpj]}
+                  %li CNPJ: #{@getup[:pj_cnpj]}
               %td.top
                 %h5 #{@user[:first_name]}
                 %ul.unstyled
@@ -34,9 +34,9 @@
                   %li #{@address[:city]}/#{@address[:state]} - #{@address[:country_code]}
                   %li CEP: #{@address[:postal_code]}
                   - if @address[:type] == 'pf'
-                    %li CPF: #{@address[:cpf]}
+                    %li CPF: #{@address[:pf_cpf]}
                   - if @address[:type] == 'pj'
-                    %li CNPJ: #{@address[:cnpj]}
+                    %li CNPJ: #{@address[:pj_cnpj]}
                     - if @address[:ie] != ''
                       %li Insc. Est.: #{@address[:ie]}
 
