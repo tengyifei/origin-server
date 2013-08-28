@@ -34,7 +34,7 @@ class BillingController < ConsoleController
       @prices       = user_manager_subscription_prices.content
       @price        = @prices.find(result[:invoice][:amount][:total][:currency]).next[1]
       @acronym      = @price[:GEAR_USAGE][:acronym]
-      @unit         = {'h' => 'hour', 'm' => 'minute'}
+      @unit         = {'h' => 'hour', 'd' => 'day', 'm' => 'month', 'g' => 'gigabyte'}
 
       @getup[:country_name]   = country_name(@getup[:country_code])
       @address[:country_name] = country_name(@address[:country_code])
