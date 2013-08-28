@@ -3,8 +3,7 @@
 # https://github.com/rails/country_select
 
 module Console::CountryHelper
-  def country_list
-    [
+  @@country_list = [
      ['Afghanistan', 'AF'],
      ['Aaland Islands', 'AX'],
      ['Albania', 'AL'],
@@ -249,5 +248,14 @@ module Console::CountryHelper
      ['Zambia', 'ZM'],
      ['Zimbabwe', 'ZW']
     ]
+
+  def country_list
+    @@country_list
+  end
+
+  # Hash[code => name]
+  @@country_hash = Hash[*@@country_list.map{|c| [ c[1], c[0] ]}.flatten]
+  def country_name(code)
+    @@country_hash[code]
   end
 end
