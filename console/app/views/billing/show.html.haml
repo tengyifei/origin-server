@@ -15,6 +15,7 @@
           %tbody
             %tr
               %td.top
+                //Getup address
                 %h5 #{@getup[:name]}
                 %ul.unstyled
                   %li CNPJ: #{@getup[:pj_cnpj]}
@@ -25,6 +26,7 @@
                   %li #{@getup[:city]}/#{@getup[:state]} - #{@getup[:country_name]}
                   %li CEP: #{@getup[:postal_code]}
               %td.top
+                //User address
                 %h5 #{@user[:first_name]}
                 %ul.unstyled
                   - if @address[:type] == 'pf'
@@ -40,6 +42,7 @@
                   %li #{@address[:city]}/#{@address[:state]} - #{@address[:country_name]}
                   %li CEP: #{@address[:postal_code]}
 
+              //Invoice summary
               %td.top
                 %dl
                   %dt Invoice:
@@ -55,6 +58,7 @@
                   %dt Total:
                   %dd #{@acronym} #{number_with_precision(@amount[:total][:amount].to_f, :precision => 2)}
   
+        //Applications
         - @applications.each do |app|
           - total = 0
           %h3 Application #{app[1][:name]}
@@ -73,8 +77,9 @@
               %tr
                 %td Gear #{item[:gear_id]}<br>#{item[:billing_start].gsub('T', ' ').byteslice(0, 19)} - #{item[:billing_end].gsub('T', ' ').byteslice(0, 19)}
                 %td #{item[:usage_type]}
-                %td #{number_with_precision(item[:hours].to_f, :precision => 6)}
-                %td #{@unit[@price.find(item[:usage_type]).next[1][:unit]]}
+                %td #{item[:quantity]}
+                //%td #{number_with_precision(item[:quantity].to_f, :precision => 6)}
+                %td #{item[:unit]}
                 %td #{@acronym} #{@price.find(item[:usage_type]).next[1][:value]}
                 %td #{@acronym} #{number_with_precision(item[:amount].to_f, :precision => 2)}
             %tr
@@ -82,31 +87,28 @@
               %td{:style => 'font-weight: bold'} Total
               %td{:style => 'font-weight: bold'} #{@acronym} #{number_with_precision(total, :precision => 2)}  
   
-      - if !@amount[:GEAR_USAGE].nil?
-        - if !@amount[:GEAR_USAGE][:total].nil?
-          %h3 Bonus
-          - bonus_quantity = !@amount[:GEAR_USAGE][:credit].nil? ? -@amount[:GEAR_USAGE][:credit][:hours] : '-'
-          - bonus_unit     = !@amount[:GEAR_USAGE].nil? ? @amount[:GEAR_USAGE][:unit] : '-'
-          - bonus_cost     = !@amount[:total].nil? ? @prices.find(@amount[:total][:currency]).next[1][:GEAR_USAGE][:value] : '-'
-          - bonus_total    = !@amount[:GEAR_USAGE][:credit].nil? ? @amount[:GEAR_USAGE][:credit][:amount] : '-'
-          %table.table.table-fixed.invoice
-            %thead
-              %tr
-                %th{:scope => 'col', :style => 'width: 350px'} Item
-                %th{:scope => 'col', :style => 'width: 200px'} Type
-                %th{:scope => 'col', :style => 'width: 150px'} Quantity
-                %th{:scope => 'col'} Unit
-                %th{:scope => 'col', :style => 'width: 120px'} Unit cost
-                %th{:scope => 'col', :style => 'width: 120px'} Total cost
-            %tbody
-              %tr
-                %td Free gear early access
-                %td Credit
-                %td #{bonus_quantity}
-                %td #{bonus_unit}
-                %td{:style => 'font-weight: bold'} #{@acronym} #{bonus_cost}
-                %td{:style => 'font-weight: bold'} #{@acronym} #{bonus_total}
+      //Credit
+      - if !@amount[:GEAR_USAGE][:credit].nil?
+        %h3 Credits
+        %table.table.table-fixed.invoice
+          %thead
+            %tr
+              %th{:scope => 'col', :style => 'width: 350px'} Item
+              %th{:scope => 'col', :style => 'width: 200px'} Type
+              %th{:scope => 'col', :style => 'width: 150px'} Quantity
+              %th{:scope => 'col'} Unit
+              %th{:scope => 'col', :style => 'width: 120px'} Unit cost
+              %th{:scope => 'col', :style => 'width: 120px'} Total credit
+          %tbody
+            %tr
+              %td Free gear
+              %td GEAR_USAGE
+              %td #{@amount[:GEAR_USAGE][:credit][:quantity]}
+              %td #{@amount[:GEAR_USAGE][:credit][:unit]}
+              %td #{@acronym} #{@prices.find(@amount[:total][:currency]).next[1][:GEAR_USAGE][:value]}
+              %td{:style => 'font-weight: bold'} #{@acronym} #{@amount[:GEAR_USAGE][:credit][:amount]}
 
+      //Final
       - if @amount[:total][:amount].to_f != 0.00
         %table.table.table-fixed.invoice
           %thead
