@@ -10,7 +10,7 @@
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
 Version: 1.7.6
-Release:       1%{?dist}
+Release:       2%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           https://openshift.redhat.com
@@ -134,6 +134,16 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Thu Aug 29 2013 Getup Builder <getup@getupcloud.com> 1.7.6-2
+- novo console (spinolacastro@gmail.com)
+- console antigo (spinolacastro@gmail.com)
+- clean up console (spinolacastro@gmail.com)
+
+* Thu Aug 29 2013 Getup Builder <getup@getupcloud.com>
+- novo console (spinolacastro@gmail.com)
+- console antigo (spinolacastro@gmail.com)
+- clean up console (spinolacastro@gmail.com)
+
 * Fri Apr 12 2013 Adam Miller <admiller@redhat.com> 1.7.6-1
 - Bug 951367 (ffranz@redhat.com)
 - Merge pull request #2025 from smarterclayton/origin_ui_37_error_page
