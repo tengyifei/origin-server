@@ -42,9 +42,6 @@ module Console::UserManagerApiHelper
 
   private
     def call(path, params, method='GET')
-
-      print path
-
       path = format_path path
 
       uri = URI.parse get_user_manager_url + path[:address]
@@ -57,19 +54,26 @@ module Console::UserManagerApiHelper
       end
 
       request = if method === 'GET'
-        Net::HTTP::Get.new uri.request_uri 
+        Net::HTTP::Get.new uri.request_uri
       else
-        Net::HTTP::Post.new uri.request_uri 
+        Net::HTTP::Post.new uri.request_uri
       end
 
       request['X-Remote-User'] = path[:user] if path[:user]
       request.set_form_data(params)
 
+      #puts "User Manager API Helper Req: #{method} #{uri.request_uri}"
+      #if method == 'POST'
+      #  puts "User Manager API Helper Data: #{params}"
+      #end
       response = http.request request
+      #puts "response: #{response}"
       response_code = response.code.to_i
+      #puts "User Manager API Helper Res: #{response} => #{response.body}"
 
       if response_code == 500
-        render inline: response.body.html_safe
+        raise "Error retrieving resource: #{path}"
+        #render inline: response.body.html_safe
       else
         GetupResponse.new response
       end

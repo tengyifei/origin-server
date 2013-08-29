@@ -1,18 +1,12 @@
-- content_for :title, "Edit billing address"
-- breadcrumb_for_account_billing 'Edit billing address'
-%h1 Edit billing address
+- content_for :title, "Edit primary address"
+- breadcrumb_for_account_billing 'Edit primary address'
+%h1 Edit primary address
 = flashes
 
-%form.form-horizontal.formtastic{:action => billing_address_path, :id => 'form-billing-address', :method => 'post'}
+%form.form-horizontal.formtastic{:action => primary_address_path, :id => 'form-primary-address', :method => 'post'}
   = token_tag(nil)
   %p
-    Fill in you billing address, used for your next invoice.
-
-  %p
-    .string.required.control-group
-      %label.control-label Use Primary Address
-      .controls
-        = check_box_tag :is_billing, !@address[:is_billing], !@address[:is_billing]
+    Fill in you primary address.
 
   %fieldset.inputs
     .string.required.control-group

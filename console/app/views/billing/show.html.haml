@@ -1,169 +1,121 @@
-- content_for :title, "Invoice info"
-- breadcrumb_for_account_billing 'Invoice info'
-%h1 Invoice info
+- content_for :title, "Invoice"
+- breadcrumb_for_account_billing 'Invoice'
+- end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
+- start_date = !@period[:start].nil? ? Date.strptime("#{@period[:start]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
+%h1 Invoice ##{@id}
+%h3 Period: #{start_date} - #{end_date}
 = flashes
 
-.row.billing-info
-  .span12
-    %section
+- if @status
+  .row.billing-info
+    .span12
+      %section
+  
+        %table.table.table-fixed.info
+          %tbody
+            %tr
+              %td.top
+                %h5 #{@getup[:name]}
+                %ul.unstyled
+                  - if @getup[:line1] != ''
+                    %li #{@getup[:line1]}
+                  - if @getup[:line2] != ''
+                    %li #{@getup[:line2]}
+                  %li #{@getup[:city]}/#{@getup[:state]} - #{@getup[:country_code]}
+                  %li CEP: #{@getup[:postal_code]}
+                  %li CNPJ: #{@getup[:cnpj]}
+              %td.top
+                %h5 #{@user[:first_name]}
+                %ul.unstyled
+                  - if @address[:line1] != ''
+                    %li #{@address[:line1]}
+                  - if @address[:line2] != ''
+                    %li #{@address[:line2]}
+                  %li #{@address[:city]}/#{@address[:state]} - #{@address[:country_code]}
+                  %li CEP: #{@address[:postal_code]}
+                  - if @address[:type] == 'pf'
+                    %li CPF: #{@address[:cpf]}
+                  - if @address[:type] == 'pj'
+                    %li CNPJ: #{@address[:cnpj]}
+                    - if @address[:ie] != ''
+                      %li Insc. Est.: #{@address[:ie]}
 
-      %table.table.table-fixed.info
-        %tbody
-          %tr
-            %td.center.middle Fatura 0001
-            %td.middle
-              %h5 Getup
-              %ul.unstyled
-                %li R. Dom Pedro Osório, 191
-                %li Porto Alegre - RS - 94036-45
-                %li Brasil
-            %td.middle
-              %h5 To
-              %ul.unstyled
-                %li Safari Produtora de Mídia
-                %li financial@testing.com
-            %td.middle
-              %dl
-                %dt Date:
-                %dd May 29, 2013
+              %td.top
+                %dl
+                  %dt Invoice:
+                  %dd ##{@id}
 
-                %dt Total:
-                %dd US$ 45.00
+                  %dt Client:
+                  %dd ##{@user[:id]}
 
-                %dt Client Id:
-                %dd 00002
+                  %dt Reference:
+                  - end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
+                  %dd #{end_date}
+  
+                  %dt Total:
+                  %dd #{@acronym} #{number_with_precision(@amount[:total][:amount].to_f, :precision => 2)}
+  
+        - @applications.each do |app|
+          - total = 0
+          %h3 Application #{app[1][:name]}
+          %table.table.table-fixed.invoice
+            %thead
+              %tr
+                %th{:scope => 'col', :style => 'width: 350px'} Item
+                %th{:scope => 'col', :style => 'width: 200px'} Type
+                %th{:scope => 'col', :style => 'width: 150px'} Quantity
+                %th{:scope => 'col'} Unit
+                %th{:scope => 'col', :style => 'width: 120px'} Unit cost
+                %th{:scope => 'col', :style => 'width: 120px'} Total cost
+            %tbody
+            - app[1][:items].each do |item|
+              - total += item[:amount].to_f
+              %tr
+                %td Gear #{item[:gear_id]}<br>#{item[:billing_start].gsub('T', ' ').byteslice(0, 19)} - #{item[:billing_end].gsub('T', ' ').byteslice(0, 19)}
+                %td #{item[:usage_type]}
+                %td #{number_with_precision(item[:hours].to_f, :precision => 6)}
+                %td #{@unit[@price.find(item[:usage_type]).next[1][:unit]]}
+                %td #{@acronym} #{@price.find(item[:usage_type]).next[1][:value]}
+                %td #{@acronym} #{number_with_precision(item[:amount].to_f, :precision => 2)}
+            %tr
+              %td{:colspan => 4}
+              %td{:style => 'font-weight: bold'} Total
+              %td{:style => 'font-weight: bold'} #{@acronym} #{number_with_precision(total, :precision => 2)}  
+  
+      - if !@amount[:GEAR_USAGE].nil?
+        - if !@amount[:GEAR_USAGE][:total].nil?
+          %h3 Bonus
+          - bonus_quantity = !@amount[:GEAR_USAGE][:credit].nil? ? -@amount[:GEAR_USAGE][:credit][:hours] : '-'
+          - bonus_unit     = !@amount[:GEAR_USAGE].nil? ? @amount[:GEAR_USAGE][:unit] : '-'
+          - bonus_cost     = !@amount[:total].nil? ? @prices.find(@amount[:total][:currency]).next[1][:GEAR_USAGE][:value] : '-'
+          - bonus_total    = !@amount[:GEAR_USAGE][:credit].nil? ? @amount[:GEAR_USAGE][:credit][:amount] : '-'
+          %table.table.table-fixed.invoice
+            %thead
+              %tr
+                %th{:scope => 'col', :style => 'width: 350px'} Item
+                %th{:scope => 'col', :style => 'width: 200px'} Type
+                %th{:scope => 'col', :style => 'width: 150px'} Quantity
+                %th{:scope => 'col'} Unit
+                %th{:scope => 'col', :style => 'width: 120px'} Unit cost
+                %th{:scope => 'col', :style => 'width: 120px'} Total cost
+            %tbody
+              %tr
+                %td Free gear early access
+                %td Credit
+                %td #{bonus_quantity}
+                %td #{bonus_unit}
+                %td{:style => 'font-weight: bold'} #{@acronym} #{bonus_cost}
+                %td{:style => 'font-weight: bold'} #{@acronym} #{bonus_total}
 
-      %h3 Application Name
-      %table.table.table-fixed.invoice
-        %thead
-          %tr
-            %th{:scope => 'col'} Item
-            %th{:scope => 'col'} Type
-            %th{:scope => 'col'} Quantity
-            %th{:scope => 'col'} Unit
-            %th{:scope => 'col'} Unit cost
-            %th{:scope => 'col'} Total cost
-        %tbody
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 700
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 350
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 350
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td{:colspan => 5}
-            %td US$ 200,00
-
-      %h3 Application 2 Name
-      %table.table.table-fixed.invoice
-        %thead
-          %tr
-            %th{:scope => 'col'} Item
-            %th{:scope => 'col'} Type
-            %th{:scope => 'col'} Quantity
-            %th{:scope => 'col'} Unit
-            %th{:scope => 'col'} Unit cost
-            %th{:scope => 'col'} Total cost
-        %tbody
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 700
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td{:colspan => 5}
-            %td US$ 200,00
-
-      %h3 Application 3 Name
-      %table.table.table-fixed.invoice
-        %thead
-          %tr
-            %th{:scope => 'col'} Item
-            %th{:scope => 'col'} Type
-            %th{:scope => 'col'} Quantity
-            %th{:scope => 'col'} Unit
-            %th{:scope => 'col'} Unit cost
-            %th{:scope => 'col'} Total cost
-        %tbody
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 700
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 350
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 350
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 700
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 350
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td Description of invoice value integration
-            %td Gear
-            %td 350
-            %td hour
-            %td US$ 0,179
-            %td US$ 200,00
-          %tr
-            %td{:colspan => 5}
-            %td US$ 200,00    
-
-      %h3 Bonus
-      %table.table.table-fixed.invoice
-        %thead
-          %tr
-            %th{:scope => 'col'} Item
-            %th{:scope => 'col'} Type
-            %th{:scope => 'col'} Quantity
-            %th{:scope => 'col'} Unit
-            %th{:scope => 'col'} Unit cost
-            %th{:scope => 'col'} Total cost
-        %tbody
-          %tr
-            %td Free gear early access
-            %td Credit
-            %td -700
-            %td hour
-            %td US$ 0,179
-            %td US$ -200,00
-
+      - if @amount[:total][:amount].to_f != 0.00
+        %table.table.table-fixed.invoice
+          %thead
+            %tr
+              %th{:colspan => 4}
+              %th{:style => 'width: 120px'}
+              %th{:style => 'width: 120px'}
+          %tbody
+            %tr
+              %td{:colspan => 4}
+              %td{:style => 'font-weight: bold'} Total
+              %td{:style => 'font-weight: bold'} #{@acronym} #{number_with_precision(@amount[:total][:amount].to_f, :precision => 2)}
