@@ -1,10 +1,11 @@
 class BillingController < ConsoleController
   include Console::UserManagerHelper
+  include Console::CountryHelper
 
   def index
       result  = user_manager_billing_history.content
       data = result[:data][0]
-      @currency = data[:payment_data].nil? ? '' : data[:payment_data][:preapproval][:currency]
+      @currency = data[:payment_data].nil? ? '' : data[:payment_data][:currency]
       @history  = data[:history]
   end
 
@@ -30,13 +31,13 @@ class BillingController < ConsoleController
       @user         = result[:invoice][:user]
       @address      = result[:invoice][:billing_address]
       @applications = result[:invoice][:applications]
-      currency      = result[:invoice][:amount][:total][:currency]
-  
-      @prices = user_manager_subscription_prices.content
-      
-      @price  = @prices.find(currency).next[1]
-      @acronym = @price[:GEAR_USAGE][:acronym]
-      @unit = {'h' => 'hour', 'm' => 'minute'}
+      @prices       = user_manager_subscription_prices.content
+      @price        = @prices.find(result[:invoice][:amount][:total][:currency]).next[1]
+      @acronym      = @price[:GEAR_USAGE][:acronym]
+      @unit         = {'h' => 'hour', 'd' => 'day', 'm' => 'month', 'g' => 'gigabyte'}
+
+      @getup[:country_name]   = country_name(@getup[:country_code])
+      @address[:country_name] = country_name(@address[:country_code])
     end
   end
 end
