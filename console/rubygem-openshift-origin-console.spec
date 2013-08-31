@@ -134,6 +134,10 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Sat Aug 31 2013 Getup Builder <getup@getupcloud.com> 1.7.6-6
+- bump version (getup@getupcloud.com)
+- update console (mateus@caruccio.com)
+
 * Fri Aug 30 2013 Getup Builder <getup@getupcloud.com> 1.7.6-5
 - API version is not locked when using PUT/POST/DELETE
   (spinolacastro@gmail.com)
