@@ -44,6 +44,10 @@ chkconfig jenkins off
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Fri Sep 13 2013 Getup Builder <getup@getupcloud.com> 1.13.0.1-2
+- bummp release (mateus@caruccio.com)
+- include GIT_SSH env var into jenkins config.xml (mateus@caruccio.com)
+
 * Thu Aug 01 2013 Krishna Raman <kraman@gmail.com> 1.13.0.1-1
 - Bumping version #s for origin release 2 (kraman@gmail.com)
 - bump_minor_versions for sprint 32 (admiller@redhat.com)
