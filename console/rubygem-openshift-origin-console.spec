@@ -10,7 +10,7 @@
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
 Version: 1.7.6
-Release:       6%{?dist}
+Release:       7%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           https://openshift.redhat.com
@@ -134,6 +134,9 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Wed Oct 02 2013 Getup Builder <getup@getupcloud.com> 1.7.6-7
+- Removed User Guide links (mateus@caruccio.com)
+
 * Sat Aug 31 2013 Getup Builder <getup@getupcloud.com> 1.7.6-6
 - bump version (getup@getupcloud.com)
 - update console (mateus@caruccio.com)
