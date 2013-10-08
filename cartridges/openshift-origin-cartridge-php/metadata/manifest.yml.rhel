@@ -3,11 +3,12 @@ Cartridge-Short-Name: PHP
 Display-Name: PHP 5.3
 Description: "PHP is a general-purpose server-side scripting language originally designed for Web development to produce dynamic Web pages. Popular development frameworks include: CakePHP, Zend, Symfony, and Code Igniter."
 Version: '5.3'
+Versions: ['5.3', '5.4', '5.5']
 License: "The PHP License, version 3.0"
 License-Url: http://www.php.net/license/3_0.txt
 Vendor: php.net
-Cartridge-Version: 0.0.3
-Compatible-Versions: [0.0.2]
+Cartridge-Version: 0.0.4
+Compatible-Versions: ['0.0.2', '0.0.3']
 Cartridge-Vendor: redhat
 Categories:
   - service
@@ -83,3 +84,16 @@ Endpoints:
       - Frontend:      "/health"
         Backend:       ""
         Options:       { health: true }
+Version-Overrides:
+  '5.4':
+     Display-Name: PHP 5.4
+     License: "The PHP License, version 3.0"
+     Provides:
+       - php-5.4
+       - "php"
+  '5.5':
+     Display-Name: PHP 5.5
+     License: "The PHP License, version 3.0"
+     Provides:
+       - php-5.5
+       - "php"
