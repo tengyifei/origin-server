@@ -8,8 +8,14 @@ esac
 # Copy the version specific files up to php directory
 shopt -s dotglob
 
+if [ "$version" == '5.3' ]; then
+  VERSION_DIR=shared
+else
+  VERSION_DIR="$version"
+fi
+
 mkdir -p $OPENSHIFT_PHP_DIR/configuration/etc/
-cp -Hr $OPENSHIFT_PHP_DIR/versions/shared/configuration/etc/* $OPENSHIFT_PHP_DIR/configuration/etc/
+cp -Hr $OPENSHIFT_PHP_DIR/versions/$VERSION_DIR/configuration/etc/* $OPENSHIFT_PHP_DIR/configuration/etc/
 
 # Create additional directories required by PHP
 mkdir -p $OPENSHIFT_PHP_DIR/phplib/pear/{docs,ext,php,cache,cfg,data,download,temp,tests,www}
