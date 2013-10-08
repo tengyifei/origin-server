@@ -2,68 +2,105 @@
 - breadcrumb_for_account 'Add Gears'
 %h1 Add Gears
 %p
-  You are using #{@capabilities.consumed_gears} gears of #{@capabilities.max_gears} total gears in your account.
+  Você está usando #{@capabilities.consumed_gears} gears de #{@capabilities.max_gears} autorizados.
   %br
-  %small Change your limits below.
+  %span.trans You are using #{@capabilities.consumed_gears} gears of #{@capabilities.max_gears} total authorized gears.
+%p
+  Altere seus limites abaixo.
+  %br
+  %span.trans Change your limits below.
 
 = flashes
+
+%hr
 
 %form.form-horizontal.formtastic{:action => gears_path, :id => 'form-billing', :method => 'post'}
   = token_tag(nil)
 
-  .input-append.span3
-    %label New gears limit
-    %input.span1.uneditable-input{:id => 'gears-number', :name => 'gears', :type => 'text', :value => '-'}
-    %button.btn{:type => 'button', :id => 'remove-gear'} -
-    %button.btn{:type => 'button', :id => 'add-gear'} +
+  %div.span3
+    Nova quantidade de gears
+    %br
+    %span.trans New gears limit
+    %br
+    .input-append
+      %input.span1.uneditable-input{:id => 'gears-number', :name => 'gears', :type => 'text', :value => '-'}
+      %button.btn{:type => 'button', :id => 'remove-gear'} -
+      %button.btn{:type => 'button', :id => 'add-gear'} +
 
-  .input-prepend
-    %label Currency
-    %button.btn.btn-info.disabled.currency{:type => 'button', :'data-currency' => 'BRL'} R$
-    %button.btn.btn-info.currency{:type => 'button', :'data-currency' => 'USD'} US$&sup3;
+  %div.span3
+    Moeda
+    %br
+    %span.trans Currency
+    %br
+    .input-prepend
+      %button.btn.btn-info.disabled.currency{:type => 'button', :'data-currency' => 'BRL'} R$
+      %button.btn.btn-info.currency{:type => 'button', :'data-currency' => 'USD'} US$&sup3;
 
   %span.right-position{:id => 'message'}
 
   %table.table.table-fixed.table-striped{:id => 'gears', :'data-source' => 'https://' + broker_host + '/getup/subscription/prices/', :'data-currency' => 'BRL', :'data-max-gears-limit' => @account_plan[:max_gears_limit]}
     %thead
       %tr
-        %th{:scope => 'col'}
-        %th{:scope => 'col'} 
-        %th{:scope => 'col'} Unit cost
-        %th{:scope => 'col'} Cost
+        %th{:scope => 'col', :width => '5%'}
+        %th{:scope => 'col', :width => '50%'}
+        %th{:scope => 'col', :width => '15%'}
+        %th{:scope => 'col', :width => '15%'}
+          Custo unitário
+          %br
+          %span.trans Unit Cost
+        %th{:scope => 'col', :width => '15%'}
+          Custo
+          %br
+          %span
+            %span.trans Cost
     %tbody
       %tr
-        %td Gears
+        %td
+        %td
+          Gears
         %td{:id => 'gears-size', :'data-gears' => @capabilities.max_gears, :'data-consumed-gears' => @capabilities.consumed_gears} -
         %td{:id => 'gears-unit-cost'} -
         %td{:id => 'gears-cost'} -
       - if @account_plan[:free_tier]
         %tr
-          %td Credit
+          %td
+          %td
+            Crédito
+            %span.trans Credit
           %td{:id => 'credit-size', :'data-hours' => @account_plan[:free_tier]} -
           %td{:id => 'credit-unit-cost'} -
-          %td{:id => 'credit-cost'} -        
+          %td{:id => 'credit-cost'} -
       %tr.info
-        %td Monthly (estimated&sup1;)
+        %td
+        %td
+          Mensal (estimado&sup1;)
+          %span.trans Monthly (estimated&sup1;)
         %td 
         %td 
         %td{:id => 'total-month'} -
       %tr.info
         %td
-          Total pre-approved&sup2;
-          %small * Valid for 12 months
+        %td
+          Total pre-aprovado&sup2; | Válido por 12 meses
+          %span.trans Total pre-approved&sup2; | Valid for 12 months
         %td 
         %td 
         %td{:id => 'total-approved'} -
-
+  %hr
   %p
-    %small 1. Monthly: Estimated cost considering the amount of gears running all time for an entire month. This is also the max amount we will charge you by month.
-
-  %p
-    %small 2. Total pre-approved: For security reasons, this pre-approval is valid for 12 months and the sum of all monthly charges cannot exceed R$ 8.750,00 or US$ 5.000,00. When the value or validity of pre-approval is about to expire or be exceeded, we will ask you for another pre-approval operation.
-
-  %p
-    %small 3. Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime.
+    %ol
+      %li
+        %small Mensal: valor estimado considerando o total de gears selecionado e rodando por todo o mês. Este é também, o valor máximo que você nos autoriza cobrar mensalmente. Este não é o valor definitivo mensal - você pagará apenas por aquilo que utilizar.
+        %br
+          %span.trans Monthly: Estimated cost considering the amount of gears running all time for an entire month. This is also the max amount we will charge you by month.
+      %li
+        %small Total pré-aprovado: Por razões de segurança, esta pré-aprovação têm validade de 12 meses e a soma de todos os meses não poderá ultrapassar R$ 8.750,00 ou US$ 5.000,00. Quando o valor ou a validade da pré-aprovação estiver para expirar ou ser excedida, nós iremos solicitar a você uma nova pré-aprovação.
+        %br
+          %span.trans Total pre-approved: For security reasons, this pre-approval is valid for 12 months and the sum of all monthly charges cannot exceed R$ 8.750,00 or US$ 5.000,00. When the value or validity of pre-approval is about to expire or be exceeded, we will ask you for another pre-approval operation.
+      %li
+        %small Em acordo com as regras do Paypal, nós cobramos em moeda Brasileira. Quando você receber sua fatura, esta estará em R$ (reais) em vez de US$. Se você tiver alguma dúvida, não deixe de nos procurar.
+        %br
+          %span.trans Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime.
 
   %fieldset
     = link_to "Cancel", account_path, :class => 'btn'

@@ -181,6 +181,12 @@ em {
 .muted {
   color: $grayLight;
 }
+span.trans {
+  font-style: italic;
+  font-size: $baseFontSize - 2;
+  color: $grayLight;
+}
+
 
 // Abbreviations and acronyms
 
