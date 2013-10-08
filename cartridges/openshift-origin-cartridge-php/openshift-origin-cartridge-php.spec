@@ -3,7 +3,7 @@
 
 Name:          openshift-origin-cartridge-php
 Version: 0.8.0.1
-Release:       2%{?dist}
+Release:       3%{?dist}
 Summary:       Php cartridge
 Group:         Development/Languages
 License:       ASL 2.0
@@ -186,6 +186,11 @@ rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 
 %changelog
+* Tue Oct 08 2013 Getup Builder <getup@getupcloud.com> 0.8.0.1-3
+- Merge branch 'getup-openshift-origin-release-2' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-2 (getup@getupcloud.com)
+- update php cart manifest (mateus@caruccio.com)
+
 * Tue Oct 08 2013 Getup Builder <getup@getupcloud.com> 0.8.0.1-2
 - php54 and php55 rpm deps (mateus@caruccio.com)
 - Added support to php-5.4 and php-5.5 (mateus@caruccio.com)
