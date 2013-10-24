@@ -96,7 +96,7 @@ class HAProxyUtils
 end
 
 class Haproxy
-    MAX_SESSIONS_PER_GEAR = 16.0
+
 
     class ShouldRetry < StandardError
       attr_reader :message
@@ -114,6 +114,7 @@ class Haproxy
         @flap_protection_time_seconds = 120 # number of seconds to ignore gear remove events since last up event
         @remove_count_threshold = 20
         @remove_count = 0
+        @max_sessions_per_gear = get_max_sessions_per_gear
         self.refresh
         @log.info("Starting haproxy_ctld")
         self.print_gear_stats
@@ -156,7 +157,7 @@ class Haproxy
         end
 
         @sessions_per_gear = @sessions.to_f / @gear_count
-        @session_capacity_pct = (@sessions_per_gear / MAX_SESSIONS_PER_GEAR ) * 100
+        @session_capacity_pct = (@sessions_per_gear / @max_sessions_per_gear ) * 100
 
     end
 
@@ -219,6 +220,7 @@ class Haproxy
             seconds_left = 0
         end
         @log.debug("GEAR_INFO - capacity: #{session_capacity_pct}% gear_count: #{gear_count} sessions: #{sessions} up/remove_thresh: #{@gear_up_pct}%/#{@gear_remove_pct}% sec_left_til_remove: #{seconds_left} gear_remove_thresh: #{@remove_count}/#{@remove_count_threshold}")
+        @log.debug("MAX_SESSIONS_PER_GEAR - #{@max_sessions_per_gear}")
     end
 
     def check_capacity(debug=nil)
@@ -297,6 +299,21 @@ class Haproxy
         end
       end
       return min, max
+    end
+
+    def get_max_sessions_per_gear
+      data_dir = ENV['OPENSHIFT_DATA_DIR']
+      sessions_file = "#{data_dir}/max_sessions.txt"
+      max_sessions = 20
+      if File.exists? sessions_file
+        sessions_data = File.read(sessions_file)
+        begin
+          max_sessions = sessions_data.to_i
+        rescue Exception => e
+          @@log.error("Unable to get gear's max sessions because of #{e.message}")
+        end
+      end
+      return max_sessions
     end
 
     def stats()
