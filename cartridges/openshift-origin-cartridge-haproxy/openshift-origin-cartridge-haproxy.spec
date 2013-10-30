@@ -45,6 +45,12 @@ HAProxy cartridge for OpenShift. (Cartridge Format V2)
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Oct 30 2013 Unknown name 0.8.0.3-1
+- Merge branch 'getup-openshift-origin-release-2' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-2
+  (spinolacastro@gmail.com)
+- fix haproxy_max_gear file path (spinolacastro@gmail.com)
+
 * Fri Oct 25 2013 Unknown name 0.8.0.2-1
 - haproxy_max_gears custom config (spinolacastro@gmail.com)
 
