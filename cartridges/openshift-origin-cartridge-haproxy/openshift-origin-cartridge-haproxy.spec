@@ -45,6 +45,9 @@ HAProxy cartridge for OpenShift. (Cartridge Format V2)
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Fri Oct 25 2013 Unknown name 0.8.0.2-1
+- haproxy_max_gears custom config (spinolacastro@gmail.com)
+
 * Thu Aug 01 2013 Krishna Raman <kraman@gmail.com> 0.8.0.1-1
 - Bumping version #s for origin release 2 (kraman@gmail.com)
 - bump_minor_versions for sprint 32 (admiller@redhat.com)
