@@ -11,3 +11,4 @@
 //= require bootstrap-tooltip
 //= require bootstrap-popover
 //= require console/form
+//= require console/chat
