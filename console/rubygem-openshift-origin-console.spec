@@ -134,6 +134,10 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Thu Nov 21 2013 Unknown name 1.7.6-10
+- Release bump (mateus@caruccio.com)
+- Added support chat (mateus@caruccio.com)
+
 * Fri Oct 18 2013 Getup Builder <getup@getupcloud.com> 1.7.6-9
 - move console assets to s3 bucket (spinolacastro@gmail.com)
 
