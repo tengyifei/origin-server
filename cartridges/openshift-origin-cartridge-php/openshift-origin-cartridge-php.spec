@@ -122,6 +122,9 @@ rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 
 %changelog
+* Wed Nov 27 2013 Unknown name 0.8.0.1-4
+- cartridge php fix (spinolacastro@gmail.com)
+
 * Tue Oct 08 2013 Getup Builder <getup@getupcloud.com> 0.8.0.1-3
 - Merge branch 'getup-openshift-origin-release-2' of github.com:getupcloud
   /origin-server into getup-openshift-origin-release-2 (getup@getupcloud.com)
