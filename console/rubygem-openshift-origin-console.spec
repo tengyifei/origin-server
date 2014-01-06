@@ -134,6 +134,10 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Mon Jan 06 2014 Unknown name 1.7.6-11
+- bump release (mateus.caruccio@getupcloud.com)
+- Hardcoded storage price (mateus.caruccio@getupcloud.com)
+
 * Thu Nov 21 2013 Unknown name 1.7.6-10
 - Release bump (mateus@caruccio.com)
 - Added support chat (mateus@caruccio.com)
