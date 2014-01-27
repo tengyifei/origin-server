@@ -31,7 +31,11 @@ class BillingController < ConsoleController
       @user         = result[:invoice][:user]
       @address      = result[:invoice][:billing_address]
       @applications = result[:invoice][:applications]
-      @prices       = user_manager_subscription_prices.content
+      if result[:invoice].has_key? :prices
+        @prices       = result[:invoice][:prices]
+      else
+        @prices       = user_manager_subscription_prices.content
+      end
       @price        = @prices.find(result[:invoice][:amount][:total][:currency]).next[1]
       @acronym      = @price[:GEAR_USAGE][:acronym]
       @unit         = {'h' => 'hour', 'd' => 'day', 'm' => 'month', 'g' => 'gigabyte'}
