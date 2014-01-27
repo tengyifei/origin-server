@@ -134,6 +134,16 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Mon Jan 27 2014 Unknown name 1.7.6-12
+- Merge branch 'getup-openshift-origin-release-2' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-2
+  (root@mirror.ops.getupcloud.com)
+- Merge branch 'getup-openshift-origin-release-2' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-2
+  (root@mirror.ops.getupcloud.com)
+- bump version (mateus.caruccio@getupcloud.com)
+- Using price table from invoice (mateus.caruccio@getupcloud.com)
+
 * Mon Jan 06 2014 Unknown name 1.7.6-11
 - bump release (mateus.caruccio@getupcloud.com)
 - Hardcoded storage price (mateus.caruccio@getupcloud.com)
