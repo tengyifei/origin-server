@@ -5,12 +5,8 @@
 .btn-toolbar
   = link_to "Billing history...", billing_index_path, :class => 'btn btn-small btn-danger'
 
-%p Edit your primary address information.
+%p Edit your contact and billing information.
 
 .btn-toolbar
-  %p= link_to "Edit primary address...", edit_primary_address_path, :class => 'btn btn-small btn-danger'
-
-%p Edit your billing address information, used by your invoices.
-
-.btn-toolbar
-  %p= link_to "Edit billing address...", edit_billing_address_path, :class => 'btn btn-small btn-danger'
+  %p= link_to "Contact information...", edit_primary_address_path, :class => 'btn btn-small btn-danger'
+  %p= link_to "Billing information...", edit_billing_address_path, :class => 'btn btn-small btn-danger'
