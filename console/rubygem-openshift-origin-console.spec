@@ -134,6 +134,12 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Fri Jan 31 2014 Unknown name 1.7.6-13
+- Merge branch 'getup-openshift-origin-release-2' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-2
+  (root@mirror.ops.getupcloud.com)
+- Add addr fields name and email. Better texts (mateus.caruccio@getupcloud.com)
+
 * Mon Jan 27 2014 Unknown name 1.7.6-12
 - Merge branch 'getup-openshift-origin-release-2' of github.com:getupcloud
   /origin-server into getup-openshift-origin-release-2
