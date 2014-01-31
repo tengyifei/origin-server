@@ -1,28 +1,28 @@
-- content_for :title, "Edit primary address"
-- breadcrumb_for_account_billing 'Edit primary address'
-%h1 Edit primary address
+- content_for :title, "Edit Contact Information"
+- breadcrumb_for_account_billing 'Edit Contact Information'
+%h1 Edit contact information
 = flashes
 
 %form.form-horizontal.formtastic{:action => primary_address_path, :id => 'form-primary-address', :method => 'post'}
   = token_tag(nil)
   %p
-    Fill in you primary address.
+    Fill in you contact information.
 
   %fieldset.inputs
     .string.required.control-group
-      %label.control-label Country
+      %label.control-label Name
       .controls
-        = select_tag :country_code, options_for_select(country_list, @address[:country_code])
+        = text_field_tag 'name', @address[:name], :placeholder => "Name", :class => 'input-xlarge'
 
     .string.required.control-group
-      %label.control-label State
+      %label.control-label Email
       .controls
-        = text_field_tag 'state', @address[:state], :placeholder => "State", :class => 'input-medium'
+        = text_field_tag 'email', @address[:email], :placeholder => "Email", :class => 'input-xlarge'
 
     .string.required.control-group
-      %label.control-label City
+      %label.control-label Phone
       .controls
-        = text_field_tag 'city', @address[:city], :placeholder => "City", :class => 'input-xlarge'
+        = phone_field_tag 'phone', @address[:phone], :placeholder => "Phone", :class => 'input-medium'
 
     .string.required.control-group
       %label.control-label Address
@@ -35,14 +35,24 @@
         = text_field_tag 'line2', @address[:line2], :placeholder => "Address", :class => 'input-xlarge'
 
     .string.required.control-group
+      %label.control-label City
+      .controls
+        = text_field_tag 'city', @address[:city], :placeholder => "City", :class => 'input-xlarge'
+
+    .string.required.control-group
+      %label.control-label State
+      .controls
+        = text_field_tag 'state', @address[:state], :placeholder => "State", :class => 'input-medium'
+
+    .string.required.control-group
+      %label.control-label Country
+      .controls
+        = select_tag :country_code, options_for_select(country_list, @address[:country_code])
+
+    .string.required.control-group
       %label.control-label Postal code
       .controls
         = text_field_tag 'postal_code', @address[:postal_code], :placeholder => "Postal code", :class => 'input-small'
-
-    .string.required.control-group
-      %label.control-label Phone
-      .controls
-        = phone_field_tag 'phone', @address[:phone], :placeholder => "Phone", :class => 'input-medium'
 
     .string.required.control-group.br-type-control
       %label.control-label Pessoa Física
