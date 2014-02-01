@@ -1,6 +1,6 @@
 %h2 Gears
 
-%p You have #{capabilities.gears_free} gears available of #{capabilities.max_gears} authorized.
+%p= I18n.t(:gears_caption, gears_free: capabilities.gears_free, max_gears: capabilities.max_gears)
 
 .btn-toolbar
-  = link_to "Add gears...", gears_path, :class => 'btn btn-small btn-danger'
+  = link_to I18n.t(:add_gears), gears_path, :class => 'btn btn-small btn-danger'

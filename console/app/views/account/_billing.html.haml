@@ -1,12 +1,14 @@
-%h2 Account Billing
+%h2= I18n.t :billing_title
 
-%p View your billing history.
-
-.btn-toolbar
-  = link_to "Billing history...", billing_index_path, :class => 'btn btn-small btn-danger'
-
-%p Edit your contact and billing information.
+%p= I18n.t :billing_history_caption
 
 .btn-toolbar
-  %p= link_to "Contact information...", edit_primary_address_path, :class => 'btn btn-small btn-danger'
-  %p= link_to "Billing information...", edit_billing_address_path, :class => 'btn btn-small btn-danger'
+  = link_to I18n.t(:billing_history_button), billing_index_path, :class => 'btn btn-small btn-danger'
+
+%br
+
+%p= I18n.t :addr_info_caption
+
+.btn-toolbar
+  %p= link_to I18n.t(:contact_info_btn), edit_primary_address_path, :class => 'btn btn-small btn-danger'
+  %p= link_to I18n.t(:billing_info_btn), edit_billing_address_path, :class => 'btn btn-small btn-danger'

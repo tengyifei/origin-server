@@ -1,6 +1,5 @@
-%h2 Authorizations
-%p
-  Allow clients and 3rd parties to access your account via a secret token.
+%h2= I18n.t(:authorizations_title)
+%p= I18n.t(:authorizations_caption)
 
 - if authorizations.present?
   %table.table.table-condensed.table-striped.table-fixed
@@ -17,6 +16,6 @@
         %td{:title => authorization.expires_at.to_s(:rfc822)}= distance_of_time_in_words(authorization.expires_at, Time.now)
 
 .btn-toolbar
-  = link_to "Add authorization...", new_authorization_path, :class => 'btn btn-small btn-danger'
+  = link_to I18n.t(:authorization_btn), new_authorization_path, :class => 'btn btn-small btn-danger'
   - if authorizations.present?
     = link_to "Revoke all", authorizations_path, :class => 'btn btn-small', :method => :delete, :confirm => "Are you sure you want to revoke all authorizations for this account? This will end any active sessions immediately."

@@ -1,8 +1,7 @@
 = div_for user do
-  %h2 Change password
+  %h2= I18n.t(:password_title)
 
-  %p
-    Allow to change your Getup account password.
+  %p= I18n.t(:password_caption)
 
   .btn-toolbar
-    = link_to "Change password...", password_settings_path, :class => 'btn btn-small btn-danger'
+    = link_to I18n.t(:change_password_btn), password_settings_path, :class => 'btn btn-small btn-danger'

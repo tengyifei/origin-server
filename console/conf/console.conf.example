@@ -6,8 +6,35 @@
 #
 # Required
 #
-BROKER_URL=https://localhost/broker/rest
+#BROKER_URL=https://dev-diego.ops.getupcloud.com/broker/rest
+BROKER_URL=https://broker-4f82c8.openshift.local/broker/rest
+
+DOMAIN_SUFFIX="getup.io"
+
+
+#
+# USER MANAGER URLs
+#
+
+#LOCAL_BROKER_BASE_URL=http://127.0.0.1:8080/getup
 LOCAL_BROKER_BASE_URL=http://127.0.0.1:8080
+
+USER_MANAGER_ACCOUNT_PLAN_URL=/account/plan/
+USER_MANAGER_ACCOUNT_LANG_URL=/account/lang/
+
+USER_MANAGER_ACCOUNT_PASSWORD_CHANGE_URL=/account/password/change/
+USER_MANAGER_ACCOUNT_PASSWORD_RESET_URL=/account/password/reset/
+USER_MANAGER_ACCOUNT_PASSWORD_RESET_KEY_URL=/account/password/reset/key/
+
+USER_MANAGER_SUBSCRIPTION_URL=/subscription/
+USER_MANAGER_SUBSCRIPTION_CONFIRM_URL=/subscription/confirm/
+USER_MANAGER_SUBSCRIPTION_CANCEL_URL=/subscription/cancel/
+USER_MANAGER_SUBSCRIPTION_PRICES_URL=/subscription/prices/
+
+USER_MANAGER_PRIMARY_ADDRESS_URL=/billing/address/primary/
+USER_MANAGER_BILLING_ADDRESS_URL=/billing/address/billing/
+USER_MANAGER_BILLING_HISTORY_URL=/billing/history/
+USER_MANAGER_BILLING_INVOICE_URL=/billing/invoice/
 
 #
 # A proxy URL to use when connecting with the broker.
@@ -16,13 +43,6 @@ LOCAL_BROKER_BASE_URL=http://127.0.0.1:8080
 #
 # BROKER_PROXY_URL=
 
-#
-# The base URL of the community wiki site.
-#
-# Optional
-#
-# COMMUNITY_URL=https://www.openshift.com/
-
 
 #
 # SSL settings for the connection between the console and broker.
@@ -30,13 +50,7 @@ LOCAL_BROKER_BASE_URL=http://127.0.0.1:8080
 #
 # Optional, will use the default Ruby environment settings
 #
-# No certificate checking (INSECURE, use only in trusted networks):
-# BROKER_API_SSL_OPTIONS={:verify_mode => OpenSSL::SSL::VERIFY_NONE}
-#
-# Perform cert checking and require SSLv3 (some Mac environments may
-# need this set):
-# BROKER_API_SSL_OPTIONS={:verify_mode => OpenSSL::SSL::VERIFY_PEER, :ssl_version => :SSLv3}
-
+BROKER_API_SSL_OPTIONS={:verify_mode => OpenSSL::SSL::VERIFY_NONE}
 
 #
 # The type of security mode that OpenShift should use.  There are
@@ -66,8 +80,7 @@ LOCAL_BROKER_BASE_URL=http://127.0.0.1:8080
 #   during startup of the console and any errors will prevent
 #   load.
 #
-CONSOLE_SECURITY=basic
-
+CONSOLE_SECURITY=session
 
 #
 # The name of the request env variable or header that indicates a 
@@ -86,8 +99,7 @@ CONSOLE_SECURITY=basic
 #
 # Required when CONSOLE_SECURITY=remote_user
 #
-# REMOTE_USER_HEADER=REMOTE_USER
-
+REMOTE_USER_HEADER=REMOTE_USER
 
 #
 # When using remote_user security, the value of the authentication
@@ -102,7 +114,14 @@ CONSOLE_SECURITY=basic
 #
 # REMOTE_USER_NAME_HEADER=HTTP_X_REMOTE_USER_NAME
 
+AUTH_SESSION_KEY = 'd3a46ba8fc4223e0d0c7f22508d63a549f6d981d538aa147b04762fc347cd227a936cbb95caf2452d938bebeb04ae58e43cd207c9a94ca9f5720e0d179c15d68'
 
+# User session duration, in seconds, before expire.
+# Optional
+# Default = 3600
+AUTH_SESSION_EXPIRE=86400
+
+SESSION_SECRET="d3a46ba8fc4223e0d0c7f22508d63a549f6d981d538aa147b04762fc347cd227a936cbb95caf2452d938bebeb04ae58e43cd207c9a94ca9f5720e0d179c15d68"
 #
 # A list of headers to pass from the incoming request to the API
 # calls made against the broker for preserving authentication state.
@@ -111,5 +130,5 @@ CONSOLE_SECURITY=basic
 #
 # Required when CONSOLE_SECURITY=remote_user, may be empty
 #
-# REMOTE_USER_COPY_HEADERS=X-Remote-User,Cookies
+REMOTE_USER_COPY_HEADERS=X-Remote-User
 

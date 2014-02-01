@@ -1,9 +1,11 @@
-%h2 Namespace
+%h2= I18n.t(:Namespace)
 //%p
 //  See the #{link_to 'User Guide', add_domains_user_guide_topic_url, :class => 'external'}
 //  for information about adding your own domain names to an application.
 
-.well
-  http://applicationname&ndash;<strong class="namespace">#{@domain.name}</strong>.#{RestApi.application_domain_suffix}
+.well!= I18n.t(:namespace_caption_3, namespace: @domain.name)
+
+%p!= I18n.t(:example_namespace, namespace: @domain.name, domain_suffix: RestApi.application_domain_suffix)
+
 .btn-toolbar
-  = link_to "Change your namespace...", edit_domain_path, :class => 'btn btn-small btn-danger'
+  = link_to I18n.t(:Change_namespace), edit_domain_path, :class => 'btn btn-small btn-danger'

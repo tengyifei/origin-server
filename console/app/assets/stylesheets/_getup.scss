@@ -33,6 +33,8 @@
     font-style: normal;
 }
 
+.hidden { display: none; }
+
 .getup-sprite { background: url(https://s3-us-west-2.amazonaws.com/getupcloud/static/img/sprite.png) no-repeat; text-indent: -5000em; }
 
 .getup { border-bottom: 5px solid #FF4C4D; min-height: 125px; background: #fff url('https://s3-us-west-2.amazonaws.com/getupcloud/static/img/header.png') no-repeat top center; }

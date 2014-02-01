@@ -1,37 +1,36 @@
-- content_for :title, "Edit billing information"
-- breadcrumb_for_account_billing 'Edit billing information'
-%h1 Edit billing information
+- content_for :title, I18n.t(:billing_info_title)
+- breadcrumb_for_account_billing 'Billing information'
+%h1= I18n.t(:billing_info_title)
 = flashes
 
 %form.form-horizontal.formtastic{:action => billing_address_path, :id => 'form-billing-address', :method => 'post'}
   = token_tag(nil)
-  %p
-    Fill in you billing information, used on your next invoice.
+  %p= I18n.t(:billing_info_caption)
 
   %p
     .string.required.control-group
-      %label.control-label Use Contact Information
+      %label.control-label= I18n.t(:use_contact_info)
       .controls
         = check_box_tag :is_billing, !@address[:is_billing], !@address[:is_billing]
 
   %fieldset.inputs
     .string.required.control-group
-      %label.control-label Name
+      %label.control-label= I18n.t(:Name)
       .controls
         = text_field_tag 'name', @address[:name], :placeholder => "Name", :class => 'input-xlarge'
 
     .string.required.control-group
-      %label.control-label Email
+      %label.control-label= I18n.t(:Email)
       .controls
         = text_field_tag 'email', @address[:email], :placeholder => "Email", :class => 'input-xlarge'
 
     .string.required.control-group
-      %label.control-label Phone
+      %label.control-label= I18n.t(:Phone)
       .controls
         = phone_field_tag 'phone', @address[:phone], :placeholder => "Phone", :class => 'input-medium'
 
     .string.required.control-group
-      %label.control-label Address
+      %label.control-label= I18n.t(:Address)
       .controls
         = text_field_tag 'line1', @address[:line1], :placeholder => "Address", :class => 'input-xlarge'
 
@@ -41,54 +40,54 @@
         = text_field_tag 'line2', @address[:line2], :placeholder => "Address", :class => 'input-xlarge'
 
     .string.required.control-group
-      %label.control-label City
+      %label.control-label= I18n.t(:City)
       .controls
         = text_field_tag 'city', @address[:city], :placeholder => "City", :class => 'input-xlarge'
 
     .string.required.control-group
-      %label.control-label State
+      %label.control-label= I18n.t(:State)
       .controls
         = text_field_tag 'state', @address[:state], :placeholder => "State", :class => 'input-medium'
 
     .string.required.control-group
-      %label.control-label Country
+      %label.control-label= I18n.t(:Country)
       .controls
         = select_tag :country_code, options_for_select(country_list, @address[:country_code])
 
     .string.required.control-group
-      %label.control-label Postal code
+      %label.control-label= I18n.t(:Postal_code)
       .controls
         = text_field_tag 'postal_code', @address[:postal_code], :placeholder => "Postal code", :class => 'input-small'
 
-    .string.required.control-group.br-type-control
+    .string.required.control-group.br-type-control.hidden
       %label.control-label Pessoa Física
       .controls
         = radio_button_tag 'type', 'pf', @address[:type] == 'pf'
 
-    .string.required.control-group.br-type-control
+    .string.required.control-group.br-type-control.hidden
       %label.control-label CPF
       .controls
         = text_field_tag 'pf_cpf', @address[:pf_cpf], :placeholder => "CPF", :class => 'input-medium type-pf-control', :disabled => @address[:type] != 'pf'
 
-    .string.required.control-group.br-type-control
+    .string.required.control-group.br-type-control.hidden
       %label.control-label Pessoa Jurídica
       .controls
         = radio_button_tag 'type', 'pj', @address[:type] == 'pj'
 
-    .string.required.control-group.br-type-control
+    .string.required.control-group.br-type-control.hidden
       %label.control-label CNPJ
       .controls
         = text_field_tag 'pj_cnpj', @address[:pj_cnpj], :placeholder => "CPNJ", :class => 'input-medium type-pj-control', :disabled => @address[:type] != 'pj'
 
-    .string.required.control-group.br-type-control
+    .string.required.control-group.br-type-control.hidden
       %label.control-label Insc. Est.
       .controls
         = text_field_tag 'pj_ie', @address[:pj_ie], :placeholder => "Insc. Estadual.", :class => 'input-medium type-pj-control', :disabled => @address[:type] != 'pj'
 
   %p
     %fieldset.form-actions
-      = link_to "Cancel", account_path, :class => 'btn'
-      %button.btn.btn-danger.update{:type => 'submit'} Save
+      = link_to I18n.t(:Cancel), account_path, :class => 'btn'
+      %button.btn.btn-danger.update{:type => 'submit'}= I18n.t(:Save)
 
 - content_for :javascripts do
   = javascript_include_tag 'address'

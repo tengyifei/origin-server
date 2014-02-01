@@ -2,6 +2,11 @@ module Console::UserManagerHelper
   include Console::UserManagerApiHelper
   # 
   # 
+  def user_manager_account_lang
+    result = user_manager_get session[:authentication].login + _url('account_lang')
+    result.content[:lang].split('-').first
+  end
+
   def user_manager_account_plan
   	user_manager_get session[:authentication].login + _url('account_plan')
   end

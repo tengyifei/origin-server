@@ -20,9 +20,9 @@ var enable_pf_controls = function () {
 
 var toggle_country = function(country_code) {
 	if (country_code == 'BR') {
-		$('.br-type-control').show();
+		$('.br-type-control').removeClass('hidden');
 	} else {
-		$('.br-type-control').hide();
+		$('.br-type-control').addClass('hidden');
 	}
 };
 
@@ -44,6 +44,7 @@ if (is_billing.length > 0 && is_billing[0].checked) {
 	toggle_controls('.inputs .controls select', false);
 }
 
+toggle_country($('#country_code').val());
 $('#country_code').change(function(el) { toggle_country(this.value); })
 $('#type_pf').click(function() { enable_pf_controls(); });
 $('#type_pj').click(function() { enable_pj_controls(); });

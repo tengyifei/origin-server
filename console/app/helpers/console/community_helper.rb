@@ -13,15 +13,23 @@ module Console::CommunityHelper
   end
 
   def openshift_twitter_url
-    'http://twitter.com/getupcloud'
+    'http://twitter.com/GetupCloud'
+  end
+
+  def openshift_twitter_status_url
+    'http://twitter.com/GetupStatus'
   end
 
   def getup_facebook_url
     'http://fb.com/getupcloud'
   end
 
+  def getup_youtube_url
+    'https://www.youtube.com/user/getupcloud'
+  end
+
   def openshift_ops_twitter_url
-    'http://twitter.com/openshift_ops'
+    'http://twitter.com/GetupStatus'
   end
 
   def open_bug_url
@@ -57,7 +65,7 @@ module Console::CommunityHelper
   end
 
   def openshift_github_project_url(project)
-    "https://github.com/openshift/#{project}"
+    "https://github.com/getupcloud/#{project}"
   end
 
   def red_hat_account_url

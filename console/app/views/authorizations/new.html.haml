@@ -1,5 +1,5 @@
-- content_for :title, "Add an Authorization"
-%h1 Add Authorization
+= content_for :title, I18n.t(:token_add_title)
+%h1= I18n.t(:token_add_title)
 = flashes
 
 = semantic_form_for @authorization, :html => {:class => 'form'} do |f|
@@ -8,15 +8,15 @@
 
     .control-group{:class => @authorization.errors[:scope].present? ? 'error' : ''}
       .controls
-        %p Select which rights you want to allow clients to have. You may select multiple scopes, or if you select none the server will choose a default scope.
+        %p= I18n.t(:token_caption_1)
         - field = 'authorization[scopes][]'
         - unmatched_scopes = @authorization.scopes - @simple_scopes.map{ |s| s[:id] }
         = hidden_field_tag field, ''
         %table.table
           %thead
             %tr
-              %th{:scope => 'col'} Scope
-              %th{:scope => 'col'} Description
+              %th{:scope => 'col'}= I18n.t(:Scope)
+              %th{:scope => 'col'}= I18n.t(:Description)
           %tbody
             - @simple_scopes.each do |scope|
               - scope_id = sanitize_to_id("#{field}#{scope[:id]}")
@@ -24,12 +24,12 @@
                 %td{:scope => 'row'}
                   %label.checkbox{:for => scope_id}
                     = check_box_tag field, scope[:id], @authorization.scopes.include?(scope[:id]), :id => scope_id
-                    = scope[:name]
+                    = I18n.t(scope[:name])
                     - if scope[:default]
                       %span.small (default)
                 %td= scope[:description]
         - if @parameter_scopes.present?
-          %p Or, you can enter scopes directly for those that require a parameter.  Separate multiple scopes with a space or comma.
+          %p= I18n.t(:token_caption_2)
           %table.table
             %tbody
               - @parameter_scopes.each do |scope|
@@ -40,12 +40,12 @@
           = text_field_tag field, unmatched_scopes.join(' '), :class => 'span6'
           = f.inline_errors_for :scope
 
-    %p If you select several scopes, you'll be able to perform actions that any of your scopes allow, but your token will expire after the shortest scope expires.
+    %p= I18n.t(:token_caption_3)
 
-    = f.input :note, :as => :text, :label => 'Add a reminder about what this authorization is for', :input_html => {:class => 'span6', :rows => 2}
+    = f.input :note, :as => :text, :label => I18n.t(:token_remainder), :input_html => {:class => 'span6', :rows => 2}
 
   = f.buttons do
-    = link_to "Cancel", settings_path, :class => 'btn'
-    = f.commit_button :label => 'Create'
+    = link_to I18n.t(:Cancel), settings_path, :class => 'btn'
+    = f.commit_button :label => I18n.t(:Create)
     = f.loading
 

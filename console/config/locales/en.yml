@@ -1,6 +1,4 @@
 en:
-  unknown: 'A system error has occurred.  If the problem persists, please contact Red Hat support.'
-
   types:
     php: PHP
 
@@ -10,3 +8,165 @@ en:
       '121': You have already saved this public key with a different name. Provide a different key here.
       '151': You must create a Jenkins application (to act as a build server) before you can add the Jenkins cartridge to an application.
       '153': You are currently using more gears than the new plan would allow.  Please scale down or delete applications before downgrading.
+
+  unknown: 'A system error has occurred.  If the problem persists, please contact Red Hat support.'
+  Name: 'Name'
+  Email: 'Email'
+  Phone: 'Phone'
+  Address: 'Address'
+  City: 'City'
+  State: 'State'
+  Country: 'Country'
+  Postal_code: 'Postal Code'
+  Save: 'Save'
+  Cancel: 'Cancel'
+  Currency: 'Currency'
+  Gears: 'Gears'
+  Credit: 'Credit'
+  Cost_unit: 'Unit cost'
+  Cost: 'Cost'
+  Namespace: 'Namespace'
+  Create: 'Create'
+  Example: 'Example'
+  Delete: 'Delete'
+  Content: 'Content'
+  Scope: 'Scope'
+  Description: 'Description'
+  Session: 'Session'
+  Read: 'Read'
+  Userinfo: 'Userinfo'
+  session: 'session'
+  read: 'read'
+  userinfo: 'userinfo'
+  default: 'default'
+  Authorization: 'Authorization'
+  Edit: 'Edit'
+  Developers: 'Developers'
+  Get_Started: 'Get Started'
+
+## Header
+  Sign_Out: 'Sign Out'
+  My_Account: 'My Account'
+  Settings: 'Settings'
+  Create_Application: 'Create'
+  My_Applications: 'Applications'
+  Help: 'Help'
+  Community: 'Community'
+  Developer_Center: 'Developer Center'
+
+## Footer
+  footer_github: 'available on GitHub'
+  footer_caption_1: 'Source code for the OpenShift Origin management console is %{github}. See %{readme} for copyright and source information. OpenShift, OpenShift Origin and the OpenShift Logo are trademarks of Red Hat, Inc.'
+
+## My Account
+  my_account: 'My Account'
+  add_gears: 'Authorize more gears'
+  billing_title: 'Account Billing'
+  billing_history_caption: 'View your billing history'
+  billing_history_button: 'Billing history...'
+  addr_info_caption: 'Edit your contact and billing information.'
+  contact_info_btn: 'Contact information...'
+  billing_info_btn: 'Billing information...'
+  gears_caption: 'You have %{gears_free} gears available of %{max_gears} authorized.'
+
+## Contact Information
+  contact_info_title: 'Contact Information'
+  contact_info_caption: 'Fill in your contact information.'
+
+## Billing Information
+  billing_info_title: 'Billing Information'
+  billing_info_caption: 'Fill in your billing information.'
+  use_contact_info: 'Use contact information (ignore below)'
+
+## Gears
+  gears_title: 'Authorize More Gears'
+  gears_info: 'You are using %{consumed_gears} gears of %{max_gears} total authorized gears.'
+  gears_caption: 'Change your limits below.'
+  gears_limit_caption: 'New gears limit'
+  monthly_estimated: 'Monthly (estimated¹)'
+  total_preapproved: 'Total pre-approved² - Valid for 12 months'
+  gears_ref_1: 'Monthly: Estimated cost considering the amount of gears running all time for an entire month. This is also the max amount we will charge you by month.'
+  gears_ref_2: 'Total pre-approved: For security reasons, this pre-approval is valid for 12 months and the sum of all monthly charges cannot exceed R$ 8.750,00 or US$ 5.000,00. When the value or validity of pre-approval is about to expire or be exceeded, we will ask you for another pre-approval operation.'
+  gears_ref_3: "Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime."
+
+## Settings
+  namespace_caption_1: 'Your namespace is unique to your account and is the suffix of the public URLs we assign to your applications.'
+  namespace_caption_2: 'Your namespace must be letters or numbers with no spaces or symbols.'
+  namespace_caption_3: 'Your namespace is: <code>%{namespace}</code>'
+  example_namespace: 'Application URL example: <a href=#>http://appname-%{namespace}.%{domain_suffix}</a>'
+  Set_namespace: 'Set your namespace...'
+  Change_namespace: 'Change your namespace...'
+  namespace_created: 'Your namespace has been created'
+  password_title: 'Change Password;'
+  password_caption: 'Allow to change your Getup account password.'
+  change_password_btn: 'Change password...'
+  authorizations_title: 'Authorizations'
+  authorizations_caption: 'Allow clients and 3rd parties to access your account via a secret token.'
+  authorization_btn: 'Add authorization...'
+  public_keys_caption: 'OpenShift uses a public key to securely encrypt the connection between your local machine and your application and to authorize you to upload code.'
+  public_keys_learn: 'Learn more about SSH keys.'
+  key_paste_caption: 'Copy and paste the contents of your public key file (.pub)'
+  public_keys_title: 'Public Keys'
+  pub_key_form_placeholder: 'The contents of your public key file...'
+  pub_key_form_title: "Your SSH key will start with a short prefix that describes its type, followed by a long string of numbers and characters.  Some keys have a bit of text at the end to describe who generated the key. Example:\n\nssh-rsa AAAAB3NzaC1yc....HcLJ bob@smith"
+  key_name: 'Key name'
+  key_name_title: 'laptop, home, work...'
+  delete_key_confirm: "Are you sure you want to delete your key '%{key_name}'?"
+  add_key_btn: "Add a new key..."
+
+## Authorization/Token
+  token_add_title: 'Add an Authorization'
+  token_usage_title: 'How to use your token'
+  token_caption_1: 'Select which rights you want to allow clients to have. You may select multiple scopes, or if you select none the server will choose a default scope.'
+  token_caption_2: 'Or, you can enter scopes directly for those that require a parameter.  Separate multiple scopes with a space or comma.'
+  token_caption_3: "If you select several scopes, you'll be able to perform actions that any of your scopes allow, but your token will expire after the shortest scope expires."
+  token_remainder: 'Add a reminder about what this authorization is for (optional)'
+  authz_title: 'Authorization Token'
+  authz_caption: 'The token will allow clients to perform these operations on your behalf:'
+  token_created_at: "Created at %{time}, expires in %{expires}"
+  token_revoke: 'Revoke this authorization token permanently'
+  token_revoke_confirm: 'Are you sure you want to revoke this authorization?'
+  token_usage_caption_1: 'To make a request to the OpenShift REST API, pass the token as an <code>Authorization</code> header'
+  token_usage_caption_2: 'For example, from the command line program cURL use the <code>-H</code> option'
+  token_usage_caption_3: 'You can pass this token directly to the <code>rhc</code> command with the <code>--token</code> option:'
+
+## Help
+  help_title_1: 'Create'
+  help_create_app_btn: 'Create an app now!'
+  help_getting_started: 'Getting Started page'
+  help_let_us_know: 'let us know'
+  help_caption_1_1: 'Just starting with Getup?'
+  help_caption_1_2: 'Get your first application up off the ground through the application creation wizard.'
+  help_caption_1_3: 'If you prefer the command line, our %{getting_started} will help you install the client tools, create your application, and make your first change.'
+  help_caption_1_4: "Create apps based on many different technologies like %{drupal}, %{ror}, and %{wp}. If you don't see your favorite framework, %{let_us_know}."
+
+  help_title_2: 'Learn'
+  help_forum: 'Our Forum'
+  help_caption_2_1: 'Want to explore our platform?'
+  help_caption_2_2: '%{forum} is the first destination for new developers to find valuable information.'
+
+  help_title_3: 'Troubleshoot'
+  help_community_forum: 'Community Forum'
+  help_knowledge_base: 'Knowledge Base'
+  help_faq: 'FAQ'
+  help_irc: '#getupcloud on freenode.net'
+  help_caption_3_1: 'Hit a bump on the road?'
+  help_caption_3_2: 'Our %{community_forum} is watched round the clock by an army of developers, evangelists, and OpenShift devotees.'
+  help_caption_3_3: 'Check out the %{knowledge_base} for known headaches and %{faq} for more general questions'
+  help_caption_3_4: 'Talk directly to the team on IRC - %{irc}.'
+
+  help_title_4: 'Engage'
+  help_subscribe: 'Subscribe now!'
+  help_facebook: 'Facebook page'
+  help_youtube: 'Youtube channel'
+  help_caption_4_1: "Like to know what's new?"
+  help_caption_4_2: 'The Getup newsletter is a great way to track the latest news.'
+  help_caption_4_3: 'Follow us on Twitter at %{twitter} or in our %{facebook}.'
+  help_caption_4_4: 'Watch some videos in our %{youtube}.'
+
+  time:
+    formats:
+      default: ! '%a, %d de %B de %Y, %H:%M:%S %z'
+      long: ! '%d de %B de %Y, %H:%M'
+      pretty_date: ! '%B %d'
+      pretty_time: ! '%A, %b %d'

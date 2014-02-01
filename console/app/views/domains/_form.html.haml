@@ -3,12 +3,12 @@
   .control-group.control-group-important{:class => domain.errors[:name].present? || domain.errors[:namespace].present? ? 'error' : '', :id => "domain_name_group", :data => domain.errors[:name].present? || domain.errors[:namespace].present? ? {:"server-error" => 'server-error'} : {}}
     .controls.first
       .input-prepend.input-append.wrap
-        %span.add-on> http://applicationname&ndash;
-        %label.invisible{:for => 'domain_name'} Namespace
+        %span.add-on> http://appname&ndash;
+        %label.invisible{:for => 'domain_name'}= I18n.t(:Namespace)
         = f.text_field :name, :autofocus => true, :placeholder => 'Namespace', :class => 'domain_name'
         %span.add-on>= ".#{RestApi.application_domain_suffix}"
       = f.semantic_errors :name, :alias => {:name => :id}, :class => [:unstyled, :errors, 'help-block']
   = f.buttons do
-    = link_to "Cancel", settings_path, :class => 'btn'
-    = f.commit_button :label => domain.persisted? ? 'Save' : 'Create'
+    = link_to I18n.t(:Cancel), settings_path, :class => 'btn'
+    = f.commit_button :label => domain.persisted? ? I18n.t(:Save) : I18n.t(:Create)
     = f.loading

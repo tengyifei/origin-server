@@ -35,40 +35,42 @@
 
 %section.row.row-help
   .span3
-    %h2 Create
+    %h2= I18n.t(:help_title_1)
     %p
-      %strong Just starting with OpenShift?
-    %p Get your first application up off the ground through the application creation wizard.
-    %p #{link_to 'Create an app now', application_types_path, :class => 'btn btn-danger'}
-    %p If you prefer the command line, #{link_to 'our Getting Started page', getting_started_path} will help you install the client tools, create your application, and make your first change.
-    %p 
-      Create apps based on many different technologies like #{link_to 'Drupal', openshift_github_project_url('drupal-example')},
-      #{link_to 'Ruby on Rails', openshift_github_project_url('rails-example')}, and
-      #{link_to 'Wordpress', openshift_github_project_url('wordpress-example')}. If you don't see your favorite framework, #{link_to 'let us know', feature_request_path}.
+      %strong= I18n.t(:help_caption_1_1)
+    %p= I18n.t(:help_caption_1_2)
+    %p= link_to I18n.t(:help_create_app_btn), application_types_path, :class => 'btn btn-danger'
+    %p!= I18n.t(:help_caption_1_3, getting_started: link_to(I18n.t(:help_getting_started), getting_started_path))
+    %p!= I18n.t(:help_caption_1_4,
+      drupal: link_to('Drupal', openshift_github_project_url('drupal-example')),
+      ror: link_to('Ruby on Rails', openshift_github_project_url('rails-example')),
+      wp: link_to('Wordpress', openshift_github_project_url('wordpress-example')),
+      let_us_know: link_to(I18n.t(:help_let_us_know), feature_request_path))
 
   .span3
-    %h2 Learn
+    %h2= I18n.t(:help_title_2)
     %p 
-      %strong Want to explore our platform?
-    %p #{link_to 'Our Forum', forum_path} is the first destination for new developers to find the information you need about OpenShift.
+      %strong= I18n.t(:help_caption_2_1)
+    %p!= I18n.t(:help_caption_2_2, forum: link_to(I18n.t(:help_forum), forum_path))
     //%p When you're looking for a great reference for understanding OpenShift, look no further than the #{link_to 'the User Guide', user_guide_url}.  It covers the entire experience and can be downloaded as HTML or PDF when you're on the go.
     -# Some of our favorites are below.
 
   .span3
-    %h2 Troubleshoot
+    %h2= I18n.t(:help_title_3)
     %p 
-      %strong Hit a bump in the road?
-    %p Our #{link_to 'community forum', getup_community_path} is watched round the clock by an army of developers, evangelists, and OpenShift devotees.
-    %p Check out the #{link_to 'Knowledge Base', forum_path} for known headaches and #{link_to 'FAQ', faq_url} for more general questions
-    %p Talk directly to the team on IRC - #{link_to 'freenode.net on channel #getupcloud', irc_web_url}.
+      %strong= I18n.t(:help_caption_3_1)
+    %p!= I18n.t(:help_caption_3_2, community_forum: link_to(I18n.t(:help_community_forum), getup_community_path))
+    %p!= I18n.t(:help_caption_3_3, knowledge_base: link_to(I18n.t(:help_knowledge_base), forum_path), faq: link_to(I18n.t(:faq), faq_url))
+    %p!= I18n.t(:help_caption_3_4, irc: link_to(I18n.t(:help_irc), irc_web_url))
 
   .span3
-    %h2 Engage
+    %h2= I18n.t(:help_title_4)
     %p 
-      %strong Need to know what's new?
-    %p The Getup newsletter is a great way to track the latest news.
-    %p #{link_to 'Subscribe today', newsletter_signup_url}
-    %p Follow us on Twitter at #{link_to '@getupcloud', openshift_twitter_url} or in our #{link_to 'Facebook Page', getup_facebook_url}.
+      %strong= I18n.t(:help_caption_4_1)
+    %p= I18n.t(:help_caption_4_2)
+    %p= link_to(I18n.t(:help_subscribe), newsletter_signup_url)
+    %p!= I18n.t(:help_caption_4_3, twitter: link_to('@GetupCloud', openshift_twitter_url), twitter_status: link_to('@GetupStatus', openshift_twitter_status_url), facebook: link_to(I18n.t(:help_facebook), getup_facebook_url))
+    %p!= I18n.t(:help_caption_4_4, youtube: link_to(I18n.t(:help_youtube), getup_youtube_url))
 
 -#%section.row
   .span12
