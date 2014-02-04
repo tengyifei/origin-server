@@ -93,7 +93,8 @@ Broker::Application.configure do
     :allow_ha_applications => conf.get_bool('ALLOW_HA_APPLICATIONS', "false"),
     :router_hostname => conf.get('ROUTER_HOSTNAME', "www.example.com"),
     :valid_ssh_key_types => OpenShift::Controller::Configuration.parse_list(conf.get('VALID_SSH_KEY_TYPES', nil)),
-    :allow_obsolete_cartridges => conf.get_bool('ALLOW_OBSOLETE_CARTRIDGES', "false")
+    :allow_obsolete_cartridges => conf.get_bool('ALLOW_OBSOLETE_CARTRIDGES', "false"),
+    :blacklist => conf.get("BLACKLISTED_WORDS", "getup").split(",")
   }
 
   config.auth = {
