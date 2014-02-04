@@ -22,5 +22,5 @@ cp -Hr $OPENSHIFT_PHP_DIR/versions/$VERSION_DIR/configuration/etc/* $OPENSHIFT_P
 echo > $OPENSHIFT_PHP_DIR/configuration/etc/conf.d/passenv.conf
 echo > $OPENSHIFT_PHP_DIR/configuration/etc/conf.d/performance.conf
 
-cp versions/shared/configuration/etc/conf.d/performance.conf.erb conf/performance.conf.erb
+cp versions/$VERSION_DIR/configuration/etc/conf.d/performance.conf.erb conf/performance.conf.erb
 cp conf/performance.conf.erb conf/performance.conf.erb.hidden
