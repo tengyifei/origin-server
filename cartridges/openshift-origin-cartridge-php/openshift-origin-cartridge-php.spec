@@ -127,6 +127,12 @@ rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 
 %changelog
+* Tue Feb 04 2014 Unknown name 1.18.0.3-3
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3
+  (spinolacastro@gmail.com)
+- php deps (spinolacastro@gmail.com)
+
 * Tue Feb 04 2014 Unknown name 1.18.0.3-2
 - php 5.4/5.5 (spinolacastro@gmail.com)
 - php 5.4/5.5 (spinolacastro@gmail.com)
