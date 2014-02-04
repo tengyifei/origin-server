@@ -127,6 +127,11 @@ rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 
 %changelog
+* Tue Feb 04 2014 Unknown name 1.18.0.3-2
+- php 5.4/5.5 (spinolacastro@gmail.com)
+- php 5.4/5.5 (spinolacastro@gmail.com)
+- php 5.4/5.5 (spinolacastro@gmail.com)
+
 * Thu Dec 12 2013 Krishna Raman <kraman@gmail.com> 1.18.0.3-1
 - Bumping version numbers (release-3 build-4) (kraman@gmail.com)
 - fix libdir (admiller@redhat.com)
