@@ -26,9 +26,34 @@ ln -s /etc/httpd/conf/magic $OPENSHIFT_PHP_DIR/conf/magic
 mkdir -p $OPENSHIFT_HOMEDIR/.drush
 
 # Pear setup
-rm -f $OPENSHIFT_HOMEDIR/.pearrc
-pear config-create "$OPENSHIFT_PHP_DIR"/phplib/pear/ "$OPENSHIFT_HOMEDIR"/.pearrc
-pear -c "$OPENSHIFT_HOMEDIR"/.pearrc config-set php_ini "$OPENSHIFT_PHP_DIR"/configuration/etc/php.ini
-pear -c "$OPENSHIFT_HOMEDIR"/.pearrc config-set auto_discover 1
 
-pear -c "$OPENSHIFT_HOMEDIR"/.pearrc config-get bin_dir > "$OPENSHIFT_PHP_DIR/env/OPENSHIFT_PHP_PATH_ELEMENT"
+if [ $version == "5.3" ]; then
+	rm -f $OPENSHIFT_HOMEDIR/.pearrc
+	pear config-create "$OPENSHIFT_PHP_DIR"/phplib/pear/ "$OPENSHIFT_HOMEDIR"/.pearrc
+	pear -c "$OPENSHIFT_HOMEDIR"/.pearrc config-set php_ini "$OPENSHIFT_PHP_DIR"/configuration/etc/php.ini
+	pear -c "$OPENSHIFT_HOMEDIR"/.pearrc config-set auto_discover 1
+	pear -c "$OPENSHIFT_HOMEDIR"/.pearrc config-get bin_dir > "$OPENSHIFT_PHP_DIR/env/OPENSHIFT_PHP_PATH_ELEMENT"
+
+elif [ $version == "5.4" ]; then
+
+	rm -f $OPENSHIFT_HOMEDIR/.pearrc
+	scl enable php54 "pear config-create '$OPENSHIFT_PHP_DIR'/phplib/pear/ '$OPENSHIFT_HOMEDIR'/.pearrc"
+	scl enable php54 "pear -c '$OPENSHIFT_HOMEDIR'/.pearrc config-set php_ini '$OPENSHIFT_PHP_DIR'/configuration/etc/php.ini"
+	scl enable php54 "pear -c '$OPENSHIFT_HOMEDIR'/.pearrc config-set auto_discover 1"
+	scl enable php54 "pear -c '$OPENSHIFT_HOMEDIR'/.pearrc config-get bin_dir > '$OPENSHIFT_PHP_DIR'/env/OPENSHIFT_PHP_PATH_ELEMENT"
+
+else 
+	rm -f $OPENSHIFT_HOMEDIR/.pearrc
+	scl enable php55 "pear config-create '$OPENSHIFT_PHP_DIR'/phplib/pear/ '$OPENSHIFT_HOMEDIR'/.pearrc"
+	scl enable php55 "pear -c '$OPENSHIFT_HOMEDIR'/.pearrc config-set php_ini '$OPENSHIFT_PHP_DIR'/configuration/etc/php.ini"
+	scl enable php55 "pear -c '$OPENSHIFT_HOMEDIR'/.pearrc config-set auto_discover 1"
+	scl enable php55 "pear -c '$OPENSHIFT_HOMEDIR'/.pearrc config-get bin_dir > '$OPENSHIFT_PHP_DIR'/env/OPENSHIFT_PHP_PATH_ELEMENT"
+fi
+
+#Php env
+if [ $version == "5.4" ]; then
+	dirname $(scl enable php54 "which php") >>$OPENSHIFT_PHP_DIR/env/OPENSHIFT_PHP_PATH_ELEMENT
+elif [ $version == "5.5" ]; then
+	dirname $(scl enable php55 "which php") >>$OPENSHIFT_PHP_DIR/env/OPENSHIFT_PHP_PATH_ELEMENT
+fi
+
