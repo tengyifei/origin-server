@@ -3,7 +3,7 @@
 
 Name:          openshift-origin-cartridge-php
 Version: 1.18.0.3
-Release:       2%{?dist}
+Release:       3%{?dist}
 Summary:       Php cartridge
 Group:         Development/Languages
 License:       ASL 2.0
@@ -41,6 +41,57 @@ Requires:      php-process
 Requires:      php-pecl-imagick
 Requires:      php-pecl-xdebug
 Requires:      php-fpm
+# php-5.4 scl
+Requires:      php54
+Requires:      php54-runtime
+Requires:      php54-php
+Requires:      php54-php-fpm
+Requires:      php54-php-bcmath
+Requires:      php54-php-devel
+Requires:      php54-php-gd
+Requires:      php54-php-imap
+Requires:      php54-php-mbstring
+Requires:      php54-php-mcrypt
+Requires:      php54-php-mysqlnd
+Requires:      php54-php-pdo
+Requires:      php54-php-pecl-apc
+Requires:      php54-php-pecl-memcache
+Requires:      php54-php-pecl-mongo
+Requires:      php54-php-pecl-imagick
+Requires:      php54-php-pecl-xdebug
+Requires:      php54-php-pgsql
+Requires:      php54-php-process
+Requires:      php54-php-soap
+Requires:      php54-php-xml
+Requires:      php54-php-xmlrpc
+# php-5.5 scl
+Requires:      php55
+Requires:      php55-runtime
+Requires:      php55-php
+Requires:      php55-php-fpm
+Requires:      php55-php-bcmath
+Requires:      php55-php-devel
+Requires:      php55-php-gd
+Requires:      php55-php-imap
+Requires:      php55-php-mbstring
+Requires:      php55-php-mcrypt
+Requires:      php55-php-mysqlnd
+Requires:      php55-php-pdo
+Requires:      php55-php-pear
+Requires:      php55-php-opcache
+Requires:      php55-php-pecl-memcache
+Requires:      php55-php-pecl-mongo
+Requires:      php55-php-pecl-imagick
+Requires:      php55-php-pecl-xdebug
+Requires:      php55-php-pecl-oci8
+Requires:      php55-php-pgsql
+Requires:      php55-php-process
+Requires:      php55-php-soap
+Requires:      php55-php-xml
+Requires:      php55-php-xmlrpc
+
+
+
 BuildArch:     noarch
 
 Obsoletes: openshift-origin-cartridge-php-5.3
