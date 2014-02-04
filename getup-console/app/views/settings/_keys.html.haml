@@ -1,0 +1,19 @@
+%h2= I18n.t(:public_keys_title)
+%p
+  = I18n.t(:public_keys_caption)
+
+  = link_to I18n.t(:public_keys_learn), ssh_keys_help_path
+
+%table.table.table-condensed.table-striped.table-fixed
+  %thead
+    %tr
+      %th{:scope => 'col'}= I18n.t(:Name)
+      %th{:scope => 'col'}= I18n.t(:Content)
+      %td
+  - keys.each do |key|
+    %tr{:id => "#{key.name}_sshkey"}
+      %td.sshkey-name{:scope => 'row'}= key.name
+      %td.code.sshkey= key.display_content
+      %td= link_to I18n.t(:Delete), key_path(key), :class => 'btn btn-mini btn-danger delete_button', :method => :delete, :confirm => I18n.t(:delete_key_confirm, key_name: key.name)
+.btn-toolbar
+  = link_to I18n.t(:add_key_btn), new_key_path, :class => 'btn btn-small btn-danger'

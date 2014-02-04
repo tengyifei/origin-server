@@ -1,0 +1,6 @@
+%h1= I18n.t(:Set_namespace)
+%p
+  = I18n.t(:namespace_caption_1)
+  //See #{link_to 'the User Guide', add_domains_user_guide_topic_url}
+  //for information about adding your own domain names to an application.
+= render :partial => 'form', :locals => { :domain => @domain }

@@ -1,0 +1,123 @@
+- content_for :title, "Invoice"
+- breadcrumb_for_account_billing 'Invoice'
+- end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
+- start_date = !@period[:start].nil? ? Date.strptime("#{@period[:start]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
+%h1 Invoice ##{@id}
+%h3 Period: #{start_date} - #{end_date}
+= flashes
+
+- if @status
+  .row.billing-info
+    .span12
+      %section
+  
+        %table.table.table-fixed.info
+          %tbody
+            %tr
+              %td.top
+                //Getup address
+                %h5 #{@getup[:name]}
+                %ul.unstyled
+                  %li CNPJ: #{@getup[:pj_cnpj]}
+                  - if @getup[:line1] != ''
+                    %li #{@getup[:line1]}
+                  - if @getup[:line2] != ''
+                    %li #{@getup[:line2]}
+                  %li #{@getup[:city]}/#{@getup[:state]} - #{@getup[:country_name]}
+                  %li CEP: #{@getup[:postal_code]}
+              %td.top
+                //User address
+                %h5 #{@user[:first_name]}
+                %ul.unstyled
+                  - if @address[:type] == 'pf'
+                    %li CPF: #{@address[:pf_cpf]}
+                  - if @address[:type] == 'pj'
+                    %li CNPJ: #{@address[:pj_cnpj]}
+                    - if @address[:ie] != ''
+                      %li Insc. Est.: #{@address[:pj_ie]}
+                  - if @address[:line1] != ''
+                    %li #{@address[:line1]}
+                  - if @address[:line2] != ''
+                    %li #{@address[:line2]}
+                  %li #{@address[:city]}/#{@address[:state]} - #{@address[:country_name]}
+                  %li CEP: #{@address[:postal_code]}
+
+              //Invoice summary
+              %td.top
+                %dl
+                  %dt Invoice:
+                  %dd ##{@id}
+
+                  %dt Client:
+                  %dd ##{@user[:id]}
+
+                  %dt Reference:
+                  - end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
+                  %dd #{end_date}
+  
+                  %dt Total:
+                  %dd #{@acronym} #{number_with_precision(@amount[:total][:amount].to_f, :precision => 2)}
+  
+        //Applications
+        - @applications.each do |app|
+          - total = 0
+          %h3 Application #{app[1][:name]}
+          %table.table.table-fixed.invoice
+            %thead
+              %tr
+                %th{:scope => 'col', :style => 'width: 350px'} Item
+                %th{:scope => 'col', :style => 'width: 200px'} Type
+                %th{:scope => 'col', :style => 'width: 150px'} Quantity
+                %th{:scope => 'col'} Unit
+                %th{:scope => 'col', :style => 'width: 120px'} Unit cost
+                %th{:scope => 'col', :style => 'width: 120px'} Total cost
+            %tbody
+            - app[1][:items].each do |item|
+              - total += item[:amount].to_f
+              %tr
+                %td Gear #{item[:gear_id]}<br>#{item[:billing_start].gsub('T', ' ').byteslice(0, 19)} - #{item[:billing_end].gsub('T', ' ').byteslice(0, 19)}
+                %td #{item[:usage_type]}
+                %td #{item[:quantity]}
+                //%td #{number_with_precision(item[:quantity].to_f, :precision => 6)}
+                %td #{item[:unit]}
+                %td #{@acronym} #{@price.find(item[:usage_type]).next[1][:value]}
+                %td #{@acronym} #{number_with_precision(item[:amount].to_f, :precision => 2)}
+            %tr
+              %td{:colspan => 4}
+              %td{:style => 'font-weight: bold'} Total
+              %td{:style => 'font-weight: bold'} #{@acronym} #{number_with_precision(total, :precision => 2)}  
+  
+      //Credit
+      - if !@amount[:GEAR_USAGE][:credit].nil?
+        %h3 Credits
+        %table.table.table-fixed.invoice
+          %thead
+            %tr
+              %th{:scope => 'col', :style => 'width: 350px'} Item
+              %th{:scope => 'col', :style => 'width: 200px'} Type
+              %th{:scope => 'col', :style => 'width: 150px'} Quantity
+              %th{:scope => 'col'} Unit
+              %th{:scope => 'col', :style => 'width: 120px'} Unit cost
+              %th{:scope => 'col', :style => 'width: 120px'} Total credit
+          %tbody
+            %tr
+              %td Free gear
+              %td GEAR_USAGE
+              %td #{@amount[:GEAR_USAGE][:credit][:quantity]}
+              %td #{@amount[:GEAR_USAGE][:credit][:unit]}
+              %td #{@acronym} #{@prices.find(@amount[:total][:currency]).next[1][:GEAR_USAGE][:value]}
+              %td{:style => 'font-weight: bold'} #{@acronym} #{@amount[:GEAR_USAGE][:credit][:amount]}
+
+      //Final
+      - if @amount[:total][:amount].to_f != 0.00
+        %table.table.table-fixed.invoice
+          %thead
+            %tr
+              %th{:colspan => 4}
+              %th{:style => 'width: 120px'}
+              %th{:style => 'width: 120px'}
+          %tbody
+            %tr
+              %td{:colspan => 4}
+              %td{:style => 'font-weight: bold'} Total
+              %td{:style => 'font-weight: bold'} #{@acronym} #{number_with_precision(@amount[:total][:amount].to_f, :precision => 2)}

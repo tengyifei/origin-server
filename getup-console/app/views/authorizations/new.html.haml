@@ -1,0 +1,51 @@
+= content_for :title, I18n.t(:token_add_title)
+%h1= I18n.t(:token_add_title)
+= flashes
+
+= semantic_form_for @authorization, :html => {:class => 'form'} do |f|
+  = f.semantic_errors :except => :note
+  = f.inputs do
+
+    .control-group{:class => @authorization.errors[:scope].present? ? 'error' : ''}
+      .controls
+        %p= I18n.t(:token_caption_1)
+        - field = 'authorization[scopes][]'
+        - unmatched_scopes = @authorization.scopes - @simple_scopes.map{ |s| s[:id] }
+        = hidden_field_tag field, ''
+        %table.table
+          %thead
+            %tr
+              %th{:scope => 'col'}= I18n.t(:Scope)
+              %th{:scope => 'col'}= I18n.t(:Description)
+          %tbody
+            - @simple_scopes.each do |scope|
+              - scope_id = sanitize_to_id("#{field}#{scope[:id]}")
+              %tr
+                %td{:scope => 'row'}
+                  %label.checkbox{:for => scope_id}
+                    = check_box_tag field, scope[:id], @authorization.scopes.include?(scope[:id]), :id => scope_id
+                    = I18n.t(scope[:name])
+                    - if scope[:default]
+                      %span.small (default)
+                %td= scope[:description]
+        - if @parameter_scopes.present?
+          %p= I18n.t(:token_caption_2)
+          %table.table
+            %tbody
+              - @parameter_scopes.each do |scope|
+                %tr
+                  %td= scope[:id]
+                  %td= scope[:description]
+
+          = text_field_tag field, unmatched_scopes.join(' '), :class => 'span6'
+          = f.inline_errors_for :scope
+
+    %p= I18n.t(:token_caption_3)
+
+    = f.input :note, :as => :text, :label => I18n.t(:token_remainder), :input_html => {:class => 'span6', :rows => 2}
+
+  = f.buttons do
+    = link_to I18n.t(:Cancel), settings_path, :class => 'btn'
+    = f.commit_button :label => I18n.t(:Create)
+    = f.loading
+

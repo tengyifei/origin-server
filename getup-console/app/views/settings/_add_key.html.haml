@@ -1,0 +1,7 @@
+%h2= I18n.t(:public_keys_title)
+.row-fluid
+  %div
+    %p= I18n.t(:public_keys_caption)
+    %p= link_to I18n.t(:public_keys_learn), ssh_keys_help_path
+
+    = render :partial => 'keys/simple_form', :locals => { :key => Key.new, :input_class => 'span4' }

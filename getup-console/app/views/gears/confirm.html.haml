@@ -1,0 +1,24 @@
+- content_for :title, "Add Gears"
+- breadcrumb_for_account 'Add Gears'
+%h1 Success!
+%p
+  Seu novo limite é mostrado abaixo: / Your new limit is shown below:
+%p
+  Limite Máximo de Gears / Max Gears Limit:
+  %small
+    #{@result[:max_gears]}
+  %br
+  Valor Mensal Aprovado (max) / Monthly Approved Amount (max):
+  %small
+    R$ #{@result[:preapproval][:amount]}
+  %br
+  Valor Total Aprovado (12 months) / Total Approved Amount (up to 12 months):
+  %small
+    R$ #{@result[:preapproval][:total_amount]} &sup1;
+%br
+%p
+  1. Em acordo com as regras do Paypal, nós cobramos em moeda Brasileira. Quando você receber sua fatura, esta estará em R$ (reais) em vez de US$. Se você tiver alguma dúvida, não deixe de nos procurar.
+  %br
+  %small 1. Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime.
+
+= link_to "Continue...", account_path, :class => 'btn'

@@ -1,0 +1,84 @@
+:css
+  .row-help a { font-weight: bold; }
+-#:css
+  .row-help > .span3 {
+    position: relative;
+  }
+  .row-help > .span3 > h2:after {
+    content: ' ';
+    position: absolute;
+    right: -10px;
+    top: 0;
+    border-color: transparent #C83423;
+    border-style: solid;
+    border-width: 0 0 36px 10px;
+  }
+  .row-help > .span3 > h2:before {
+    content: ' ';
+    position: absolute;
+    left: -18px;
+    top: 0;
+    width: 10px;
+    border-color: #C83423 transparent;
+    border-style: solid;
+    border-width: 0 0 36px 10px;
+  }
+  .row-help > .span3 > h2 {
+    border-color: #C83423;
+    background-color: #C83423;
+  }
+  .row-help > .span3:first-child > h2:before {
+    border-left: 10px;
+    left: -10px;
+    border-color: #C83423;
+  }
+
+%section.row.row-help
+  .span3
+    %h2= I18n.t(:help_title_1)
+    %p
+      %strong= I18n.t(:help_caption_1_1)
+    %p= I18n.t(:help_caption_1_2)
+    %p= link_to I18n.t(:help_create_app_btn), application_types_path, :class => 'btn btn-danger'
+    %p!= I18n.t(:help_caption_1_3, getting_started: link_to(I18n.t(:help_getting_started), getting_started_path))
+    %p!= I18n.t(:help_caption_1_4,
+      drupal: link_to('Drupal', openshift_github_project_url('drupal-example')),
+      ror: link_to('Ruby on Rails', openshift_github_project_url('rails-example')),
+      wp: link_to('Wordpress', openshift_github_project_url('wordpress-example')),
+      let_us_know: link_to(I18n.t(:help_let_us_know), feature_request_path))
+
+  .span3
+    %h2= I18n.t(:help_title_2)
+    %p 
+      %strong= I18n.t(:help_caption_2_1)
+    %p!= I18n.t(:help_caption_2_2, forum: link_to(I18n.t(:help_forum), forum_path))
+    //%p When you're looking for a great reference for understanding OpenShift, look no further than the #{link_to 'the User Guide', user_guide_url}.  It covers the entire experience and can be downloaded as HTML or PDF when you're on the go.
+    -# Some of our favorites are below.
+
+  .span3
+    %h2= I18n.t(:help_title_3)
+    %p 
+      %strong= I18n.t(:help_caption_3_1)
+    %p!= I18n.t(:help_caption_3_2, community_forum: link_to(I18n.t(:help_community_forum), getup_community_path))
+    %p!= I18n.t(:help_caption_3_3, knowledge_base: link_to(I18n.t(:help_knowledge_base), forum_path), faq: link_to(I18n.t(:faq), faq_url))
+    %p!= I18n.t(:help_caption_3_4, irc: link_to(I18n.t(:help_irc), irc_web_url))
+
+  .span3
+    %h2= I18n.t(:help_title_4)
+    %p 
+      %strong= I18n.t(:help_caption_4_1)
+    %p= I18n.t(:help_caption_4_2)
+    %p= link_to(I18n.t(:help_subscribe), newsletter_signup_url)
+    %p!= I18n.t(:help_caption_4_3, twitter: link_to('@GetupCloud', openshift_twitter_url), twitter_status: link_to('@GetupStatus', openshift_twitter_status_url), facebook: link_to(I18n.t(:help_facebook), getup_facebook_url))
+    %p!= I18n.t(:help_caption_4_4, youtube: link_to(I18n.t(:help_youtube), getup_youtube_url))
+
+-#%section.row
+  .span12
+    %h2 Videos
+    %ul.thumbnails
+      %li.span3
+        .thumbnail
+          %h5 Product Tour
+          = link_to 'video1' do
+            %img{:src => '/app/images/video_stills/OpenShift-Express-demo.png', :alt => 'Play video'}
+          %p This video walks you through the high level functionality of OpenShift Express, from installing the client tools, creating a subdomain to deploying your app onto the cloud.

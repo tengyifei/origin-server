@@ -1,0 +1,142 @@
+.tile {
+  padding: 15px 25px; 
+  margin-bottom: 20px; 
+  background-color: #222;
+  color: #b0b0b0;
+  
+  h2 {
+    @include clearfix();
+  }
+
+  > p {
+    margin-bottom: $baseLineHeight / 1.5;
+  }
+
+  > ul.meta > li > label, {
+    display: inline;
+  }
+
+  > h3 > a { 
+    color: #dadada; 
+    text-decoration: none; 
+  }
+
+  &.cartridge_type .warning {
+    color: $orange;
+  }
+}
+
+.label-tags {
+  a.label {
+    color: #666;
+    background-color: transparent;
+    text-decoration: none;
+    margin-right: 5px;
+    text-shadow: none;
+
+    &:hover {
+      color: #111;
+      background-color: #eee !important;
+    }
+  }
+}
+
+.tile-click {
+  cursor: pointer;
+  
+  h3 {
+    margin-right: 10px;
+  }
+
+  &:hover {
+    background-color: #151515;
+
+    h3 {
+      color: #f0f0f0;
+    }
+  }
+
+  &:active {
+    background-color: #333;
+    color: white
+  }
+}
+
+.tile-compact {
+  padding-right: 35px;
+  h3 {
+    display: inline-block;
+    margin-right: 10px;
+    margin-bottom: 0;
+  }
+  a.label {
+    display: inline-block;
+    vertical-align: middle;
+    margin-top: -5px;
+  }
+}
+
+.tile-dark {
+
+  .tile {
+    background: #131313;
+  }
+  
+  .tile-featured h3 {
+    margin-right: 20px;
+  }
+
+  > .tile-click {
+    position: relative;
+    margin-bottom: 3px;
+
+    .tile-target {
+      color:#c0c0c0;
+    }
+
+    &:hover  {
+      background: #000;
+      
+      .font-icon-block {
+        opacity: 1;
+      }
+      .tile-target {
+        color: #f0f0f0;
+      }
+      .font-icon.tile-arrow {
+        color: $buttonBlueHover;
+      }
+    }
+    .font-icon.tile-arrow {
+      position: absolute;
+      font-size: 13.5px;
+      position: absolute;
+      right: 25px;
+      top: 25px;
+    }
+    .font-icon-block {
+      position: absolute;
+      right: 25px;
+      top: 20px;
+      font-size: 16px; 
+      color: #777;
+      opacity: .3;
+    }
+  }
+}
+
+.section-body .tile-dark > .tile-click {
+  margin-left: 5px;
+  > div {
+    margin-right: -5px;
+  }
+}
+
+@media (max-width: 767px) {
+  .section-body .row > .tile-click {
+    @include expand_for_phone();
+
+  }
+}
+
+

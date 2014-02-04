@@ -1,0 +1,14 @@
+- input_html = defined?(input_class) ? { :class => input_class } : {}
+
+= semantic_form_for key, :html => {:class => 'form-horizontal'} do |f|
+  = f.semantic_errors :except => [:name, :raw_content, :content, :type]
+  = f.inputs do
+    = f.input :name, :label => I18n.t(:key_name), :input_html => {:placeholder => I18n.t(:key_name_title)}
+    = f.input :raw_content,
+              :as => :text,
+              :label => I18n.t(:key_paste_caption),
+              :input_html => input_html.merge({:placeholder => I18n.t(:pub_key_form_placeholder), :title => I18n.t(:pub_key_form_title)})
+  = f.buttons do
+    = link_to I18n.t(:Cancel), settings_path, :class => 'btn'
+    = f.commit_button :label => I18n.t(:Create)
+    = f.loading

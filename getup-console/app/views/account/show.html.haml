@@ -1,0 +1,12 @@
+= content_for :page_title, I18n.t(:My_Account)
+%h1= I18n.t(:My_Account)
+= flashes
+
+.row
+  .span7
+    %section
+      = render :partial => 'gears', :locals => {:capabilities => @capabilities}
+
+  .span5
+    %section
+      = render :partial => 'billing'

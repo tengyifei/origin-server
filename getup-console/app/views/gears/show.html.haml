@@ -1,0 +1,85 @@
+= content_for :title, I18n.t(:gears_title)
+- breadcrumb_for_account 'Authorize Gears'
+%h1= I18n.t :gears_title
+%p= I18n.t(:gears_info, consumed_gears: @capabilities.consumed_gears, max_gears: @capabilities.max_gears)
+
+%p= I18n.t :gears_caption
+
+= flashes
+
+%hr
+
+%form.form-horizontal.formtastic{:action => gears_path, :id => 'form-billing', :method => 'post'}
+  = token_tag(nil)
+
+  %div.span3
+    = I18n.t :gears_limit_caption
+    %br
+    .input-append
+      %input.span1.uneditable-input{:id => 'gears-number', :name => 'gears', :type => 'text', :value => '-'}
+      %button.btn{:type => 'button', :id => 'remove-gear'} -
+      %button.btn{:type => 'button', :id => 'add-gear'} +
+
+  %div.span3
+    = I18n.t :Currency
+    %br
+    .input-prepend
+      %button.btn.btn-info.disabled.currency{:type => 'button', :'data-currency' => 'BRL'} R$
+      %button.btn.btn-info.currency{:type => 'button', :'data-currency' => 'USD'} US$&sup3;
+
+  %span.right-position{:id => 'message'}
+
+  %table.table.table-fixed.table-striped{:id => 'gears', :'data-source' => 'https://' + broker_host + '/getup/subscription/prices/', :'data-currency' => 'BRL', :'data-max-gears-limit' => @account_plan[:max_gears_limit]}
+    %thead
+      %tr
+        %th{:scope => 'col', :width => '5%'}
+        %th{:scope => 'col', :width => '50%'}
+        %th{:scope => 'col', :width => '15%'}
+        %th{:scope => 'col', :width => '15%'}
+          = I18n.t :Cost_unit
+        %th{:scope => 'col', :width => '15%'}
+          = I18n.t :Cost
+    %tbody
+      %tr
+        %td
+        %td
+          = I18n.t :Gears
+        %td{:id => 'gears-size', :'data-gears' => @capabilities.max_gears, :'data-consumed-gears' => @capabilities.consumed_gears} -
+        %td{:id => 'gears-unit-cost'} -
+        %td{:id => 'gears-cost'} -
+      - if @account_plan[:free_tier]
+        %tr
+          %td
+          %td
+            = I18n.t :Credit
+          %td{:id => 'credit-size', :'data-hours' => @account_plan[:free_tier]} -
+          %td{:id => 'credit-unit-cost'} -
+          %td{:id => 'credit-cost'} -
+      %tr.info
+        %td
+        %td= I18n.t :monthly_estimated
+        %td 
+        %td 
+        %td{:id => 'total-month'} -
+      %tr.info
+        %td
+        %td= I18n.t :total_preapproved
+        %td 
+        %td 
+        %td{:id => 'total-approved'} -
+  %hr
+  %p
+    %ol
+      %li
+        %span.trans= I18n.t :gears_ref_1
+      %li
+        %span.trans= I18n.t :gears_ref_2
+      %li
+        %span.trans= I18n.t :gears_ref_3
+
+  %fieldset
+    = link_to "Cancel", account_path, :class => 'btn'
+    %button.btn.paypal{:type => 'submit'} Buy with Paypal...
+
+- content_for :javascripts do
+  = javascript_include_tag 'gears'

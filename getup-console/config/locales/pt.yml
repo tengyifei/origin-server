@@ -1,0 +1,368 @@
+pt:
+  unknown: 'A system error has occurred.  If the problem persists, please contact Red Hat support.'
+  Name: 'Nome'
+  Email: 'Email'
+  Phone: 'Telefone'
+  Address: 'Endereço'
+  City: 'Cidade'
+  State: 'Estado'
+  Country: 'País'
+  Postal_code: 'CEP'
+  Save: 'Salvar'
+  Cancel: 'Cancelar'
+  Currency: 'Moeda'
+  Gears: 'Gears'
+  Credit: 'Crédito'
+  Cost_unit: 'Custo unitário'
+  Cost: 'Custo'
+  Namespace: 'Namespace'
+  Create: 'Criar'
+  Example: 'Exemplo'
+  Delete: 'Excluir'
+  Content: 'Conteúdo'
+  Scope: 'Escopo'
+  Description: 'Descrição'
+  Session: 'Session'
+  Read: 'Read'
+  Userinfo: 'Userinfo'
+  session: 'session'
+  read: 'read'
+  userinfo: 'userinfo'
+  default: 'padrão'
+  Authorization: 'Autorização'
+  Edit: 'Alterar'
+  Developers: 'Desenvolvedores'
+  Get_Started: 'Primeiros Passos'
+
+## Header
+  Sign_Out: 'Sair'
+  My_Account: 'Minha Conta'
+  Settings: 'Configurações'
+  Create_Application: 'Criar'
+  My_Applications: 'Aplicações'
+  Help: 'Ajuda'
+  Community: 'Comunidade'
+  Developer_Center: 'Central do Desenvolvedor'
+
+## Footer
+  footer_github: 'disponível no GitHub'
+  footer_caption_1: 'O código fonte do console do OpenShift Origin está %{github}. Leia o %{readme} para informacões de copyright e código fonte. OpenShift, OpenShift Origin e o logotipo OpenShift são marcas registradas de Red Hat, Inc.'
+
+## My Account
+  my_account: 'Minha conta'
+  add_gears: 'Autorizar mais gears'
+  billing_title: 'Cobrança'
+  billing_history_caption: 'Acesse seu histórico de faturas'
+  billing_history_button: 'Faturas...'
+  addr_info_caption: 'Altere seus dados de contato e cobrança.'
+  contact_info_btn: 'Dados de contato...'
+  billing_info_btn: 'Dados de cobrança...'
+  gears_caption: 'Você possui %{gears_free} gears disponíveis de %{max_gears} autorizados.'
+
+## Contact Information
+  contact_info_title: 'Dados de contato'
+  contact_info_caption: 'Preencha seus dados de contato.'
+
+## Billing Information
+  billing_info_title: 'Dados de Cobrança'
+  billing_info_caption: 'Preencha seus dados de cobrança.'
+  use_contact_info: 'Usar dados de contato (ignorar abaixo)'
+
+## Gears
+  gears_title: 'Autorizar mais Gears'
+  gears_info: 'Você está usando %{consumed_gears} gears de %{max_gears} autorizados.'
+  gears_caption: 'Altere seus limites abaixo.'
+  gears_limit_caption: 'Nova quantidade de gears'
+  monthly_estimated: 'Mensal (estimado¹)'
+  total_preapproved: 'Total pré-aprovado² - Válido por 12 meses'
+  gears_ref_1: 'Mensal: valor estimado considerando o total de gears selecionado e rodando por todo o mês. Este é também, o valor máximo que você nos autoriza cobrar mensalmente. Este não é o valor definitivo mensal - você pagará apenas por aquilo que utilizar.'
+  gears_ref_2: 'Total pré-aprovado: Por razões de segurança, esta pré-aprovação têm validade de 12 meses e a soma de todos os meses não poderá ultrapassar R$ 8.750,00 ou US$ 5.000,00. Quando o valor ou a validade da pré-aprovação estiver para expirar ou ser excedida, nós iremos solicitar a você uma nova pré-aprovação.'
+  gears_ref_3: 'Em acordo com as regras do Paypal, nós cobramos em moeda Brasileira. Quando você receber sua fatura, esta estará em R$ (reais) em vez de US$. Se você tiver alguma dúvida, não deixe de nos procurar.'
+
+## Settings
+  namespace_caption_1: 'Seu namespace é exclusivo da sua conta e identifica o suffixo da URL pública de suas aplicações'
+  namespace_caption_2: 'Seu namespace deve conter apenas letras e números, sem espaço ou símbolos.'
+  namespace_caption_3: 'Seu namespace é: <code>%{namespace}</code>'
+  example_namespace: 'Exemplo da URL de aplicação: <a href=#>http://appname-%{namespace}.%{domain_suffix}</a>'
+  Set_namespace: 'Defina seu namespace'
+  Change_namespace: 'Mude seu namespace...'
+  namespace_created: 'Seu namespace foi criado'
+  password_title: 'Trocar Senha'
+  password_caption: 'Troque a senha de sua conta Getup.'
+  change_password_btn: 'Trocar senha...'
+  authorizations_title: 'Autorizações'
+  authorizations_caption: 'Permitir a clientes e terceiros, acesso a sua conta via secret tokens.'
+  authorization_btn: 'Criar autorização...'
+  public_keys_caption: 'Para baixar o código de sua apliação voce precisa incluir sua chave pública SSH no campo abaixo.'
+  public_keys_learn: 'Saiba mais sobre chaves SSH.'
+  key_paste_caption: 'Copie e cole o conteúdo de sua chave pública (.pub)'
+  public_keys_title: 'Chaves Públicas'
+  pub_key_form_placeholder: 'O conteúdo de seu arquivo de chave pública...'
+  pub_key_form_title: 'Sua chave pública SSH começa com um pequeno prefixo que descreve seu tipo, seguido de um texto longo com números e caractéres. Algumas chaves possuem um pequeno texto no final para informar quem gerou esta chave. Exemplo:\n\nssh-rsa AAAAB3NzaC1yc....HcLJ bob@smith.com'
+  key_name: 'Nome da chave'
+  key_name_title: 'laptop, casa, trabalho...'
+  delete_key_confirm: "Você tem certeza que deseja remover a chave '%{key_name}'?"
+  add_key_btn: "Incluir uma chave..."
+
+## Authorization
+  token_add_title: 'Criar uma autorização'
+  token_usage_title: 'Como usar seu token'
+  token_caption_1: 'Selecione quais permissões você quer dar ao cliente. Você deve escolher o escopo ou deixar em branco para o sistema utilizar o padrão.'
+  token_caption_2: 'Ou você pode inserir os escopos manualmente para aqueles que necessitam de um parâmetro. Separe multiplos escopos com um espaço ou vírgula.'
+  token_caption_3: 'Selecionando multiplos escopos, você pode realizar ações que qualquer um dos escopos permita, mas seu token expira após o período de expiração do escopo mais curto.'
+  token_remainder: 'Inclua um lembrete para esta autorização (opcional)'
+  authz_title: 'Token de Autorização'
+  authz_caption: 'O token vai permitir que clientes realizem as seguintes operações em seu nome:'
+  token_created_at: 'Criado em %{time}, expira em %{expires}'
+  token_revoke: 'Revogar este token permanentemente'
+  token_revoke_confirm: 'Você tem certeza que deseja revogar esta autorização?'
+  token_usage_caption_1: 'Para fazer uma requisição a API REST da plataforma, passe o token no cabeçalho <code>Authorization</code>'
+  token_usage_caption_2: 'Por exemplo, usando a opção <code>-H</code> do programa cURL na linha de comando:'
+  token_usage_caption_3: 'Você pode passar esse token diretamente ao comando <code>rhc</code> com a opção <code>--token</code>:'
+
+## Help
+  help_title_1: 'Crie'
+  help_create_app_btn: 'Crie um app agora!'
+  help_getting_started: 'página de Primeiros Passos'
+  help_let_us_know: 'avise-nos'
+  help_caption_1_1: 'Iniciando na Getup?'
+  help_caption_1_2: 'Crie sua primeira aplicação do zero a partir do passo-a-passo de criação.'
+  help_caption_1_3: 'Se você prefere a linha de comando, nossa %{getting_started} vai ajudá-lo a instalar a ferramenta certa, criar sua aplicação e fazer as primeiras mudanças'
+  help_caption_1_4: "Crie aplicações baseadas em diferentes tecnologias como %{drupal}, %{ror}, e %{wp}. Se você não encontra seu framework favorito, %{let_us_know}."
+
+  help_title_2: 'Aprenda'
+  help_forum: 'Nosso Forum'
+  help_caption_2_1: 'Deseja explorar nossa plataforma?'
+  help_caption_2_2: '%{forum} é o primeiro destino para novos desenvolvedores encontrarem informações sobre valiosas.'
+
+  help_title_3: 'Solucione'
+  help_community_forum: 'Fórum da Comunidade'
+  help_knowledge_base: 'Base de Conhecimento'
+  help_faq: 'FAQ'
+  help_irc: '#getupcloud na freenode.net'
+  help_caption_3_1: 'Encontrou uma pedra no caminho?'
+  help_caption_3_2: 'Nosso %{community_forum} é monitorado constantemente por um exército de desenvolvedores, evangelistas e pessoas devotadas ao OpenShift.'
+  help_caption_3_3: 'Confira a %{knowledge_base} para problemas conhecidos, e a %{faq} para perguntas mais frequentes.'
+  help_caption_3_4: 'Fale diretamente com o time no IRC - %{irc}.'
+
+  help_title_4: 'Envolva-se'
+  help_subscribe: 'Assine agora!'
+  help_facebook: 'página no Facebook'
+  help_youtube: 'canal do Youtube'
+  help_caption_4_1: "Gosta de saber das novidades?"
+  help_caption_4_2: 'A newsletter é uma ótima forma de manter-se atualizado.'
+  help_caption_4_3: 'Siga-nos no Twitter em %{twitter} e %{twitter_status} ou en nossa %{facebook}.'
+  help_caption_4_4: 'Assista aos vídeos em nosso %{youtube}.'
+
+  date:
+    abbr_day_names:
+    - Dom
+    - Seg
+    - Ter
+    - Qua
+    - Qui
+    - Sex
+    - Sáb
+    abbr_month_names:
+    -
+    - Jan
+    - Fev
+    - Mar
+    - Abr
+    - Mai
+    - Jun
+    - Jul
+    - Ago
+    - Set
+    - Out
+    - Nov
+    - Dez
+    day_names:
+    - Domingo
+    - Segunda
+    - Terça
+    - Quarta
+    - Quinta
+    - Sexta
+    - Sábado
+    formats:
+      default: ! '%d/%m/%Y'
+      long: ! '%d de %B de %Y'
+      short: ! '%d de %B'
+    month_names:
+    -
+    - Janeiro
+    - Fevereiro
+    - Março
+    - Abril
+    - Maio
+    - Junho
+    - Julho
+    - Agosto
+    - Setembro
+    - Outubro
+    - Novembro
+    - Dezembro
+    order:
+    - :day
+    - :month
+    - :year
+  datetime:
+    distance_in_words:
+      about_x_hours:
+        one: aproximadamente 1 hora
+        other: aproximadamente %{count} horas
+      about_x_months:
+        one: aproximadamente 1 mês
+        other: aproximadamente %{count} meses
+      about_x_years:
+        one: aproximadamente 1 ano
+        other: aproximadamente %{count} anos
+      almost_x_years:
+        one: quase 1 ano
+        other: quase %{count} anos
+      half_a_minute: meio minuto
+      less_than_x_minutes:
+        one: menos de um minuto
+        other: menos de %{count} minutos
+      less_than_x_seconds:
+        one: menos de 1 segundo
+        other: menos de %{count} segundos
+      over_x_years:
+        one: mais de 1 ano
+        other: mais de %{count} anos
+      x_days:
+        one: 1 dia
+        other: ! '%{count} dias'
+      x_minutes:
+        one: 1 minuto
+        other: ! '%{count} minutos'
+      x_months:
+        one: 1 mês
+        other: ! '%{count} meses'
+      x_seconds:
+        one: 1 segundo
+        other: ! '%{count} segundos'
+    prompts:
+      day: Dia
+      hour: Hora
+      minute: Minuto
+      month: Mês
+      second: Segundo
+      year: Ano
+  errors: &errors
+    format: ! '%{attribute} %{message}'
+    messages:
+      accepted: deve ser aceito
+      blank: não pode ficar em branco
+      present: deve ficar em branco
+      confirmation: não está de acordo com a confirmação
+      empty: não pode ficar vazio
+      equal_to: deve ser igual a %{count}
+      even: deve ser par
+      exclusion: não está disponível
+      greater_than: deve ser maior que %{count}
+      greater_than_or_equal_to: deve ser maior ou igual a %{count}
+      inclusion: não está incluído na lista
+      invalid: não é válido
+      less_than: deve ser menor que %{count}
+      less_than_or_equal_to: deve ser menor ou igual a %{count}
+      not_a_number: não é um número
+      not_an_integer: não é um número inteiro
+      odd: deve ser ímpar
+      record_invalid: ! 'A validação falhou: %{errors}'
+      restrict_dependent_destroy:
+        one: "Não é possível excluir o registro pois existe um %{record} dependente"
+        many: "Não é possível excluir o registro pois existem %{record} dependentes"
+      taken: já está em uso
+      too_long: ! 'é muito longo (máximo: %{count} caracteres)'
+      too_short: ! 'é muito curto (mínimo: %{count} caracteres)'
+      wrong_length: não possui o tamanho esperado (%{count} caracteres)
+    template:
+      body: ! 'Por favor, verifique o(s) seguinte(s) campo(s):'
+      header:
+        one: ! 'Não foi possível gravar %{model}: 1 erro'
+        other: ! 'Não foi possível gravar %{model}: %{count} erros.'
+  helpers:
+    select:
+      prompt: Por favor selecione
+    submit:
+      create: Criar %{model}
+      submit: Salvar %{model}
+      update: Atualizar %{model}
+  number:
+    currency:
+      format:
+        delimiter: .
+        format: ! '%u %n'
+        precision: 2
+        separator: ! ','
+        significant: false
+        strip_insignificant_zeros: false
+        unit: R$
+    format:
+      delimiter: .
+      precision: 3
+      separator: ! ','
+      significant: false
+      strip_insignificant_zeros: false
+    human:
+      decimal_units:
+        format: ! '%n %u'
+        units:
+          billion:
+            one: bilhão
+            other: bilhões
+          million:
+            one: milhão
+            other: milhões
+          quadrillion:
+            one: quatrilhão
+            other: quatrilhões
+          thousand: mil
+          trillion:
+            one: trilhão
+            other: trilhões
+          unit: ''
+      format:
+        delimiter: .
+        precision: 2
+        significant: true
+        strip_insignificant_zeros: true
+      storage_units:
+        format: ! '%n %u'
+        units:
+          byte:
+            one: Byte
+            other: Bytes
+          gb: GB
+          kb: KB
+          mb: MB
+          tb: TB
+    percentage:
+      format:
+        delimiter: .
+    precision:
+      format:
+        delimiter: .
+  support:
+    array:
+      last_word_connector: ! ' e '
+      two_words_connector: ! ' e '
+      words_connector: ! ', '
+  time:
+    am: ''
+    formats:
+      default: ! '%a, %d de %B de %Y, %H:%M:%S %z'
+      long: ! '%d de %B de %Y, %H:%M'
+      short: ! '%d de %B, %H:%M'
+      pretty_date: ! '%d de %B'
+      pretty_time: ! '%d de %B, %A'
+    pm: ''
+  # remove these aliases after 'activemodel' and 'activerecord' namespaces are removed from Rails repository
+  activemodel:
+    errors:
+      <<: *errors
+  activerecord:
+    errors:
+      <<: *errors
