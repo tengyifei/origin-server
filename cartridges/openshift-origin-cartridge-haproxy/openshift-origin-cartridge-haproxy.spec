@@ -6,7 +6,7 @@
 
 Summary:       Provides HA Proxy
 Name:          openshift-origin-cartridge-haproxy
-Version: 1.18.0.1
+Version: 1.19.8
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -46,14 +46,51 @@ HAProxy cartridge for OpenShift. (Cartridge Format V2)
 %doc %{cartridgedir}/LICENSE
 
 %changelog
-* Fri Dec 06 2013 Krishna Raman <kraman@gmail.com> 1.18.0.1-1
-- Bumping versions for OpenShift Origin Release 3 (kraman@gmail.com)
-- Merge pull request #4198 from ncdc/haproxy-keep-proxy-gears-disabled
-  (dmcphers+openshiftbot@redhat.com)
-- bump_minor_versions for sprint 37 (admiller@redhat.com)
-- Keep proxy gears disabled appropriately (andy.goldstein@gmail.com)
+* Fri Jan 24 2014 Adam Miller <admiller@redhat.com> 1.19.8-1
+- Bug 1044927 (dmcphers@redhat.com)
 
-* Wed Dec 04 2013 Krishna Raman <kraman@gmail.com> 1.18.0.1-1
+* Thu Jan 23 2014 Adam Miller <admiller@redhat.com> 1.19.7-1
+- Merge pull request #4558 from bparees/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Bump up cartridge versions (bparees@redhat.com)
+
+* Wed Jan 22 2014 Adam Miller <admiller@redhat.com> 1.19.6-1
+- Bug 1056483 - Better error messaging with direct usage of haproxy_ctld
+  (dmcphers@redhat.com)
+
+* Tue Jan 14 2014 Adam Miller <admiller@redhat.com> 1.19.5-1
+- Merge pull request #4456 from caruccio/proxy-gear-ttl
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4463 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bisect the scale up/down threshold more evenly for lower scale numbers
+  (dmcphers@redhat.com)
+- Proxy gear ttl from env var (mateus.caruccio@getupcloud.com)
+
+* Mon Jan 13 2014 Adam Miller <admiller@redhat.com> 1.19.4-1
+- Bug 1051446 (dmcphers@redhat.com)
+- Fixing typos (dmcphers@redhat.com)
+
+* Thu Jan 09 2014 Troy Dawson <tdawson@redhat.com> 1.19.3-1
+- Make sessions per gear configurable and use moving average for num sessions
+  (dmcphers@redhat.com)
+
+* Mon Dec 16 2013 Adam Miller <admiller@redhat.com> 1.19.2-1
+- Merge pull request #4323 from mmcgrath-openshift/master
+  (dmcphers+openshiftbot@redhat.com)
+- checking for executible bits prior to execution (mmcgrath@redhat.com)
+- updated typos as per pull request (mmcgrath@redhat.com)
+- allow for customized haproxy_ctld.rb file to exist (mmcgrath@redhat.com)
+- added haproxy_ctld comments and ability to run custom haproxy_ctld
+  (mmcgrath@redhat.com)
+
+* Thu Dec 12 2013 Adam Miller <admiller@redhat.com> 1.19.1-1
+- bump_minor_versions for sprint 38 (admiller@redhat.com)
+
+* Fri Dec 06 2013 Troy Dawson <tdawson@redhat.com> 1.18.2-1
+- Bump up cartridge versions. (mrunalp@gmail.com)
+
+* Wed Dec 04 2013 Adam Miller <admiller@redhat.com> 1.18.1-1
 - Merge pull request #4198 from ncdc/haproxy-keep-proxy-gears-disabled
   (dmcphers+openshiftbot@redhat.com)
 - bump_minor_versions for sprint 37 (admiller@redhat.com)

@@ -2,8 +2,8 @@
 %global frameworkdir %{_libexecdir}/openshift/cartridges/php
 
 Name:          openshift-origin-cartridge-php
-Version: 1.18.0.3
-Release:       1%{?dist}
+Version: 1.19.8
+Release:       2%{?dist}
 Summary:       Php cartridge
 Group:         Development/Languages
 License:       ASL 2.0
@@ -41,6 +41,63 @@ Requires:      php-process
 Requires:      php-pecl-imagick
 Requires:      php-pecl-xdebug
 Requires:      php-fpm
+Requires:      php-intl
+
+#  RHEL-6 PHP 5.4 SCL
+%if 0%{?fedora}%{?rhel} <= 6
+Requires:      php54
+Requires:      php54-php
+Requires:      php54-php-devel
+Requires:      php54-php-pdo
+Requires:      php54-php-gd
+Requires:      php54-php-xml
+Requires:      php54-php-mysqlnd
+Requires:      php54-php-pgsql
+Requires:      php54-php-mbstring
+Requires:      php54-php-pear
+Requires:      php54-php-pecl-apc
+Requires:      php54-php-soap
+Requires:      php54-php-bcmath
+Requires:      php54-php-process
+Requires:      php54-php-intl
+Requires:      php54-php-ldap
+Requires:      php54-php-process
+Requires:      php54-php-fpm
+Requires:      php54-php-intl
+Requires:      php54-php-pecl-memcache
+Requires:      php54-php-pecl-mongo
+Requires:      php54-php-pecl-imagick
+Requires:      php54-php-pecl-xdebug
+Requires:      php54-php-mcrypt
+%endif
+
+#  RHEL-6 PHP 5.5 SCL
+%if 0%{?fedora}%{?rhel} <= 6
+Requires:      php55
+Requires:      php55-php
+Requires:      php55-php-fpm
+Requires:      php55-php-bcmath
+Requires:      php55-php-devel
+Requires:      php55-php-gd
+Requires:      php55-php-imap
+Requires:      php55-php-mbstring
+Requires:      php55-php-mcrypt
+Requires:      php55-php-mysqlnd
+Requires:      php55-php-pdo
+Requires:      php55-php-pear
+Requires:      php55-php-opcache
+Requires:      php55-php-pecl-memcache
+Requires:      php55-php-pecl-mongo
+Requires:      php55-php-pecl-imagick
+Requires:      php55-php-pecl-xdebug
+Requires:      php55-php-pecl-oci8
+Requires:      php55-php-pgsql
+Requires:      php55-php-process
+Requires:      php55-php-soap
+Requires:      php55-php-xml
+Requires:      php55-php-xmlrpc
+%endif
+
 BuildArch:     noarch
 
 Obsoletes: openshift-origin-cartridge-php-5.3
@@ -59,15 +116,16 @@ PHP cartridge for openshift. (Cartridge Format V2)
 %__mkdir -p %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
 
 %if 0%{?fedora}%{?rhel} <= 6
-mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel6 %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%__mv %{buildroot}%{cartridgedir}/usr/lib/php_context.rhel6 %{buildroot}%{cartridgedir}/usr/lib/php_context
+%__mv %{buildroot}%{cartridgedir}/versions/5.4-scl %{buildroot}%{cartridgedir}/versions/5.4
 %endif
-%if 0%{?fedora} == 18
-mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora18 %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%if 0%{?fedora} >= 18
+%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora %{buildroot}%{cartridgedir}/metadata/manifest.yml
+%__mv %{buildroot}%{cartridgedir}/usr/lib/php_context.fedora %{buildroot}%{cartridgedir}/usr/lib/php_context
 %endif
-%if 0%{?fedora} == 19
-mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora19 %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%endif
-rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
+%__rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.* || :
+%__rm %{buildroot}%{cartridgedir}/usr/lib/php_context.* || :
 
 %files
 %attr(0755,-,-) %{cartridgedir}/bin/
@@ -76,26 +134,49 @@ rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 
 %changelog
-* Thu Dec 12 2013 Krishna Raman <kraman@gmail.com> 1.18.0.3-1
-- Bumping version numbers (release-3 build-4) (kraman@gmail.com)
-- fix libdir (admiller@redhat.com)
+* Thu Jan 23 2014 Adam Miller <admiller@redhat.com> 1.19.8-1
+- Bump up cartridge versions (bparees@redhat.com)
 
-* Wed Dec 11 2013 Krishna Raman <kraman@gmail.com> 1.18.0.2-1
-- Bumping version numbers (release-3 build-2) (kraman@gmail.com)
-- dynamically find libdir for cartridge installs, should fix ARM
-  (admiller@redhat.com)
+* Fri Jan 17 2014 Adam Miller <admiller@redhat.com> 1.19.7-1
+- Merge pull request #4502 from sosiouxme/custom-cart-confs
+  (dmcphers+openshiftbot@redhat.com)
+- <php cart> enable providing custom gear server confs (lmeyer@redhat.com)
 
-* Fri Dec 06 2013 Krishna Raman <kraman@gmail.com> 1.18.0.1-1
-- Bumping versions for OpenShift Origin Release 3 (kraman@gmail.com)
-- enable php-fpm based on user request (admiller@redhat.com)
-- Fix for bug 1034596 remove links that point to openshift.redhat.com
-  (sgoodwin@redhat.com)
-- Remove Open Sans since we're not including it externally,     make font stack
-  consistent with our site,     set line-height (sgoodwin@redhat.com)
-- Revisions to new app welcome pages. (sgoodwin@redhat.com)
-- bump_minor_versions for sprint 37 (admiller@redhat.com)
+* Fri Jan 17 2014 Adam Miller <admiller@redhat.com> 1.19.6-1
+- Merge pull request #4462 from bparees/cart_data_cleanup
+  (dmcphers+openshiftbot@redhat.com)
+- remove unnecessary cart-data variable descriptions (bparees@redhat.com)
 
-* Wed Dec 04 2013 Krishna Raman <kraman@gmail.com> 1.18.0.1-1
+* Thu Jan 16 2014 Adam Miller <admiller@redhat.com> 1.19.5-1
+- fix php-cli include_path; config cleanup (vvitek@redhat.com)
+- fix php cart PEAR builds (vvitek@redhat.com)
+- php control script cleanup (vvitek@redhat.com)
+
+* Thu Jan 09 2014 Troy Dawson <tdawson@redhat.com> 1.19.4-1
+- Bug 1033581 - Adding upgrade logic to remove the unneeded
+  jenkins_shell_command files (bleanhar@redhat.com)
+- Modify PHP stop() to skip httpd stop when the process is already dead
+  (hripps@redhat.com)
+
+* Fri Dec 20 2013 Adam Miller <admiller@redhat.com> 1.19.3-1
+- set php-5.4 SCL PATHs for gear environment (vvitek@redhat.com)
+
+* Wed Dec 18 2013 Adam Miller <admiller@redhat.com> 1.19.2-1
+- Merge pull request #4370 from maxamillion/admiller/fix_libdir_uname
+  (dmcphers+openshiftbot@redhat.com)
+- enable php54 SCL, add php_context lib (vvitek@redhat.com)
+- handle non-64bit libdir for ARM (admiller@redhat.com)
+- add php54 SCL dependency on RHEL-6 (vvitek@redhat.com)
+- add php-intl pecl as php cartridge dependency (vvitek@redhat.com)
+- remove obsolete php .spec fedora18 condition (vvitek@redhat.com)
+
+* Thu Dec 12 2013 Adam Miller <admiller@redhat.com> 1.19.1-1
+- bump_minor_versions for sprint 38 (admiller@redhat.com)
+
+* Fri Dec 06 2013 Troy Dawson <tdawson@redhat.com> 1.18.2-1
+- Bump up cartridge versions. (mrunalp@gmail.com)
+
+* Wed Dec 04 2013 Adam Miller <admiller@redhat.com> 1.18.1-1
 - enable php-fpm based on user request (admiller@redhat.com)
 - Fix for bug 1034596 remove links that point to openshift.redhat.com
   (sgoodwin@redhat.com)
