@@ -134,6 +134,9 @@ PHP cartridge for openshift. (Cartridge Format V2)
 
 
 %changelog
+* Thu Feb 13 2014 Unknown name 1.19.8-2
+- haproxy and php new cartridges (spinolacastro@gmail.com)
+
 * Thu Jan 23 2014 Adam Miller <admiller@redhat.com> 1.19.8-1
 - Bump up cartridge versions (bparees@redhat.com)
 

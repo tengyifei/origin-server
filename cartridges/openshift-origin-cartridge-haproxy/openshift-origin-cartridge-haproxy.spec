@@ -46,6 +46,10 @@ HAProxy cartridge for OpenShift. (Cartridge Format V2)
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Thu Feb 13 2014 Unknown name 1.19.8-2
+- bump version (spinolacastro@gmail.com)
+- haproxy and php new cartridges (spinolacastro@gmail.com)
+
 * Fri Jan 24 2014 Adam Miller <admiller@redhat.com> 1.19.8-1
 - Bug 1044927 (dmcphers@redhat.com)
 
