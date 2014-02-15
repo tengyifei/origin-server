@@ -85,6 +85,10 @@ mkdir -p %{buildroot}/etc/openshift/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Sat Feb 15 2014 Unknown name 1.18.0.1-2
+- bump version (spinolacastro@gmail.com)
+- fix missing env_vars routes (spinolacastro@gmail.com)
+
 * Fri Dec 06 2013 Krishna Raman <kraman@gmail.com> 1.18.0.1-1
 - Bumping versions for OpenShift Origin Release 3 (kraman@gmail.com)
 - fix bz1036507 - improve error message (rchopra@redhat.com)
