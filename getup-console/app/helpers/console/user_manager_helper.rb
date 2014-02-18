@@ -3,8 +3,15 @@ module Console::UserManagerHelper
   # 
   # 
   def user_manager_account_lang
-    result = user_manager_get session[:authentication].login + _url('account_lang')
-    result.content[:lang].split('-').first
+    begin
+      result = user_manager_get session[:authentication].login + _url('account_lang')
+      result.content[:lang]
+    rescue
+    end
+  end
+
+  def user_manager_account_lang_change(lang)
+    user_manager_post session[:authentication].login + _url('account_lang'), :lang => lang
   end
 
   def user_manager_account_plan

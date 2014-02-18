@@ -1,6 +1,6 @@
-- content_for :title, "Edit Authorization"
+= content_for :title, I18n.t(:token_edit_title)
 
-%h1 Authorization Token
+%h1= I18n.t(:authz_title)
 = flashes
 
 = semantic_form_for @authorization, :html => {:class => 'form'} do |f|
@@ -10,12 +10,12 @@
     %section
       %pre.larger{:style => 'word-break: break-all;'}= @authorization.token
 
-      %p The token will allow clients to perform these operations on your behalf:
+      %p= I18n.t(:token_caption_4)
       %table.table
         %thead
           %tr
-            %th{:scope => 'col'} Scope
-            %th{:scope => 'col'} Description
+            %th{:scope => 'col'}= I18n.t(:Scope)
+            %th{:scope => 'col'}= I18n.t(:Description)
         %tbody
           - @authorization.scopes.each do |s|
             - if scope = @scope_definitions.find{ |scope| scope[:match] ? s.match(scope[:match]) : scope[:id].to_s == s.to_s }
@@ -23,9 +23,9 @@
                 %td{:scope => 'row'}= scope[:id]
                 %td= scope[:description]
 
-      = f.input :note, :as => :text, :label => 'Change the description of this authorization token', :input_html => {:class => 'span6', :rows => 2}
+      = f.input :note, :as => :text, :label => I18n.t(:token_change_desc), :input_html => {:class => 'span6', :rows => 2}
 
   = f.buttons do
-    = link_to "Cancel", settings_path, :class => 'btn'
-    = f.commit_button :label => 'Save', :button_html => {:title => 'Update this authorization token'}
+    = link_to I18n.t(:Cancel), settings_path, :class => 'btn'
+    = f.commit_button :label => I18n.t(:Save), :button_html => {:title => I18n.t(:update_auth_help)}
     = f.loading

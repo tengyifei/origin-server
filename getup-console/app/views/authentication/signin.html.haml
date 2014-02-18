@@ -8,15 +8,15 @@
 
   %section
     %div.signin{ :id => 'signin' }
-      %h2 Dashboard Authentication
+      %h2= I18n.t(:Dashboard_Auth)
       %form{:action => auth_path, :id => 'form-authentication', :method => 'post'}
         %fieldset
           = token_tag(nil)
           = email_field_tag 'login', '', :placeholder => "Login", :required => ''
           = password_field_tag 'password', '', :placeholder => "Password", :required => ''
 
-          %button.getup-sprite Sign in
-          = link_to "Forgot your password?", reset_path, :id =>  'forgot'
+          %button.getup-sprite= I18n.t(:Sign_in)
+          = link_to I18n.t(:forgot_password), reset_path, :id =>  'forgot'
 
     = flashes
 

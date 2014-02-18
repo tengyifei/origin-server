@@ -8,7 +8,7 @@
           %li= link_to I18n.t(:Get_Started), getting_started_path
           //%li= link_to 'User Guide', user_guide_url
           %li= link_to 'FAQ', faq_url
-          %li= link_to 'IRC Channel', irc_web_url
+          %li!= link_to(I18n.t(:irc_channel), irc_web_url)
 
       %nav.span8
         %address

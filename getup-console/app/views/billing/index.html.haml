@@ -1,5 +1,5 @@
-- content_for :title, "Billing"
-- breadcrumb_for_account 'Billing'
+= content_for :title, I18n.t(:billing_title)
+= breadcrumb_for_account I18n.t(:Billing)
 
 = flashes
 
@@ -36,17 +36,17 @@
 .row.billing-history
   .span12
     %section
-      %h2 Billing History
+      %h2= I18n.t(:billing_history_title)
 
       %table.table.table-fixed
         %thead
           %tr
-            %th{:scope => 'col'} Id
-            %th{:scope => 'col'} Month
-            %th{:scope => 'col'} Processed
-            %th{:scope => 'col'} Due Date
-            %th{:scope => 'col'} Status
-            %th{:scope => 'col'} Amount (#{@currency})
+            %th{:scope => 'col'}= I18n.t(:Id)
+            %th{:scope => 'col'}= I18n.t(:Month)
+            %th{:scope => 'col'}= I18n.t(:Processed)
+            %th{:scope => 'col'}= I18n.t(:Due_Date)
+            %th{:scope => 'col'}= I18n.t(:Status)
+            %th{:scope => 'col'}= I18n.t(:Amount) + " (#{@currency})"
             %th{:scope => 'col'} PDF
         %tbody
           - @history.each do |h|

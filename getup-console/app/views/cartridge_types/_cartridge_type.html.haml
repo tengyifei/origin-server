@@ -9,7 +9,7 @@
 = div_for cartridge_type, :class => classes do
 
   - if not inactive and cartridge_type.tags.include? :experimental
-    %span.label.pull-right Experimental
+    %span.label.pull-right= I18n.t(:Experimental)
 
   %h3
     = cartridge_type.display_name
@@ -34,18 +34,18 @@
 
       - if cartridge_type.version
         %li.version
-          %label Version:
+          %label= I18n.t(:Version) + ':'
           %span= cartridge_type.version
 
   - if not (inactive and reason == :installed) and cartridge_type.description.present?
     = show_description cartridge_type.description
 
   - if cartridge_type.learn_more_url
-    = link_to "Learn more", cartridge_type.learn_more_url
+    = link_to I18n.t(:Learn_more), cartridge_type.learn_more_url
 
   - if extra_info and cartridge_type.provides
     %div
-      %h4 What you get:
+      %h4= I18n.t(:What_you_get) + ':'
       %ul
         - cartridge_type.provides.each do |provided|
           %li= provided
@@ -53,12 +53,12 @@
   - if reason
     - case reason
     - when :requires
-      .warning Requires #{cartridge_type.requires.join(',')}
+      .warning= I18n.t(:Requires) + cartridge_type.requires.join(',')
     - when :conflicts
-      .warning Conflicts with #{cartridge_type.conflicts.join(',')}
+      .warning= I18n.t(:Conflicts_with) + cartridge_type.conflicts.join(',')
     - when :blocked
-      .warning Cannot be added to #{application.framework_name}
+      .warning= I18n.t(:Cannot_be_added_to) + application.framework_name
 
   - unless hide_link or inactive
-    = link_to "Select »", application_cartridge_type_path(application, cartridge_type), :class => 'btn'
+    = link_to I18n.t(:Select), application_cartridge_type_path(application, cartridge_type), :class => 'btn'
 

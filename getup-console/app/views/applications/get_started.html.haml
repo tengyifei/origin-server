@@ -1,106 +1,95 @@
-- breadcrumb_for_application @application, @wizard ? 'Next steps' : 'Get Started'
+= breadcrumb_for_application @application, @wizard ? I18n.t(:Next_Steps) : I18n.t(:Get_Started)
 
 - if @wizard
   = app_wizard_steps_create 2, :completed => true
-  %h1.invisible Get Started
+  %h1.invisible= I18n.t(:Get_Started)
   %section
     = flashes
-    %p.larger Your application has been created. If you're new to OpenShift check out these tips for where to go next.
+    %p.larger= I18n.t(:app_create_next_steps)
 
 - else
-  %h1 Get Started
+  %h1= I18n.t(:Get_Started)
   %section
     = flashes
-    %p.larger Looking for tips on what to build or where to go next?  We've organized some helpful hints for you.
+    %p.larger= I18n.t(:app_create_get_started)
 
 
 %section.row
-  .span7
+  .span8
     -# application url
-    %h2 Accessing your application
+    %h2= I18n.t(:app_acessing)
     %p
       - if true #FIXME Need to come up with a better way to control this in the model.  Requires info about carts.
-        Your application has one or more cartridges that expose a public URL to the Internet.  Click the link below
-        to see your application:
+        = I18n.t(:app_create_caption_2)
       - else
-        If your application exposes services to the Internet they will be available at
+        = I18n.t(:app_create_caption_3)
 
-      %p.well.application-url.larger
+      %p.well.application-url{:style => "font-size: 20px"}
         = link_to @application.web_url, @application.web_url, :target => '_blank'
 
-    %p 
-      The 
-      = link_to "application overview page", application_path(@application)
-      provides a summary of your application and its cartridges.
+    %p!= I18n.t(:app_create_summary, app: link_to(I18n.t(:app_create_summay_link), application_path(@application)))
 
     -# git/setup
     - if true #FIXME has at least one cartridge with source code
-      %h2 Making code changes
+      %h2= I18n.t(:app_create_code_change)
 
       - unless @has_keys
         %div.well
-          %h4 Set your Public Key
-          %p
-            Before you can upload code, you need to provide us with a <strong>public key</strong>
-            to identify you to our servers. If this is your first time creating a public key
-            #{link_to "read more about SSH keys and remote access", ssh_keys_help_path}.
+          %h4= I18n.t(:app_create_set_key)
+          %p!= I18n.t(:app_create_set_key_caption, ssh: link_to(I18n.t(:app_create_set_key_ssh), ssh_keys_help_path))
           = render :partial => 'keys/simple_form', :locals => { :key => Key.new, :input_class => 'span6' }
 
-      %p 
-        OpenShift uses the #{link_to "Git version control system", git_homepage_url}
-        to manage the code of your application. Each cartridge has a single Git <strong>repository</strong>
-        that you'll use to check in changes to your application. When you <strong>push</strong>
-        a change to your Git repository we'll automatically deploy your code and restart your 
-        application if necessary.
+      %p!= I18n.t(:app_create_git, git: link_to(I18n.t(:app_create_git_url), git_homepage_url))
 
       - if @has_keys
         - if true #FIXME has a single cartridge with source code
-          %p Install the Git client for your operating system, and from your command line run
+          %p= I18n.t(:app_create_git_inst)
           %pre.cli
             = preserve do
               :escaped
                 git clone #{@application.git_url}
                 cd #{@application.name}/
-          %p 
-            This will create a folder with the source code of your application. After making a change,
-            %strong add,
-            %strong commit,
-            and
-            %strong push
-            your changes.
+          %p
+            = I18n.t(:app_create_git_caption_a)
+            %strong
+              %em
+                add,
+            %strong
+              %em
+                commit,
+            e
+            %strong
+              %em
+                push
+            = I18n.t(:app_create_git_caption_b)
           %pre.cli
             = preserve do
-              :escaped
-                git add .
-                git commit -m 'My changes'
-                git push
+              git add .
+              =I18n.t(:git_commit_mesg)
+              git push
 
-          %p 
-            When you push changes the OpenShift server will report back its status on deploying your code. 
-            The server will run any of your configured
-            = link_to "deploy hooks", deploy_hook_user_guide_topic_url
-            and then restart the application.
+          %p!= I18n.t(:app_create_git_caption_2, hooks: link_to(I18n.t(:app_create_git_hooks), deploy_hook_user_guide_topic_url))
 
         - else
           -#FIXME has multiple cartridges with source code
 
 
-  .span5
+  .span4
 
     -# cartridges
-    %h2 Adding capabilities
-    %p
-      Cartridges are the components of an OpenShift application, and include databases, build systems,
-      and management capabilities. <strong>#{link_to 'Adding a cartridge', application_cartridge_types_path(@application)}</strong> such as 
-      #{link_to 'MySQL', application_cartridge_type_path(@application, 'mysql-5.1')} or #{link_to 'MongoDB', application_cartridge_type_path(@application, 'mongodb-2.2')}
-      to an application provides the desired capability without forcing you to administrate or update that feature.
+    %h2= I18n.t(:Adding_capabilities)
+    %p!= I18n.t(:add_cap,
+      cart: link_to(I18n.t(:adding_a_cart), application_cartridge_types_path(@application)),
+      mysql: link_to('MySQL', application_cartridge_type_path(@application, 'mysql-5.1')),
+      mongodb: link_to('MongoDB', application_cartridge_type_path(@application, 'mongodb-2.2')))
+
     -#%p
       To run a PHP application with MySQL (the M and P in LAMP) you 
       %strong embed
       the MySQL cartridge into your application. OpenShift gives your PHP code access to your new MySQL database, but
       manages the database server for you.
     %p 
-      = link_to "Add a cartridge to your application now", application_cartridge_types_path(@application)
+      = link_to I18n.t(:add_cart_now), application_cartridge_types_path(@application)
       -#or from the command line with
     -#%pre.cli
       = preserve do
@@ -114,17 +103,11 @@
           rhc cartridge add -a #{@application.name} -c <cart_id>
 
     -# client
-    %h2 Managing your application
+    %h2= I18n.t(:manage_app)
 
     %h3 RHC Client Tools
 
-    %p
-      Most of the capabilities of OpenShift are exposed through our command line tool, 
-      %strong rhc.
-      Whether it's adding cartridges, checking uptime, or pulling log files from
-      the server, you can quickly put a finger on the pulse of your application.
-      #{link_to "Follow these steps to install the client", client_tools_install_help_url}
-      on Linux, Mac OS X, or Windows.
+    %p!= I18n.t(:rhc_caption, link: link_to(I18n.t(:rhc_link),client_tools_install_help_url))
     %p
       //After installing the command line tool read more 
       //#{link_to "on how to manage your application from the command line in our User Guide", user_guide_url }.

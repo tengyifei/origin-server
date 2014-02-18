@@ -1,22 +1,15 @@
-- breadcrumb_for_application @application, 'Disable Jenkins Builds'
-- content_for :page_title, 'Disable Jenkins Builds'
+= breadcrumb_for_application @application, I18n.t(:build_disable)
+= content_for :page_title, I18n.t(:build_disable)
 
-%h1 Disable Jenkins Builds
+%h1= I18n.t(:build_disable)
 
 = semantic_form_for @application, :url => application_building_path(@application), :html => {:method => :delete, :class => 'form'} do |f|
-  %p 
-    OpenShift is configured to build this application with 
-    #{link_to 'Jenkins', jenkins_help_url } when you make 
-    changes through Git. If you remove the Jenkins cartridge
-    your build history and results are preserved, but new 
-    changes to Git will no longer start builds.
+  %p!= I18n.t(:build_disable_caption_1, jenkins: link_to('Jenkins', jenkins_help_url))
 
-  %p 
-    Are you sure you wish to disable builds for this 
-    application?
+  %p= I18n.t(:build_disable_ask)
 
   = f.semantic_errors
   = f.buttons do
-    = link_to 'Cancel', @referer || application_path(@application), :class => 'btn'
-    = f.commit_button :label => "Remove Jenkins", :button_html => {:class => 'btn btn-danger'}
+    = link_to I18n.t(:Cancel), @referer || application_path(@application), :class => 'btn'
+    = f.commit_button :label => I18n.t(:Disable) + " Jenkins", :button_html => {:class => 'btn btn-danger'}
     = f.loading

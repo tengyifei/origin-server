@@ -6,6 +6,9 @@
   .span7
 
     %section
+      = render :partial => 'language', :locals => {:user => @user}
+
+    %section
       = render :partial => 'user', :locals => {:user => @user}
 
     %section

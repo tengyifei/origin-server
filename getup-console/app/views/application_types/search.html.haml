@@ -1,26 +1,21 @@
-%h1.invisible Create a New Application
+%h1.invisible= I18n.t(:Create_a_New_Application)
 = breadcrumb_for_create_application(@type_groups[0][0])
 = app_wizard_steps_create 0, :active => true
 = flashes
 
 %section.row
   .span6
-    %p.larger
-      Choose a web programming cartridge or kick the tires with a
-      quickstart. After you create the application 
-      you can add <strong>cartridges</strong> to enable additional 
-      capabilities like databases, metrics, and continuous build 
-      support with Jenkins.
+    %p.larger!= I18n.t(:app_create_caption_1)
 
     %form.form-search.form-search-block{:id => 'form-search-create-apps', :method => 'get'}
-      %label.invisible{:for => 'search'} Search by keyword or tag
-      %input.search-query{:type => 'text', :id => 'search', :name => 'search', :placeholder => 'Search by keyword or tag', :value => @search}    
+      %label.invisible{:for => 'search'}!= I18n.t(:app_create_search)
+      %input.search-query{:type => 'text', :id => 'search', :name => 'search', :placeholder => I18n.t(:app_create_search)}
       %button.search.font-icon{:type => 'submit', "aria-hidden" => "true", "data-icon" => "\uee03"} 
 
     - if @browse_tags.present?
       %span.dropdown
         %a.btn.dropdown-toggle{:href => '#', :data => {:toggle => 'dropdown'}}
-          Browse by tag...
+          = I18n.t(:browse_by_tag)
           %span.font-icon{"aria-hidden" => "true", "data-icon" => "\uee12"}
         %ul.dropdown-menu#tag-filter
           - @browse_tags.each do |(name, tag)|
@@ -33,14 +28,11 @@
       %dt
         %span.font-icon{"aria-hidden" => "true", "data-icon" => "\ue021"}
         Cartridge
-      %dd 
-        A managed runtime that receives security updates and upgrades automatically.
+      %dd= I18n.t(:app_create_cart_caption)
       %dt
         %span.font-icon{"aria-hidden" => "true", "data-icon" => "\ue029"}
         QuickStart
-      %dd 
-        An quick way to try out a new technology with code and libraries preconfigured. You are 
-        responsible for updating core libraries for security updates.
+      %dd= I18n.t(:app_create_quickstart_caption)
 
 %section
   - if @type_groups.length == 1
@@ -50,7 +42,7 @@
     %h3.divide
       #{title}
       - if types.length > 4
-        %small= link_to '(show all)', application_types_path
+        %small= link_to I18n.t(:app_create_see_all), application_types_path
     .row
       - in_columns_of(2, types).each do |types|
         .span6.tile-dark
@@ -64,11 +56,11 @@
             %h3.divide= title
             = render :collection => types, :locals => {:excluded_tags => []}
 
-  %p #{link_to "See all application types", application_types_path}
+  %p #{link_to I18n.t(:see_all_app_types), application_types_path}
 
 %section
   %p
-    Can't find what you're looking for? Try broadening your search or filtering by another tag.
+    =I18n.t(:search_caption)
     -#%p
       Can't find what you're looking for? #{link_to "Browse the Quickstarts", community_quickstarts_url} 
       on our community, or #{link_to "create your own!", create_quickstart_url}

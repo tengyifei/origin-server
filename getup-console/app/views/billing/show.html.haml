@@ -1,9 +1,9 @@
-- content_for :title, "Invoice"
-- breadcrumb_for_account_billing 'Invoice'
+- content_for :title, I18n.t(:Invoice)
+- breadcrumb_for_account_billing I18n.t(:Invoice)
 - end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
 - start_date = !@period[:start].nil? ? Date.strptime("#{@period[:start]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
-%h1 Invoice ##{@id}
-%h3 Period: #{start_date} - #{end_date}
+%h1= I18n.t(:Invoice) + " ##{@id}"
+%h3= I18n.t(:Period) + ": #{start_date} - #{end_date}"
 = flashes
 
 - if @status
@@ -45,13 +45,13 @@
               //Invoice summary
               %td.top
                 %dl
-                  %dt Invoice:
+                  %dt= I18n.t(:Invoice) + ':'
                   %dd ##{@id}
 
-                  %dt Client:
+                  %dt= I18n.t(:Client) + ':'
                   %dd ##{@user[:id]}
 
-                  %dt Reference:
+                  %dt= I18n.t(:Reference) + ':'
                   - end_date = !@period[:end].nil? ? Date.strptime("#{@period[:end]}","%Y-%m-%d").strftime("%d/%m/%Y") : '-'
                   %dd #{end_date}
   
@@ -61,16 +61,16 @@
         //Applications
         - @applications.each do |app|
           - total = 0
-          %h3 Application #{app[1][:name]}
+          %h3= I18n.t(:Application) + " #{app[1][:name]}"
           %table.table.table-fixed.invoice
             %thead
               %tr
-                %th{:scope => 'col', :style => 'width: 350px'} Item
-                %th{:scope => 'col', :style => 'width: 200px'} Type
-                %th{:scope => 'col', :style => 'width: 150px'} Quantity
-                %th{:scope => 'col'} Unit
-                %th{:scope => 'col', :style => 'width: 120px'} Unit cost
-                %th{:scope => 'col', :style => 'width: 120px'} Total cost
+                %th{:scope => 'col', :style => 'width: 350px'}= I18n.t(:Item)
+                %th{:scope => 'col', :style => 'width: 200px'}= I18n.t(:Type)
+                %th{:scope => 'col', :style => 'width: 150px'}= I18n.t(:Quantity)
+                %th{:scope => 'col'}= I18n.t(:Unit)
+                %th{:scope => 'col', :style => 'width: 120px'}= I18n.t(:Unit_cost)
+                %th{:scope => 'col', :style => 'width: 120px'}= I18n.t(:Total_cost)
             %tbody
             - app[1][:items].each do |item|
               - total += item[:amount].to_f
@@ -89,19 +89,19 @@
   
       //Credit
       - if !@amount[:GEAR_USAGE][:credit].nil?
-        %h3 Credits
+        %h3= I18n.t(:Credits)
         %table.table.table-fixed.invoice
           %thead
             %tr
-              %th{:scope => 'col', :style => 'width: 350px'} Item
-              %th{:scope => 'col', :style => 'width: 200px'} Type
-              %th{:scope => 'col', :style => 'width: 150px'} Quantity
-              %th{:scope => 'col'} Unit
-              %th{:scope => 'col', :style => 'width: 120px'} Unit cost
-              %th{:scope => 'col', :style => 'width: 120px'} Total credit
+              %th{:scope => 'col', :style => 'width: 350px'}= I18n.t(:Item)
+              %th{:scope => 'col', :style => 'width: 200px'}= I18n.t(:Type)
+              %th{:scope => 'col', :style => 'width: 150px'}= I18n.t(:Quantity)
+              %th{:scope => 'col'}= I18n.t(:Unit)
+              %th{:scope => 'col', :style => 'width: 120px'}= I18n.t(:Unit_cost)
+              %th{:scope => 'col', :style => 'width: 120px'}= I18n.t(:Total_credit)
           %tbody
             %tr
-              %td Free gear
+              %td= I18n.t(:Free_gear)
               %td GEAR_USAGE
               %td #{@amount[:GEAR_USAGE][:credit][:quantity]}
               %td #{@amount[:GEAR_USAGE][:credit][:unit]}

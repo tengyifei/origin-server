@@ -30,9 +30,9 @@ class AliasesController < ConsoleController
     @alias.normalize_certificate_content!
 
     if @alias.save
-      redirect_to @application, :flash => {:success => "Alias '#{@alias.id}' has been created"}
+      redirect_to @application, :flash => {:success => I18n.t(:alias_created, name: %{name}) }
     else
-      message = @alias.errors.first || "Unable to create alias '#{@alias.name}'"
+      message = @alias.errors.first || I18n.t(:alias_create_error, name: %{name})
       redirect_to application_aliases_path(@application), :flash => {:error => message.kind_of?(Array) ? message.select {|x| x.is_a?(String)} : message}
     end
   end
@@ -48,10 +48,10 @@ class AliasesController < ConsoleController
     @application = @domain.find_application params[:application_id]
     alias_name = params[:id]
     if alias_name and @application.remove_alias(alias_name)
-      message = @application.messages.first || "Alias '#{alias_name}' has been removed"
+      message = @application.messages.first || I18n.t(:alias_removed, name: %{name})
       redirect_to @application, :flash => {:success => message.kind_of?(Array) ? message.select {|x| x.is_a?(String)} : message}
     else
-      message = @alias.errors.first || "Unable to delete alias '#{alias_name}'"
+      message = @alias.errors.first || I18n.t(:alias_remove_error, name: %{name})
       flash.now[:error] = message.kind_of?(Array) ? message.select {|x| x.is_a?(String)} : message
       render :index
     end
@@ -75,9 +75,9 @@ class AliasesController < ConsoleController
     end
 
     if @alias.errors.empty?
-      redirect_to @application, :flash => {:success => "Alias '#{@alias.id}' has been updated"}
+      redirect_to @application, :flash => {:success => I18n.t(:alias_updated, name: %{name})}
     else
-      message = @alias.errors.first || "Unable to update alias '#{@alias.name}'"
+      message = @alias.errors.first || I18n.t(:alias_update_error, name: %{name})
       flash.now[:error] = message.kind_of?(Array) ? message.select {|x| x.is_a?(String)} : message
       render :show
     end

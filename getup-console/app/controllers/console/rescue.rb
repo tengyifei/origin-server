@@ -18,12 +18,12 @@ module Console
         alternatives = begin
             if Application == e.model
               @domain.applications.map do |app|
-                ["Application #{app.name}", application_path(app)]
+                [ I18n.t(:app_alternative, app: app.name), application_path(app)]
               end.tap do |links|
-                links << ['Create a new application', new_application_path] if links.empty?
+                links << [I18n.t(:Create_a_New_Application), new_application_path] if links.empty?
               end if @domain rescue nil
             elsif ApplicationType == e.model
-              [['See other application types', application_types_path]]
+              [[I18n.t(:see_other_app_types), application_types_path]]
             end
           end if e.respond_to? :model
 

@@ -6,7 +6,7 @@
     :value => "#{application.name}", 
     :autofocus => (params[:focus].blank?),
     :size => nil, 
-    :placeholder => 'Application name', 
+    :placeholder => I18n.t(:app_name), 
     :class => "application_name span3 #{'error' if application.errors.include? :name}"
 
   -# If the user has a domain, use it, otherwise prompt them for that field
@@ -27,4 +27,4 @@
 
 - unless @domain and @domain.persisted?
   %p.help-block
-    %span.text-warning Because this is your first application, you need to provide a domain name under which your applications will be grouped
+    %span.text-warning= I18n.t(:app_create_set_namespace)

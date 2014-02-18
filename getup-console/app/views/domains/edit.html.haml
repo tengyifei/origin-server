@@ -1,7 +1,6 @@
-- content_for :title, "Change your Namespace"
-- breadcrumb_for_settings 'Change your Namespace'
-%h1 Change your Namespace
+= content_for :title, I18n.t(:change_namespace)
+= breadcrumb_for_settings I18n.t(:change_namespace)
+%h1= I18n.t(:change_namespace)
 .alert.alert-warning
-  %strong Warning
-  Changing your namespace will alter the public URLs of your applications.  If you change your namespace you will need to update any bookmarks or external links to your applications.
+  %strong!= I18n.t(:change_namespace_warning)
 = render :partial => 'form', :locals => { :domain => @domain }

@@ -1,34 +1,29 @@
-- breadcrumb_for_application @application, 'Add a Cartridge'
-- content_for :page_title, 'Next Steps'
+- breadcrumb_for_application @application, I18n.t(:add_a_cartridge)
+- content_for :page_title, I18n.t(:Next_Steps)
 
 - if @wizard
   = cartridge_wizard_steps_create 2, :completed => true
-  %h1.invisible Next Steps
+  %h1.invisible= I18n.t(:Next_Steps)
 - else
-  %h1 Next Steps
+  %h1= I18n.t(:Next_Steps)
 
 = flashes
 
 .row
   .span7
     -# client
-    %h2 Managing your cartridge
-    %p
-      Most of the capabilities of OpenShift are exposed through our command line tool, <code>rhc</code>.
-      Whether it's adding cartridges, checking uptime, or pulling log files from
-      the server, you can quickly put a finger on the pulse of your application.
-      #{link_to "Follow these steps to install the client", getting_started_path}
-      on Linux, Mac OS X, or Windows.
+    %h2= I18n.t(:managing_cartridge)
+    %p!= I18n.t(:rhc_caption, link: link_to(I18n.t(:rhc_link),client_tools_install_help_url))
 
-    %p
-      You can get a list of cartridges by running
+    %p= I18n.t(:rhc_cart_list)
 
     %pre.cli
       = preserve do
         :escaped
           rhc cartridge list
-    %p
-      You can manage the cartridge by running one of these commands
+
+    %p= I18n.t(:rhc_cart_man)
+
     %pre.cli
       = preserve do
         :escaped
@@ -38,21 +33,18 @@
           rhc cartridge reload -a #{@application.name} -c #{@cartridge.name}
           rhc cartridge status -a #{@application.name} -c #{@cartridge.name}
 
-    %p
-      You can remove the cartridge by running the following command.
-      .warning
-        Warning: make sure you've backed up any data you wish to keep before running this command
+    %p= I18n.t(:rhc_cart_rm)
+
+      .warning= I18n.t(:rhc_cart_rm_warn)
+
     %pre.cli
       = preserve do
         :escaped
           rhc cartridge remove -a #{@application.name} -c #{@cartridge.name}
 
   .span5
-    %h2 Cartridge info
+    %h2= I18n.t(:Cartridge_info)
     = render :partial => @cartridge_type, :locals => {:hide_link => true, :extra_info => true}
 
-    %h2 Accessing your application
-    %p 
-      The 
-      = link_to "application overview page", application_path(@application)
-      provides a summary of your application and its cartridges.
+    %h2= I18n.t(:app_acessing)
+    %p!= I18n.t(:app_create_summary, app: link_to(I18n.t(:app_create_summary_link), application_path(@application)))

@@ -5,17 +5,17 @@
   %table.table.table-condensed.table-striped.table-fixed
     %thead
       %tr
-        %th{:scope => 'col'} Note
-        %th{:scope => 'col'} Scope
-        %th{:scope => 'col'} Expires in
+        %th{:scope => 'col'}= I18n.t(:Note)
+        %th{:scope => 'col'}= I18n.t(:Scope)
+        %th{:scope => 'col'}= I18n.t(:Expires_in)
     %tbody
     - authorizations.each do |authorization|
       %tr{:id => "#{authorization.id}_auth"}
-        %td{:scope => 'row'}= link_to authorization.note.presence || "<none>", authorization_path(authorization)
+        %td{:scope => 'row'}= link_to authorization.note.presence || "<" + I18n.t(:none) + ">", authorization_path(authorization)
         %td= authorization.scopes.join(' ')
         %td{:title => authorization.expires_at.to_s(:rfc822)}= distance_of_time_in_words(authorization.expires_at, Time.now)
 
 .btn-toolbar
   = link_to I18n.t(:authorization_btn), new_authorization_path, :class => 'btn btn-small btn-danger'
   - if authorizations.present?
-    = link_to "Revoke all", authorizations_path, :class => 'btn btn-small', :method => :delete, :confirm => "Are you sure you want to revoke all authorizations for this account? This will end any active sessions immediately."
+    = link_to I18n.t(:Revoke_all), authorizations_path, :class => 'btn btn-small', :method => :delete, :confirm => I18n.t(:token_revoke_all_mesg)

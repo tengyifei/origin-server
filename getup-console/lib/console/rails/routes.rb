@@ -77,6 +77,7 @@ module ActionDispatch::Routing
         resource :settings, :controller => :settings, :only => [:show] do
           get 'password' => 'settings#password'
           post 'password' => 'settings#update_password'
+          post 'language' => 'settings#update_language'
         end
 
         scope 'settings' do
@@ -86,6 +87,7 @@ module ActionDispatch::Routing
 
       def openshift_settings_resource_routes
         resource :domain, :only => [:new, :create, :edit, :update]
+        resource :language, :only => [:create]
         resources :keys, :only => [:new, :create, :destroy]
         resources :authorizations, :except => [:index]
         match 'authorizations' => 'authorizations#destroy_all', :via => :delete

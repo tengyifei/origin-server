@@ -1,5 +1,5 @@
-- breadcrumb_for_application @application, 'Add a Cartridge'
-- content_for :page_title, 'Add a Cartridge'
+- breadcrumb_for_application @application, I18n.t(:add_a_cartridge)
+- content_for :page_title, I18n.t(:add_a_cartridge)
 
 %h1.invisible Configure New Application
 = cartridge_wizard_steps_create 1
@@ -12,11 +12,11 @@
   = f.hidden_field :name, :value => @cartridge_type.name
   = f.semantic_errors
   %p
-    Do you want to add the
+    = I18n.t(:add_cartridge_ask_1)
     %strong
       #{@cartridge_type.display_name}
-    cartridge to your application?
+    = I18n.t(:add_cartridge_ask_2)
   = f.buttons do
-    = link_to "Back", application_cartridge_types_path(@application), :class => 'btn'
-    = f.commit_button("Add Cartridge")
+    = link_to I18n.t(:Back), application_cartridge_types_path(@application), :class => 'btn'
+    = f.commit_button(I18n.t(:Add_Cartridge))
     = f.loading

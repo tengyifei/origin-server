@@ -40,9 +40,9 @@
     text-shadow: none;
   }
 
-- content_for :page_title, @message || 'Page not found'
+- content_for :page_title, @message || I18n.t(:Page_not_found)
 
-%h1= @message || 'Page not found <small>404</small>'.html_safe
+%h1= @message || I18n.t(:Page_not_found) + ' <small>404</small>'.html_safe
 
 %section.row
   .span7
@@ -50,7 +50,7 @@
       %h2 The page you requested was not found or may no longer exist
 
     - if @alternatives.present?
-      %p Were you looking for any of the following?
+      %p= I18n.t(:not_found_caption)
       %ul
         - @alternatives.each do |alt|
           %li= link_to alt[0], alt[1], alt[2] || {}
