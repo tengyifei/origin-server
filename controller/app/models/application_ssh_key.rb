@@ -6,4 +6,10 @@ class ApplicationSshKey < SshKey
   include Mongoid::Document
   field :component_id, type: Moped::BSON::ObjectId
   embedded_in :application, class_name: Application.name
+
+  def to_obj(args={})
+    super
+    self.component_id = args["component_id"] if args["component_id"]
+    self
+  end
 end

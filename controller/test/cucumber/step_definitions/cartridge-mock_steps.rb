@@ -4,9 +4,9 @@ Then /^the ([^ ]+) ([^ ]+) marker will( not)? exist$/ do |cartridge_name, marker
   marker_file = File.join($home_root, @gear.uuid, 'app-root', 'data', state_dir, marker)
 
   if negate
-    assert_file_not_exists marker_file
+    refute_file_exist marker_file
   else
-    assert_file_exists marker_file
+    assert_file_exist marker_file
   end
 end
 
@@ -16,7 +16,7 @@ When /^the ([^ ]+) ([^ ]+) marker is removed$/ do |cartridge_name, marker|
   marker_file = File.join($home_root, @gear.uuid, 'app-root', 'data', state_dir, marker)
 
   FileUtils.rm_f marker_file
-  assert_file_not_exists marker_file  
+  refute_file_exist marker_file
 end
 
 
@@ -25,7 +25,7 @@ Then /^the ([^ ]+) ([^ ]+) marker will be ([^ ]+)$/ do |cartridge_name, marker, 
 
   marker_file = File.join($home_root, @gear.uuid, 'app-root', 'data', state_dir, marker)
 
-  assert_file_exists marker_file
+  assert_file_exist marker_file
 
   assert_equal value, File.open(marker_file, "rb").read.chomp
 end
@@ -35,8 +35,7 @@ When /^a new file is added and pushed to the client-created application repo$/ d
     run "echo 'foo' >> cucumber_test_file"
     run 'git add .'
     run "git commit -m 'Test Change'"
-    push_output = `git push`
-    $logger.info("Push output:\n#{push_output}")
+    run("git push >> " + @app.get_log("git_push") + " 2>&1")
   end
 end
 
@@ -49,9 +48,9 @@ Then /^the new file will (not )?be present in the (secondary )?gear app-root rep
   end
 
   if negate
-    assert_file_not_exists file
+    refute_file_exist file
   else
-    assert_file_exists file
+    assert_file_exist file
   end
 end
 
@@ -68,9 +67,9 @@ Then /^the ([^ ]+) ([^ ]+) marker will( not)? exist in the( plugin)? gear$/ do |
   end
 
   if negate
-    assert_file_not_exists marker_file
+    refute_file_exist marker_file
   else
-    assert_file_exists marker_file
+    assert_file_exist marker_file
   end  
 end
 

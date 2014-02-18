@@ -1,0 +1,42 @@
+.tile.tile-click.application{ :class => application.owner? ? 'application-owned' : nil }
+  %h3.flow
+    - if application.aliases.present?
+      = link_to application_path(application), :class => 'tile-target flow-block name' do
+        = application.name
+        = '-'
+        %span.alias= application.aliases.first.name
+    - else
+      = link_to application.name, application_path(application), :class => 'tile-target'
+
+    %span.flow-block.right
+      %span.url
+        = link_to application.web_url, :target => '_blank', :title => "Go to the application's web page", :class => "font-icon-link" do
+          %span.font-icon.url-icon{'aria-hidden'=>"true", 'data-icon' => "\ue002"}
+
+      - type, title = application_gear_title(application)
+      %span.count{:title => title}
+        = application.gear_count
+        %span.gear-icon{'aria-hidden'=>"true", 'data-icon' => "\ue014"}
+        - case type
+        - when :max
+          .gauge-vertical>
+            %span.gauge-tick.fill>  .
+            %span.gauge-tick.fill>  .
+            %span.gauge-tick.fill>  .
+        - when :min
+          .gauge-vertical>
+            %span.gauge-tick.empty> .
+            %span.gauge-tick.empty> .
+            %span.gauge-tick.fill>  .
+        - when :middle
+          .gauge-vertical>
+            %span.gauge-tick.empty> .
+            %span.gauge-tick.fill>  .
+            %span.gauge-tick.fill>  .
+        - when :fixed
+          .gauge-vertical>
+            %span.gauge-tick.fill> .
+            %span.gauge-tick.fill> .
+            %span.gauge-tick.fill> .
+
+  .cartridges= application.cartridges.map(&:display_name).join(', ')

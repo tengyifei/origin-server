@@ -2,11 +2,9 @@
 # Application descriptor API
 # @api REST
 class DescriptorsController < BaseController
-  before_filter :get_domain, :get_application
+  before_filter :get_application
   ##
   # Retrieve application descriptor
-  # 
-  # URL: /domains/:domain_id/applications/:application_id/descriptor
   #
   # Action: GET
   #
@@ -15,7 +13,7 @@ class DescriptorsController < BaseController
   #   Name: appname
   #   Requires:
   #   - mysql-5.1
-  #   - mongodb-2.2
+  #   - mongodb-2.4
   #   - php-5.4
   #   Group-Overrides:
   #   - components:
@@ -26,6 +24,6 @@ class DescriptorsController < BaseController
   #   ```
   # @return [RestReply<YAML>] Application Descriptor in YAML format
   def show
-    render_success(:ok, "descriptor", @application.to_descriptor.to_yaml, "Show descriptor for application '#{@application.name}' for domain '#{@domain.namespace}'")
+    render_success(:ok, "descriptor", @application.to_descriptor.to_yaml, "Show descriptor for application '#{@application.name}' for domain '#{@application.domain_namespace}'")
   end
 end

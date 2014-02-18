@@ -30,6 +30,14 @@ module Console::HelpHelper
     user_guide_topic_url 'chap-OpenShift-User_Guide-Namespaces.html'
   end
 
+  def product_architecture_url
+    community_base_url 'products/architecture'
+  end
+
+  def products_url
+    community_base_url 'products'
+  end
+
   def cartridge_list_url
     community_base_url 'developers/technologies'
   end

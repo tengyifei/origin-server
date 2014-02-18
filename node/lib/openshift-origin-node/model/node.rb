@@ -15,10 +15,12 @@
 #++
 
 require 'openshift-origin-node/utils/sdk'
+require 'openshift-origin-node/utils/shell_exec'
+require 'openshift-origin-node/utils/node_logger'
 require 'openshift-origin-common/models/manifest'
 require 'openshift-origin-node/model/cartridge_repository'
+require 'openshift-origin-node/model/application_container'
 require 'openshift-origin-common'
-require 'systemu'
 require 'safe_yaml'
 require 'etc'
 
@@ -37,26 +39,41 @@ module OpenShift
       DEFAULT_QUOTA            = { 'quota_files' => 1000, 'quota_blocks' => 128 * 1024 }
       DEFAULT_PAM_LIMITS       = { 'nproc' => 100 }
 
+      DEFAULT_NODE_PROFILE         = 'small'
+      DEFAULT_QUOTA_BLOCKS         = '1048576'
+      DEFAULT_QUOTA_FILES          = '80000'
+      DEFAULT_NO_OVERCOMMIT_ACTIVE = false
+      DEFAULT_MAX_ACTIVE_GEARS     = 0
+
+      @@resource_limits_cache = nil
+
+      def self.resource_limits
+        unless @@resource_limits_cache
+          limits = '/etc/openshift/resource_limits.conf'
+          if File.readable? limits
+            @@resource_limits_cache = OpenShift::Config.new(limits)
+          else
+            return nil
+          end
+        end
+        return @@resource_limits_cache
+      end
+
       def self.get_cartridge_list(list_descriptors = false, porcelain = false, oo_debug = false)
         carts = []
         CartridgeRepository.instance.latest_versions do |cartridge|
-          cartridge.versions.each do |version|
-            begin
-              cooked = Runtime::Manifest.new(cartridge.manifest_path, version, cartridge.repository_path)
-              print "Loading #{cooked.name}-#{cooked.version}..." if oo_debug
+          begin
+            print "Loading #{cartridge.name}-#{cartridge.version}..." if oo_debug
 
-              v1_manifest            = Marshal.load(Marshal.dump(cooked.manifest))
-              
-              # Appending the version to the name will be done in the common cartridge model 
-              #v1_manifest['Name']    = "#{cooked.name}-#{cooked.version}"
-              
-              v1_manifest['Version'] = cooked.version
-              carts.push OpenShift::Cartridge.new.from_descriptor(v1_manifest)
-              print "OK\n" if oo_debug
-            rescue Exception => e
-              print "ERROR\n" if oo_debug
-              print "#{e.message}\n#{e.backtrace.inspect}\n" unless porcelain
-            end
+            # Deep copy is necessary here because OpenShift::Cartridge makes destructive changes
+            # to the hash passed to from_descriptor
+            v1_manifest            = Marshal.load(Marshal.dump(cartridge.manifest))
+            v1_manifest['Version'] = cartridge.version
+            carts.push OpenShift::Cartridge.new.from_descriptor(v1_manifest)
+            print "OK\n" if oo_debug
+          rescue Exception => e
+            print "ERROR\n" if oo_debug
+            print "#{e.message}\n#{e.backtrace.inspect}\n" unless porcelain
           end
         end
 
@@ -86,60 +103,29 @@ module OpenShift
         output
       end
 
-      # This won't be updated for v2 because it's going away soon.
-      def self.get_cartridge_info(cart_name, porcelain = false, oo_debug = false)
-        output = ""
-        cart_found = false
-
-        cartridge_path = OpenShift::Config.new.get("CARTRIDGE_BASE_PATH")
-        Dir.foreach(cartridge_path) do |cart_dir|
-          next if [".", "..", "embedded", "abstract", "abstract-httpd", "haproxy-1.4", "mysql-5.1", "mongodb-2.2", "postgresql-8.4"].include? cart_dir
-          path = PathUtils.join(cartridge_path, cart_dir, "info", "manifest.yml")
-          begin
-            cart = OpenShift::Cartridge.new.from_descriptor(YAML.load(File.open(path), :safe => true))
-            if cart.name == cart_name
-              output << "CLIENT_RESULT: "
-              output << cart.to_descriptor.to_json
-              cart_found = true
-              break
-            end
-          rescue Exception => e
-            print "ERROR\n" if oo_debug
-            print "#{e.message}\n#{e.backtrace.inspect}\n" unless porcelain
-          end
-        end
-
-        embedded_cartridge_path = PathUtils.join(cartridge_path, "embedded")
-        if (! cart_found) and File.directory?(embedded_cartridge_path)
-          Dir.foreach(embedded_cartridge_path) do |cart_dir|
-            next if [".",".."].include? cart_dir
-            path = PathUtils.join(embedded_cartridge_path, cart_dir, "info", "manifest.yml")
-            begin
-              cart = OpenShift::Cartridge.new.from_descriptor(YAML.load(File.open(path), :safe => true))
-              if cart.name == cart_name
-                output << "CLIENT_RESULT: "
-                output << cart.to_descriptor.to_json
-                break
-              end
-            rescue Exception => e
-              print "ERROR\n" if oo_debug
-              print "#{e.message}\n#{e.backtrace.inspect}\n" unless porcelain
-            end
-          end
-        end
-        output
-      end
-
       def self.get_quota(uuid)
-        cmd = %&quota --always-resolve -w #{uuid} | awk '/^.*\\/dev/ {print $1":"$2":"$3":"$4":"$5":"$6":"$7}'; exit ${PIPESTATUS[0]}&
-        st, out, errout = systemu cmd
-        if st.exitstatus == 0 || st.exitstatus == 1
-          arr = out.strip.split(":")
-          raise NodeCommandException.new "Error: #{errout} executing command #{cmd}" unless arr.length == 7
-          arr
-        else
-          raise NodeCommandException.new "Error: #{errout} executing command #{cmd}"
+        begin
+          Etc.getpwnam(uuid)
+        rescue ArgumentError
+          raise NodeCommandException.new(
+                    Utils::Sdk.translate_out_for_client("Unable to obtain quota user #{uuid} does not exist",
+                                                        :error))
         end
+
+        stdout, _, _ = Utils.oo_spawn("quota --always-resolve -w #{uuid}")
+        results      = stdout.split("\n").grep(%r(^.*/dev/))
+        if results.empty?
+          raise NodeCommandException.new(
+                    Utils::Sdk.translate_out_for_client("Unable to obtain quota for user #{uuid}",
+                                                        :error))
+        end
+
+        results = results.first.strip.split(' ')
+
+        {device:      results[0],
+         blocks_used: results[1].to_i, blocks_quota: results[2].to_i, blocks_limit: results[3].to_i,
+         inodes_used: results[4].to_i, inodes_quota: results[5].to_i, inodes_limit: results[6].to_i
+        }
       end
 
       def self.get_gear_mountpoint
@@ -158,20 +144,60 @@ module OpenShift
         oldpath
       end
 
-      def self.set_quota(uuid, blocksmax, inodemax)
-        if inodemax.to_s.empty?
-          cur_quota = get_quota(uuid)
-          inodemax = cur_quota[6]
+      def self.check_quotas(uuid, watermark)
+        output = []
+        quota  = self.get_quota(uuid)
+        usage  = (quota[:blocks_used] / quota[:blocks_limit].to_f) * 100.0
+
+        if watermark < usage
+          output << "Warning: Gear #{uuid} is using %3.1f%% of disk quota" % usage
         end
 
-        mountpoint = self.get_gear_mountpoint
-        cmd = "setquota --always-resolve -u #{uuid} 0 #{blocksmax} 0 #{inodemax} -a #{mountpoint}"
-        st, out, errout = systemu cmd
-        raise NodeCommandException.new "Error: #{errout} executing command #{cmd}" unless st.exitstatus == 0
+        usage = (quota[:inodes_used] / quota[:inodes_limit].to_f) * 100.0
+        if watermark < usage
+          output << "Warning: Gear #{uuid} is using %3.1f%% of inodes allowed" % usage
+        end
+        return output
+      rescue Exception => e
+        return []
+      end
+
+      def self.set_quota(uuid, blocksmax, inodemax)
+        current_quota, current_inodes, cur_quota = 0, 0, nil
+
+        begin
+          cur_quota = get_quota(uuid)
+        rescue NodeCommandException
+          # keep defaults
+        end
+
+        unless nil == cur_quota
+          current_quota  = cur_quota[:blocks_used]
+          blocksmax      = cur_quota[:blocks_limit] if blocksmax.to_s.empty?
+          current_inodes = cur_quota[:inodes_used]
+          inodemax       = cur_quota[:inodes_limit] if inodemax.to_s.empty?
+        end
+
+        if current_quota > blocksmax.to_i
+          raise NodeCommandException.new(
+                    Utils::Sdk.translate_out_for_client("Current usage #{current_quota} exceeds requested quota #{blocksmax}",
+                                                        :error))
+        end
+
+        if current_inodes > inodemax.to_i
+          raise NodeCommandException.new(
+                    Utils::Sdk.translate_out_for_client("Current inodes #{current_inodes} exceeds requested inodes #{inodemax}",
+                                                        :error))
+        end
+
+        mountpoint      = self.get_gear_mountpoint
+        cmd             = "setquota --always-resolve -u #{uuid} 0 #{blocksmax} 0 #{inodemax} -a #{mountpoint}"
+        _, stderr, rc = Utils.oo_spawn(cmd)
+        raise NodeCommandException.new "Error: #{stderr} executing command #{cmd}" unless rc == 0
       end
 
       def self.init_quota(uuid, blocksmax=nil, inodemax=nil)
-        resource = OpenShift::Config.new('/etc/openshift/resource_limits.conf')
+        resource = resource_limits
         blocksmax = (blocksmax or resource.get('quota_blocks') or DEFAULT_QUOTA['quota_blocks'])
         inodemax  = (inodemax  or resource.get('quota_files')  or DEFAULT_QUOTA['quota_files'])
         self.set_quota(uuid, blocksmax.to_i, inodemax.to_i)
@@ -183,11 +209,6 @@ module OpenShift
         rescue NodeCommandException
           # If the user no longer exists than it has no quota
         end
-      end
-
-      def self.find_system_messages(pattern)
-        regex = Regexp.new(pattern)
-        open('/var/log/messages') { |f| f.grep(regex) }.join("\n")
       end
 
       def self.init_pam_limits_all
@@ -205,7 +226,7 @@ module OpenShift
       end
 
       def self.init_pam_limits(uuid, limits={})
-        resource =OpenShift::Config.new('/etc/openshift/resource_limits.conf')
+        resource = resource_limits
         limits_order = (resource.get('limits_order') or DEFAULT_PAM_LIMITS_ORDER)
         limits_file = PathUtils.join(DEFAULT_PAM_LIMITS_DIR, "#{limits_order}-#{uuid}.conf")
 
@@ -239,7 +260,7 @@ module OpenShift
       end
 
       def self.get_pam_limits(uuid)
-        resource = OpenShift::Config.new('/etc/openshift/resource_limits.conf')
+        resource = resource_limits
         limits_order = (resource.get('limits_order') or DEFAULT_PAM_LIMITS_ORDER)
         limits_file = PathUtils.join(DEFAULT_PAM_LIMITS_DIR, "#{limits_order}-#{uuid}.conf")
 
@@ -284,7 +305,7 @@ module OpenShift
       end
 
       def self.remove_pam_limits(uuid)
-        resource = OpenShift::Config.new('/etc/openshift/resource_limits.conf')
+        resource = resource_limits
         limits_order = (resource.get('limits_order') or DEFAULT_PAM_LIMITS_ORDER)
         limits_file = PathUtils.join(DEFAULT_PAM_LIMITS_DIR, "#{limits_order}-#{uuid}.conf")
         begin
@@ -293,6 +314,57 @@ module OpenShift
         end
       end
 
+      def self.node_utilization
+        res = Hash.new(nil)
+
+        resource = resource_limits
+        return res unless resource
+
+        res['node_profile'] = resource.get('node_profile', DEFAULT_NODE_PROFILE)
+        res['quota_blocks'] = resource.get('quota_blocks', DEFAULT_QUOTA_BLOCKS)
+        res['quota_files'] = resource.get('quota_files', DEFAULT_QUOTA_FILES)
+        res['no_overcommit_active'] = resource.get_bool('no_overcommit_active', DEFAULT_NO_OVERCOMMIT_ACTIVE)
+
+        # use max_{active_,}gears if set in resource limits, or fall back to old "apps" names
+        res['max_active_gears'] = (resource.get('max_active_gears') or resource.get('max_active_apps') or DEFAULT_MAX_ACTIVE_GEARS)
+
+        #
+        # Count number of git repos and gear status counts
+        #
+        res['git_repos_count'] = 0
+        res['gears_total_count'] = 0
+        res['gears_idled_count'] = 0
+        res['gears_stopped_count'] = 0
+        res['gears_started_count'] = 0
+        res['gears_deploying_count'] = 0
+        res['gears_unknown_count'] = 0
+        OpenShift::Runtime::ApplicationContainer.all(nil, false).each do |app|
+          # res['git_repos_count'] += 1 if ApplicationRepository.new(app).exists?
+          res['gears_total_count'] += 1
+
+          case app.state.value
+          # expected values: building, deploying, started, idle, new, stopped, or unknown
+          when 'idle'
+            res['gears_idled_count'] += 1
+          when 'stopped'
+            res['gears_stopped_count'] += 1
+          when 'started'
+            res['gears_started_count'] += 1
+          when *%w[new building deploying]
+            res['gears_deploying_count'] += 1
+          else # literally 'unknown' or something else
+            res['gears_unknown_count'] += 1
+          end
+        end
+
+        # consider a gear active unless explicitly not
+        res['gears_active_count'] = res['gears_total_count'] - res['gears_idled_count'] - res['gears_stopped_count']
+        res['gears_usage_pct'] = begin res['gears_total_count'] * 100.0 / res['max_active_gears'].to_f; rescue; 0.0; end
+        res['gears_active_usage_pct'] = begin res['gears_active_count'] * 100.0 / res['max_active_gears'].to_f; rescue; 0.0; end
+        res['capacity'] = res['gears_usage_pct'].to_s
+        res['active_capacity'] = res['gears_active_usage_pct'].to_s
+        return res
+      end
     end
   end
 end

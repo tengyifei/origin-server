@@ -23,7 +23,8 @@ function wait_for_postgres_availability {
 
 function start {
   if ! _is_running; then
-    echo "Starting Postgres"
+    echo "Starting Postgres cartridge"
+    oo-erb conf/postgresql.conf.erb.hidden > conf/postgresql.conf
 
     postgresql_context "pg_ctl start"
     wait_for_postgres_availability || error "Could not start Postgres" 70
@@ -44,8 +45,8 @@ function stop {
     if _is_running; then
       error "Could not stop Postgres" 70
     else
+      echo "Stopping Postgres cartridge"
       truncate -s0 $OPENSHIFT_POSTGRESQL_DB_PID
-      echo "Postgres stopped"
     fi
   else
     echo "Postgres already stopped"
@@ -69,6 +70,7 @@ function pre_snapshot {
   echo $OPENSHIFT_POSTGRESQL_DB_USERNAME > $OPENSHIFT_DATA_DIR/postgresql_db_username
   echo $OPENSHIFT_APP_NAME > $OPENSHIFT_DATA_DIR/postgresql_db_dbname
   echo $OPENSHIFT_GEAR_UUID > $OPENSHIFT_DATA_DIR/postgresql_db_uuid
+  echo $OPENSHIFT_POSTGRESQL_VERSION > $OPENSHIFT_DATA_DIR/postgresql_version
 
   # Remove any statements that modify the postgres role
   local rexp="^\s*\(DROP\|CREATE\|ALTER\)\s*ROLE\s*postgres.*"
@@ -95,6 +97,28 @@ function post_restore {
   local new_db=$OPENSHIFT_APP_NAME
   local old_db=$(< $OPENSHIFT_DATA_DIR/postgresql_db_dbname)
 
+  local old_version=""
+
+  if [ ! -f $OPENSHIFT_DATA_DIR/postgresql_version ]
+  then
+    if [ "$OPENSHIFT_POSTGRESQL_VERSION" != "8.4" ]
+    then
+      warning "WARNING: Postgresql snapshot must have a file named postgresql_version containing software version in app-root/data"
+      return
+    else
+      old_version="8.4"
+    fi
+  else
+    old_version=$(< $OPENSHIFT_DATA_DIR/postgresql_version)
+  fi
+
+  if [ "$old_version" != "$OPENSHIFT_POSTGRESQL_VERSION" ]
+  then
+    warning "WARNING: Postgresql restore to version $OPENSHIFT_POSTGRESQL_VERSION attempted from another version: $old_version.  Skipping restore."
+    start
+    return
+  fi
+
   if [ -f $dump_file ]
   then
     start
@@ -117,12 +141,15 @@ function post_restore {
     fi
 
     # Rename old database
-    {
-      echo "
-      ALTER DATABASE \"${old_db}\" RENAME TO \"${new_db}\";
-      " | postgresql_context "psql -U postgres -d postgres"
-    } || error "Failed to rename database" 187
-
+    if [ ${old_db} != ${new_db} ] 
+    then
+      {
+        echo "
+        ALTER DATABASE \"${old_db}\" RENAME TO \"${new_db}\";
+        " | postgresql_context "psql -U postgres -d postgres"
+      } || error "Failed to rename database" 187
+    fi
+	
     {
       # We want to change the default old user in case the app has its own users
       # We also need to check the UID because v1 creates tables owned by the user
@@ -164,6 +191,7 @@ function cleanup_dump {
     postgresql_dump_snapshot.gz
     postgresql_db_username
     postgresql_db_dbname
+    postgresql_version
   )
   for file in "${dumpfiles[@]}"
   do
@@ -177,13 +205,21 @@ function reload {
   else
     # TODO: client_result is semantically incorrect, but for now,
     # we'll use it so that CLI can display it.
-    client_result "'reload' is valid only when the database is running"
+    client_error "'reload' is valid only when the database is running"
+    exit 1
   fi
 }
 
 function tidy {
   truncate -s0 $OPENSHIFT_POSTGRESQL_DB_LOG_DIR/*
+  # PosgreSQL needs to be running in order to perform vacuuming
+  #
+  if ! _is_running; then
+    tidy_start=true
+    start
+  fi
   postgresql_context "psql -c 'vacuum analyze;' -U postgres"
+  [ tidy_start ] && stop
 }
 
 case "$1" in
@@ -216,6 +252,6 @@ case "$1" in
     tidy
   ;;
   *)
-    echo 0
+    exit 0
   ;;
 esac

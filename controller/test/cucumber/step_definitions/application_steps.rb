@@ -41,7 +41,30 @@ Given /^a new client created( scalable)? (.+) application$/ do |scalable, type|
   end
   raise "Could not create domain: #{@app.create_domain_code}" unless @app.create_domain_code == 0
   raise "Could not create application #{@app.create_app_code}" unless @app.create_app_code == 0
+
+  @test_apps_hash ||= {}
+  @test_apps_hash[@app.name] = @app
 end
+
+Given /^a new client created( scalable)? (.+) application named ([^\s]+)$/ do |scalable, type, app_name|
+  @app = TestApp.create_unique(type, nil, scalable)
+  @apps ||= []
+  @apps << @app.name
+  register_user(@app.login, @app.password) if $registration_required
+  if rhc_create_domain(@app)
+    if scalable
+      rhc_create_app(@app, true, '-s')
+    else
+      rhc_create_app(@app)
+    end
+  end
+  raise "Could not create domain: #{@app.create_domain_code}" unless @app.create_domain_code == 0
+  raise "Could not create application #{@app.create_app_code}" unless @app.create_app_code == 0
+
+  @test_apps_hash ||= {}
+  @test_apps_hash[app_name] = @app
+end
+
 
 Then /^creating a new client( scalable)? (.+) application should fail$/ do |scalable, type|
   @app = TestApp.create_unique(type, nil, scalable)
@@ -140,6 +163,10 @@ When /^the embedded (.*) cartridge is removed$/ do |type|
   rhc_embed_remove(@app, type)
 end
 
+When /^a new environment variable key=(.*) value=(.*) is added$/ do |key, value|
+  rhc_set_env(@app,key,value)
+end
+
 When /^the application is changed$/ do
   Dir.chdir(@app.repo) do
     @update = "TEST"
@@ -148,6 +175,87 @@ When /^the application is changed$/ do
     run("sed -i 's/Welcome/#{@update}/' #{@app.get_index_file}")
     run("git commit -a -m 'Test change'")
     run("git push >> " + @app.get_log("git_push") + " 2>&1")
+  end
+end
+
+
+When /^the jboss application is changed to multiartifact$/ do
+  Dir.chdir(@app.repo) do
+    @update = """<executions>
+              <execution>
+                <goals><goal>war</goal></goals>
+                <phase>package</phase>
+                <configuration>
+                  <outputDirectory>deployments</outputDirectory>
+                  <warName>ROOT</warName>
+                </configuration>
+              </execution>
+              <execution>
+                <id>test3-archive</id>
+                <goals><goal>war</goal></goals>
+                <phase>package</phase>
+                <configuration>
+                  <outputDirectory>deployments</outputDirectory>
+                  <warName>test3</warName>
+                </configuration>
+              </execution>
+              <execution>
+                <id>test-exploded</id>
+                <goals><goal>exploded</goal></goals>
+                <phase>package</phase>
+                <configuration>
+                  <webappDirectory>deployments/exploded/test.war</webappDirectory>
+                  <warName>test</warName>
+                </configuration>
+              </execution>
+              <execution>
+                <id>test2-exploded</id>
+                <goals><goal>exploded</goal></goals>
+                <phase>package</phase>
+                <configuration>
+                  <webappDirectory>deployments/exploded/test2.war</webappDirectory>
+                  <warName>test2</warName>
+                </configuration>
+              </execution>
+            </executions>""".gsub(/\s+/, "")
+    # Make a change to the app pom file
+    run("sed -i -e \"/<configuration>/,/<\\\/configuration>/c #{@update}\" #{@app.get_pom_file}")
+    run("git commit -a -m 'Test change'")
+    run("git push >> " + @app.get_log("git_push_multiartifact") + " 2>&1")
+  end
+end
+
+When /^the jboss application deployment-scanner is changed to (archive only|exploded only|none|all|disabled)$/ do |scanner_config|
+  Dir.chdir(@app.repo) do
+    matchbegin = '<subsystem xmlns=\"urn:jboss:domain:deployment-scanner:1.1\">'
+    matchend = '<\/subsystem>'
+    @update = '<deployment-scanner path=\"deployments\" relative-to=\"jboss.server.base.dir\" '
+    @update << 'scan-interval=\"5000\" deployment-timeout=\"300\" '
+    log_postfix = scanner_config.split(/ /)[0]
+
+    case scanner_config
+    when 'exploded only'
+      @update << 'auto-deploy-zipped=\"false\" auto-deploy-exploded=\"true\"'
+    when 'none'
+      @update << 'auto-deploy-zipped=\"false\" auto-deploy-exploded=\"false\"'
+    when 'all'
+      @update << 'auto-deploy-exploded=\"true\"'
+    when 'disabled'
+      @update << 'scan-enabled=\"false\"'
+    end
+    @update << "/>"
+    run("awk '/#{matchbegin}/{p=1; print; print \"#{@update}\"}/#{matchend}/{p=0}!p' #{@app.get_standalone_config} > #{@app.get_standalone_config}.new")
+    run("mv #{@app.get_standalone_config}.new #{@app.get_standalone_config}")
+    run("git commit -a -m 'Test change'")
+    run("git push >> " + @app.get_log("git_push_scanner_config_#{log_postfix}") + " 2>&1")
+  end
+end
+
+When /^the jboss management interface is disabled$/ do
+  Dir.chdir(@app.repo) do
+    run("sed -i -e \"/<native-interface>/,/<\\\/native-interface>/d\" #{@app.get_standalone_config}")
+    run("git commit -a -m 'Test change'")
+    run("git push >> " + @app.get_log("git_push_disabled_management") + " 2>&1")
   end
 end
 
@@ -204,7 +312,7 @@ When /^I snapshot the application$/ do
 end
 
 When "I preserve the current snapshot" do
-  assert_file_exists @app.snapshot
+  assert_file_exist @app.snapshot
   tmpdir = Dir.mktmpdir
 
   @saved_snapshot = File.join(tmpdir,File.basename(@app.snapshot))
@@ -223,7 +331,7 @@ When /^I restore the application( from a preserved snapshot)?$/ do |preserve|
   if preserve
     @app.snapshot = @saved_snapshot
   end
-  assert_file_exists @app.snapshot
+  assert_file_exist @app.snapshot
   File.size(@app.snapshot).should > 0
 
   file_list = `tar ztf #{@app.snapshot}`
@@ -248,6 +356,16 @@ Then /^the applications should( not)? be accessible?$/ do |negate|
       app.is_accessible?.should be_true
       app.is_accessible?(true).should be_true
     end
+  end
+end
+
+Then /^the applications should display default content on first attempt$/ do
+  @apps.each do |app|
+    # Check for "Welcome to OpenShift"
+    body = app.connect(false,1,5)
+    body.should match(/Welcome to OpenShift/)
+    body = app.connect(true,1,5)
+    body.should match(/Welcome to OpenShift/)
   end
 end
 
@@ -309,19 +427,157 @@ Then /^the submodule should be deployed successfully$/ do
 end
 
 Then /^the application should be accessible$/ do
-  @app.is_accessible?.should be_true
-  @app.is_accessible?(true).should be_true
+  assert_application_accessible(@app)
+end
+
+Then /^the (.+) application should (not )?be accessible$/ do |app_name, negate|
+  app = @test_apps_hash[app_name]
+  assert_application_accessible(app, negate)
+end
+
+def assert_application_accessible(app, negate=false)
+  if negate
+    app.is_accessible?(false, 1).should be_false
+    app.is_accessible?(true, 1).should be_false
+  else
+    app.is_accessible?.should be_true
+    app.is_accessible?(true).should be_true
+  end
+end
+
+Then /^the cartridge (.+) status should be (.+)$/ do |cartridge, status|
+  result = rhc_get_app_status(@app, cartridge)
+  result.should =~ /status/
+end
+
+
+Then /^the application should display default content on first attempt$/ do
+  # Check for "Welcome to OpenShift"
+  body = @app.connect(false,1,5)
+  body.should match(/Welcome to OpenShift/)
+  body = @app.connect(true,1,5)
+  body.should match(/Welcome to OpenShift/)
+end
+
+Then /^the application should display default content for deployed artifacts on first attempt$/ do
+  output=[]
+  result = run("grep 'Artifacts deployed:' " + @app.get_log("git_push_multiartifact"), output)
+  result.should == 0
+
+  artifacts=output[0].split(':')[2].split(' ')
+  
+  # Verify content for each artifact (ROOT.war should be / others should be /<artifact name>
+  artifacts.each do |artifact|
+    # strip out pathnames, file extension and trailing junk
+    artifact = artifact.gsub(/\.\/exploded\//, "").gsub(/\.\//, "").gsub(/\.war.*/, "")
+    if artifact == "ROOT"
+      body = @app.connect(false,1,5)
+      body.should match(/Welcome to OpenShift/)
+    else
+      # should connect to URL of artifact and not /
+      body = @app.connect(false,1,5,"/#{artifact}/")
+      body.should match(/Welcome to OpenShift/)
+    end
+  end
+end
+
+Then /^deployment verification should be skipped with (scanner disabled|management unavailable) message$/ do |reason| 
+  case reason
+  when "scanner disabled"
+    logfile = @app.get_log("git_push_scanner_config_disabled")
+    run("grep 'Deployment scanner disabled, skipping deployment verification' " + logfile).should == 0
+  when "management unavailable"
+    logfile = @app.get_log("git_push_disabled_management")
+    run("grep 'Could not connect to JBoss management interface, skipping deployment verification' " + logfile).should == 0
+  end
+
+  run("grep 'Failed deployments:' " + logfile).should_not == 0
+  run("grep 'Artifacts in an unknown state:' " + logfile).should_not == 0
+  run("grep 'Artifacts skipped because of deployment-scanner configuration:' " + logfile).should_not == 0
+  run("grep 'Artifacts deployed:' " + logfile).should_not == 0
+end
+
+Then /^(only exploded|only archive|no|all|default) artifacts should be deployed$/ do |scanner_config|
+  case scanner_config
+  when 'no'
+    log_postfix = "none"
+  when 'all'
+    log_postfix = "all"
+  when 'only exploded'
+    log_postfix = "exploded"
+  when 'only archive'
+    log_postfix = "archive"
+  when 'default'
+    log_postfix = "multiartifact"
+  end
+
+  logfile = @app.get_log("git_push_scanner_config_#{log_postfix}")
+
+  failedresult = run("grep 'Failed deployments:' " + logfile)
+  unknownresult = run("grep 'Artifacts in an unknown state:' " + logfile)
+  failedresult.should_not == 0
+  unknownresult.should_not == 0
+
+  skippedoutput = []
+  skippedresult = run("grep 'Artifacts skipped because of deployment-scanner configuration:' " + logfile, 
+                      skippedoutput)
+
+  deployedoutput = []
+  deployedresult = run("grep 'Artifacts deployed:' " + logfile, deployedoutput)
+
+  cartdir = @app.type.split('-')[0]
+  deploydir = "#{cartdir}/standalone/deployments"
+  regex = '".*\.\([ejrsw]ar\|zip\)$"'
+  commandprefix = "'cd " + deploydir + " && find . "
+  commandpostfix = " -iregex " + regex + " -print0'"
+  exploded = @app.ssh_command(commandprefix + "-type d" + commandpostfix).split("\0")
+  archived = @app.ssh_command(commandprefix + "-type f" + commandpostfix).split("\0")
+
+  case scanner_config
+  when 'only archive'
+    skippedresult.should == 0
+    deployedresult.should == 0
+    exploded.each do |artifact|
+      skippedoutput[0].should match(artifact)
+      deployedoutput[0].should_not match(artifact)
+    end
+    archived.each do |artifact|
+      skippedoutput[0].should_not match(artifact)
+      deployedoutput[0].should match(artifact)
+    end
+  when 'only exploded'
+    skippedresult.should == 0
+    deployedresult.should == 0
+    exploded.each do |artifact|
+      skippedoutput[0].should_not match(artifact)
+      deployedoutput[0].should match(artifact)
+    end
+    archived.each do |artifact|
+      skippedoutput[0].should match(artifact)
+      deployedoutput[0].should_not match(artifact)
+    end
+  when 'no'
+    skippedresult.should == 0
+    deployedresult.should_not == 0
+    exploded.concat(archived).each do |artifact|
+      skippedoutput[0].should match(artifact)
+    end
+  when 'all'
+    skippedresult.should_not == 0
+    deployedresult.should == 0
+    exploded.concat(archived).each do |artifact|
+      deployedoutput[0].should match(artifact)
+    end
+  end
 end
 
 Then /^the application should not be accessible$/ do
   @app.is_inaccessible?.should be_true
 end
 
-
 Then /^the application should not be accessible via node\-web\-proxy$/ do
   @app.is_inaccessible?(60, 8000).should be_true
 end
-
 
 Then /^the application should be assigned to the supplementary groups? "([^\"]*)" as shown by the node's \/etc\/group$/ do | supplementary_groups|
   added_supplementary_group = supplementary_groups.split(",")
@@ -414,4 +670,17 @@ def gear_up?(hostname, state='UP')
   end
   $logger.debug("No gears found")
   return found
+end
+
+When /^JAVA_OPTS_EXT is available$/ do
+  user_vars =  File.join($home_root, @app.uid, '.env', 'user_vars')
+  FileUtils.mkpath(user_vars)
+  env = File.join(user_vars, 'JAVA_OPTS_EXT')
+
+  IO.write(env, '-Dcucumber=true', 0, mode: 'w', perm: 0644)
+end
+
+When /^the jvm is using JAVA_OPTS_EXT$/ do
+  %x(pgrep -fl 'java.*Dcucumber=true')
+  assert_equal(0, $?.exitstatus, 'JAVA_OPTS_EXT is not being used')
 end

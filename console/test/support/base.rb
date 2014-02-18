@@ -147,6 +147,15 @@ class ActiveSupport::TestCase
   end
 end
 
+unless ActiveSupport::TestCase.method_defined?(:omit)
+  class ActiveSupport::TestCase
+    def omit(msg=nil)
+      puts "\nOmitted: #{msg}\n" if msg.present?
+      skip
+    end
+  end
+end
+
 raise "Fixed in Rails 4" if Rails::VERSION::MAJOR > 3
 class ActionDispatch::Integration::Session
   def script_name

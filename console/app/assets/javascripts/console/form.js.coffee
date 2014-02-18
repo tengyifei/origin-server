@@ -13,7 +13,14 @@ $ ->
 
   $.validator.addMethod "alpha_numeric", ((value) ->
     (/^[A-Za-z0-9]*$/).test value
-  ), "Only letters and numbers are allowed"
+  ), "Only letters and numbers are allowed."
+
+  $.validator.addMethod "in_array", ((value, element, params) ->
+    if $.isArray(params)
+      return $.inArray(value, params) >= 0
+    else
+      return true
+  )
 
   $.validator.setDefaults
     onsubmit:     true
@@ -22,6 +29,7 @@ $ ->
     onclick:      false
     errorClass:   'help-inline'
     errorElement: 'p'
+    ignoreTitle:  true
     highlight: (element,errorClass,validClass) ->
       $(element).addClass('error')
       $el = find_control_group_parent(element)
@@ -43,6 +51,7 @@ $ ->
     src = $(this)
     tgt = $(src.attr('data-unhide'))
     if (tgt)
+      tgt.removeClass('hidden hidden-scripted')
       event.preventDefault() if event?
       src.closest('[data-hide-parent]').addClass('hidden')
       $('input',tgt.removeClass('hidden')).focus()
@@ -67,5 +76,53 @@ $ ->
             false
         else
           false
+
+  $('.alert.with-alert-details a').click (event) ->
+    event.preventDefault() if event?
+    link = $(this)
+    message = link.closest('.alert.with-alert-details')
+    details = message.next('.alert-details')
+    message.toggleClass('detailed')
+    details.toggleClass('hide')
+    if link.text() == 'Show more' 
+      link.text('Show less')
+    else 
+      link.text('Show more')
+
+  # application_type/<type>
+  $('form#new_application').validate
+    ignore: ""
+    errorPlacement: (error, el) ->
+      controls_block = el.closest('.controls')
+      if controls_block.length
+        controls_block.append(error)
+      else
+        error.insertAfter(el)
+    rules:
+      "application[name]":
+        required: true
+        rangelength: [1,32]
+        alpha_numeric: true
+      "application[domain_name]":
+        required: true
+        rangelength: [1,16]
+        alpha_numeric: true
+      "application[gear_profile]":
+        in_array: (element) ->
+          $sizes = $(element).closest('form').find('select#application_domain_name option:selected').data('gear-sizes')
+          if $sizes == ""
+            []
+          else if !$sizes
+            null
+          else 
+            $sizes.split(',')
+    messages:
+      "application[gear_profile]":
+        in_array: (params, element) ->
+          if $.isArray(params)
+            if params.length == 0
+              "The owner of the selected domain has disabled all gear sizes from being created. You will not be able to create an application in this domain."
+            else
+              jQuery.format("The gear size '{0}' is not valid for the selected domain. Allowed sizes: {1}.", $(element).val(), params.join(', '))
 
   $(document).activateForms()

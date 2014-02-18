@@ -3,6 +3,7 @@ require 'formtastic'
 module Console
   module Formtastic
     class BootstrapFormBuilder < ::Formtastic::SemanticFormBuilder
+      include ::Formtastic::Util
 
       def initialize(object_name, object, template, options, proc)
         options[:html] ||= {}
@@ -93,9 +94,29 @@ module Console
 
         return nil if full_errors.blank?
         #html_options[:class] ||= "errors"
-        template.content_tag(:ul, html_options) do
-          ::Formtastic::Util.html_safe(full_errors.map { |error| template.content_tag(:li, error) }.join)
+
+        with_details = full_errors.length > 1
+        html_options[:class] += ' with-alert-details' if with_details
+
+        error_content = template.content_tag(:ul, html_options) do
+          if with_details
+            html_safe(template.content_tag(:li) do
+              html_safe('Unable to complete the requested operation. ') <<
+              html_safe(template.content_tag(:a, {:href => '#'}) { 'Show more' })
+            end)
+          else
+            html_safe(full_errors.map { |error| template.content_tag(:li, error) }.join)
+          end
         end
+        details_content = ''
+        if with_details
+          details_content = template.content_tag(:pre, {:class => 'alert-details hide'}) do
+            template.content_tag(:ul, {:class => 'unstyled'}) do
+              html_safe(full_errors.map { |error| template.content_tag(:li, error.strip) }.join)
+            end
+          end
+        end
+        error_content + details_content
       end
 
       def inline_hints_for(method, options) #:nodoc:
@@ -113,7 +134,7 @@ module Console
         return nil unless render_inline_errors?
         errors = error_keys(method, options).map do |x|
           attribute = localized_string(x, x.to_sym, :label) || humanized_attribute_name(x)
-          @object.errors[x].map do |error| 
+          @object.errors[x].map do |error|
             (error[0,1] == error[0,1].upcase) ? error : [attribute, error].join(" ")
           end
         end.flatten.compact.uniq
@@ -122,12 +143,13 @@ module Console
           @input_inline_errors << errors
           return nil
         end
-        send(:"error_#{inline_errors}", [*errors], options) 
+        send(:"error_#{inline_errors}", [*errors], options)
       end
 
       def error_list(errors, options = {}) #:nodoc:
         error_class = options[:error_class] || default_inline_error_class
-        template.content_tag(:p, errors.join('. ').untaint, :class => error_class)
+        ensure_dot = lambda { |s| s.strip!; s << '.' unless s.end_with?('.'); s }
+        template.content_tag(:p, errors.flatten.map(&ensure_dot).join(' ').untaint, :class => error_class)
       end
 
       def inputs(*args, &block)
@@ -223,9 +245,9 @@ module Console
           options[:input_html][:autocomplete] = field
         end
 
-        html_class = [ 
-          options[:as], 
-          options[:required] ? :required : :optional, 
+        html_class = [
+          options[:as],
+          options[:required] ? :required : :optional,
           'control-group',
         ] #changed
         html_class << 'control-group-important' if options[:important]
@@ -235,7 +257,7 @@ module Console
           html_class << 'error'
 
           wrapper_html[:"data-server-error"] = "server-error"
-          
+
           options[:input_html] ||= {}
           options[:input_html][:class] ||= ""
           options[:input_html][:class] << " error"
@@ -319,6 +341,7 @@ module Console
         end
 
         label_options = options_for_label(options).merge(:input_name => input_name)
+        label_options[:class] ||= 'control-label'
         label_options[:for] ||= html_options[:id]
 
         select_html = parts(method, options) do

@@ -29,6 +29,19 @@ class DomainsControllerTest < ActionController::TestCase
     "d#{uuid[0..10]}%i"
   end
 
+  test "should display domain list" do
+    with_domain
+
+    get :index
+
+    assert domains = assigns(:domains)
+    assert domain = domains.first
+    assert_equal @domain, domain
+    assert domain.capabilities.present?
+    assert domain.members.present?
+    assert assigns(:can_create) != nil
+  end
+
   test "should display domain creation form" do
     get :new
 
@@ -45,14 +58,22 @@ class DomainsControllerTest < ActionController::TestCase
     assert_redirected_to settings_path
   end
 
+  test "should create domain and redirect" do
+    post :create, {:domain => get_post_form, :then => '/redirect?param1=value1&param2=value2', :domain_param => 'param1'}
+
+    assert domain = assigns(:domain)
+    assert domain.errors.empty?, domain.errors.inspect
+    assert_redirected_to "/redirect?param1=#{domain.name}&param2=value2"
+  end
+
   test "should clear domain session cache" do
-    session[:domain] = 'foo'
+    Rails.cache.write(@controller.domains_cache_key, [])
     post :create, {:domain => get_post_form}
 
     assert domain = assigns(:domain)
     assert domain.errors.empty?, domain.errors.inspect
     assert_redirected_to settings_path
-    assert_nil session[:domain]
+    assert_nil Rails.cache.read(@controller.domains_cache_key)
   end
 
   test "should assign errors on empty name" do
@@ -62,7 +83,7 @@ class DomainsControllerTest < ActionController::TestCase
     assert !domain.errors.empty?
     assert domain.errors[:name].present?, domain.errors.inspect
     assert !domain.errors[:name].nil?
-    assert domain.errors[:name].include? 'Namespace is required and cannot be blank.' 
+    assert domain.errors[:name].include? 'Must be a minimum of 1 and maximum of 16 characters.' 
     assert_template :new
   end
 
@@ -113,50 +134,64 @@ class DomainsControllerTest < ActionController::TestCase
   test "should show edit domain page" do
     with_domain
 
-    get :edit
+    Domain.expects(:find).with() {|id, *args| id == @domain.id }.returns(@domain)
+
+    get :edit, {:id => @domain.id}
     assert_template :edit
+    assert_response :success
+  end
+
+  test "should show domain info page" do
+    with_domain
+
+    Domain.expects(:find).with() {|id, *args| id == @domain.id }.returns(@domain)
+
+    get :show, {:id => @domain.id}
+    assert_template :show
     assert_response :success
   end
 
   test "should update domain" do
     with_particular_user
 
-    put :update, {:domain => {:name => unique_name}}
+    Domain.expects(:find).with() {|id, *args| id == @domain.id }.returns(@domain)
+
+    put :update, {:id => @domain.id, :domain => {:name => unique_name}}
 
     assert domain = assigns(:domain)
     assert domain.errors.empty?, domain.errors.inspect
-    assert_redirected_to settings_path
+    assert_redirected_to domain_path(domain)
   end
 
   test "should update domain and clear session cache" do
     with_particular_user
-    session[:domain] = 'foo'
+    Rails.cache.write(@controller.domains_cache_key, [])
 
-    put :update, {:domain => {:name => unique_name}}
+    put :update, {:id => @domain.id, :domain => {:name => unique_name}}
 
     assert domain = assigns(:domain)
     assert domain.errors.empty?, domain.errors.inspect
-    assert_redirected_to settings_path
-    assert_nil session[:domain]
+    assert_redirected_to domain_path(domain)
+    assert_nil Rails.cache.read(@controller.domains_cache_key)
   end
 
   test "update should assign errors on empty name" do
     with_particular_user
 
-    put :update, {:domain => {:name => ''}}
+    put :update, {:id => @domain.id, :domain => {:name => ''}}
 
     assert domain = assigns(:domain)
     assert !domain.errors.empty?
     assert domain.errors[:name].present?, domain.errors.inspect
     assert !domain.errors[:name].nil?
-    assert domain.errors[:name].include? 'Namespace is required and cannot be blank.'
+    assert domain.errors[:name].include? 'Must be a minimum of 1 and maximum of 16 characters.' 
     assert_template :edit
   end
 
   test "update should assign errors on long name" do
     with_particular_user
 
-    put :update, {:domain => {:name => 'aoeu'*2000}}
+    put :update, {:id => @domain.id, :domain => {:name => 'aoeu'*2000}}
 
     assert domain = assigns(:domain)
     assert !domain.errors.empty?
@@ -168,7 +203,7 @@ class DomainsControllerTest < ActionController::TestCase
   test "update should assign errors on invalid name" do
     with_particular_user
 
-    put :update, {:domain => {:name => '@@@@'}}
+    put :update, {:id => @domain.id, :domain => {:name => '@@@@'}}
 
     assert domain = assigns(:domain)
     assert !domain.errors.empty?, domain.inspect
@@ -181,13 +216,43 @@ class DomainsControllerTest < ActionController::TestCase
     with_particular_user
     assert (domain = Domain.new(get_post_form.merge(:name => "d#{new_uuid[0..12]}", :as => unique_user))).save, domain.errors.inspect
 
-    put :update, {:domain => {:name => domain.name}}
+    put :update, {:id => @domain.id, :domain => {:name => domain.name}}
 
     assert domain = assigns(:domain)
     assert !domain.errors.empty?
     assert domain.errors[:name].present?, domain.errors.inspect
     assert_equal 1, domain.errors[:name].length
     assert_template :edit
+  end
+
+  test "should show delete page" do
+    with_particular_user
+
+    get :delete, {:id => @domain.id}
+
+    assert_response :success
+    assert_template :delete
+    assert domain = assigns(:domain)
+  end
+
+  test "should not show delete page for domain with applications" do
+    with_particular_user
+    Domain.any_instance.expects(:application_count).returns(1)
+
+    get :delete, {:id => @domain.id}
+
+    assert_redirected_to domain_path(@domain)
+    assert flash[:info] =~ /removed/, "Expected a message about removing applications"
+  end
+
+  test "should delete domain successfully" do
+    with_particular_user
+
+    delete :destroy, {:id => @domain.id}
+
+    assert_redirected_to settings_path
+    assert flash[:success] =~ /deleted/, "Expected a message about removing applications"
+    assert_raises(RestApi::ResourceNotFound) { Domain.find(@domain.id, :as => unique_user) }
   end
 
   def get_post_form

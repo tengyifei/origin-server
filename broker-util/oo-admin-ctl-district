@@ -1,11 +1,10 @@
 #!/usr/bin/env oo-ruby
-
 require 'rubygems'
 require 'getoptlong'
 require 'pp'
-require "/var/www/openshift/broker/config/environment"
+require "#{ENV['OPENSHIFT_BROKER_DIR'] || '/var/www/openshift/broker'}/config/environment"
 
-CTL_DISTRICT_COMMANDS = "(add-node|remove-node|deactivate-node|activate-node|add-capacity|remove-capacity|create|destroy)"
+CTL_DISTRICT_COMMANDS = "(add-node|remove-node|deactivate-node|activate-node|add-capacity|remove-capacity|create|destroy|publish-uids|set-region|unset-region)"
 
 def usage
   puts <<USAGE
@@ -18,18 +17,23 @@ oo-admin-ctl-district: Control districts
 oo-admin-ctl-district OPTIONS
 
 Options:
--u|--uuid     <district uuid>
+-u|--uuid <district uuid>
     District uuid  (alphanumeric)
 -c|--command <command>
     #{CTL_DISTRICT_COMMANDS}
 -n|--name <district name>
-    District name (Used on create or in place of uuid on other commands)
+    District name (Used on create or in place of uuid on other commands) Allowed chars: alphanumeric, underscore, hyphen, dot
 -p|--node_profile <gear_size>
     #{Gear::gear_sizes_display_string} Only needed for create
 -i|--server_identity
-    Node server_identity (required)
+    Node server identity (required)
 -s|--size
     Size to add or remove (positive number) (required)
+-r|--region <region_name>
+    Region name of the server identitiy.
+    Only valid for add-node (optional) and set-region
+-z|--zone <zone_name>
+    Zone within the region. Only valid when region is specified
 -b|--bypass
     Ignore warnings
 -h|--help
@@ -58,6 +62,8 @@ opts = GetoptLong.new(
     ["--size",             "-s", GetoptLong::REQUIRED_ARGUMENT],
     ["--name",             "-n", GetoptLong::REQUIRED_ARGUMENT],
     ["--node_profile",     "-p", GetoptLong::REQUIRED_ARGUMENT],
+    ["--region",           "-r", GetoptLong::REQUIRED_ARGUMENT],
+    ["--zone",             "-z", GetoptLong::REQUIRED_ARGUMENT],
     ["--bypass",           "-b", GetoptLong::NO_ARGUMENT],    
     ["--help",             "-h", GetoptLong::NO_ARGUMENT]
 )
@@ -80,20 +86,27 @@ uuid     = args["--uuid"]
 command  = args['--command']
 server_identity  = args['--server_identity']
 size     = args['--size'] ? args['--size'].to_i : nil
+region   = args['--region']
+zone     = args['--zone']
 bypass   = args['--bypass']
 name     = args['--name']
 node_profile = args['--node_profile']
+
+if !command && (args.length > 0)
+  puts "Error: --command is required with any arguments"
+  exit 255
+end
+
+if command && !(command =~ /\A(add-node|remove-node|deactivate-node|activate-node|add-capacity|remove-capacity|create|destroy|publish-uids|set-region|unset-region)\z/)
+  puts "Command must be one of: #{CTL_DISTRICT_COMMANDS}"
+  exit 255
+end
 
 if node_profile && !Gear::valid_gear_size?(node_profile)
   puts "Node profile must be one of: #{Gear::gear_sizes_display_string}"
   exit 1
 end
   
-if command && !(command =~ /\A(add-node|remove-node|deactivate-node|activate-node|add-capacity|remove-capacity|create|destroy)\z/)
-  puts "Command must be one of: #{CTL_DISTRICT_COMMANDS}"
-  exit 255
-end
-
 district = nil
 if uuid || name
   district = get_district(uuid, name)
@@ -106,15 +119,24 @@ if uuid || name
     puts "District '#{name}' already exists"
     exit 1
   end
-  unless server_identity || (command != 'add-node' && command != 'remove-node' && command != 'deactivate-node' && command != 'activate-node')
+  unless server_identity || (command != 'add-node' && command != 'remove-node' && command != 'deactivate-node' &&
+                             command != 'activate-node' && command != 'set-region' && command != 'unset-region')
     puts "--server_identity is required with command: #{command}"
+    exit 1
+  end
+  unless region || (command != 'set-region')
+    puts "--region is required with command: #{command}"
+    exit 1
+  end
+  unless zone || (command != 'set-region')
+    puts "--zone is required with command: #{command}"
     exit 1
   end
   unless size || (command != 'add-capacity' && command != 'remove-capacity')
     puts "--size is required with command: #{command}"
     exit 1
   end
-elsif command
+elsif command && (command != 'publish-uids')
   if command != 'create'
     puts "--uuid or --name is required with command: #{command}"
   else
@@ -127,7 +149,7 @@ reply = ResultIO.new
 begin
   case command
   when "add-node"
-    district.add_node(server_identity)
+    district.add_node(server_identity, region, zone)
     reply.resultIO << "Success!"
   when "remove-node"
     district.remove_node(server_identity)
@@ -144,6 +166,25 @@ begin
   when "remove-capacity"
     district.remove_capacity(size)
     reply.resultIO << "Success!"
+  when "set-region"
+    district.set_region(server_identity, region, zone)
+    reply.resultIO << "Success!"
+  when "unset-region"
+    district.unset_region(server_identity)
+    reply.resultIO << "Success!"
+  when "publish-uids"
+    districts = district ? [district] : District.find_all
+
+    reply.resultIO << "No districts created yet.  Use 'oo-admin-ctl-district -c create' to create one." if districts.empty?
+    districts.each do |district|
+      if district.servers.empty?
+        reply.resultIO << "District: #{district.name} does not have any server identities, skipping.\n"
+      else
+        reply.resultIO << "Publishing district UIDs for district: #{district.name} (#{district.uuid})\n"
+        OpenShift::ApplicationContainerProxy.set_district_uid_limits("#{district.uuid}", district.first_uid, district.max_uid)
+        reply.resultIO << "District: #{district.name} done\n"
+      end
+    end
   when "create"
     default_gear_size = Rails.application.config.openshift[:default_gear_size]
     puts "node_profile not specified.  Using default: #{default_gear_size}" unless node_profile
@@ -154,15 +195,14 @@ begin
     unless bypass
       puts <<-WARNING
 !!!! WARNING !!!! WARNING !!!! WARNING !!!!
-You are about to destroy the #{uuid ? uuid : name} district.
+You are about to delete the #{uuid ? uuid : name} district.
 
 This is NOT reversible, all remote data for this district will be removed.
 WARNING
   
-      print "Do you want to destroy this district (y/n): "
+      print "Do you want to delete this district (y/n): "
       begin
-        agree = gets.chomp
-        if agree != 'y'
+        unless gets.to_s.strip =~ /^(yes|y)$/i
           puts "\n"
           exit 217
         end
@@ -171,10 +211,8 @@ WARNING
         exit 217
       end
     end
-
     district.delete
-    reply.resultIO << "Successfully destroyed district: #{uuid ? uuid : name}" if reply.resultIO.string.empty?
-  
+    reply.resultIO << "Successfully deleted district: #{uuid ? uuid : name}" if reply.resultIO.string.empty?
   else
     if district
       append_district(district, reply.resultIO)
@@ -189,7 +227,7 @@ WARNING
       end
     end
   end
-  if (uuid || name) && command && command != 'destroy'
+  if (uuid || name) && command && command != 'destroy' && command != 'publish-uids'
     district = get_district(uuid, name)
     append_district(district, reply.resultIO)
   end

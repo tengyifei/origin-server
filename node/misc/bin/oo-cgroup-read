@@ -7,6 +7,7 @@ require 'optparse'
 require 'etc'
 require 'rubygems'
 require 'open4'
+require 'json'
 
 # each value begins with the subsystem name and a dot (.)
 # extract the subsystem name and check it against the list
@@ -17,13 +18,14 @@ require 'open4'
 
 def usage
   puts <<EOF
-usage: oo-cgroup-read [-h|--help] <attrname>
+usage: oo-cgroup-read [-h|--help] <option>
 
-attrname: the name of the cgroup attribute requested
+option: 1) the name of the cgroup attribute requested
+    or  2) "all" to list all attribute names.
+    or  3) "report" to list all attribute names and values in JSON
 EOF
 
 end
-
 
 # Check that the user didn't send any nasty strings at us.
 def scrub_input(instring)
@@ -63,6 +65,33 @@ def get_cgroup_attribute_nocgget(attribute, username)
   value
 end
 
+def get_cgroup_attribute_names_nocgget(username)
+  begin
+    names=[]
+    File.open('/proc/mounts', File::RDONLY) do |mounts|
+      mounts.each do |l|
+        if l =~ /^\S+\s+(\S+)\s+cgroup\s+/
+          begin
+            cgpath=File.join($1, "openshift", username)
+            Dir.entries(cgpath).select { |f|
+              not f.start_with?(".")
+            }.each { |name|
+              begin
+                File.open(File.join(cgpath, name), File::RDONLY) { |f| f.read }
+                names << name
+              rescue Errno::EACCES
+              end
+            }
+          rescue
+          end
+        end
+      end
+    end
+  end
+  names.sort.uniq
+end
+
+
 #
 # Call cgget to retrieve the value for the user.
 # cgget does not set a return flag on failure to find a value or error
@@ -87,10 +116,59 @@ def get_cgroup_attribute_cgget(attribute, username)
   value = stdout.read.strip
 end
 
+def get_cgroup_attribute_names_cgget(username)
+  names=[]
+
+  cmd = "cgget -n -a /openshift/#{username}"
+  pid, stdin, stdout, stderr = open4(cmd)
+
+  stdout.each do |l|
+    if l=~/^(\w+)\:/
+      names << $1
+    end
+  end
+
+  names.sort.uniq
+end
+
 # Set to the proper implementation for this platform
 def get_cgroup_attribute(*args)
   get_cgroup_attribute_nocgget(*args)
 end
+
+def get_cgroup_attribute_names(*args)
+  get_cgroup_attribute_names_nocgget(*args)
+end
+
+def report_cgroup_attributes(username)
+  results = Hash.new
+
+  _, _, stdout, _ = open4("cgget -a -n /openshift/#{username}")
+
+  top_key = nil
+  stdout.each do |line|
+    if line.include?(':')
+      top_key, values  = line.split(':').map { |e| e.strip }
+      values           = values.split(' ')
+
+      results[top_key] = case
+                           when values.length == 0
+                             nil
+                           when values.length == 1
+                             values.first
+                           when values.length.even? && values.first =~ /\A\D+.*/
+                             Hash[*values]
+                           else
+                             values
+                         end
+    else
+      key, value            = line.strip.split(' ')
+      results[top_key][key] = value
+    end
+  end
+  results
+end
+
 
 #
 # Check for a help request from the user
@@ -101,7 +179,7 @@ def parse_options
   options = {}
 
   optparse = OptionParser.new do |opts|
-    opts.banner = "Usage: #{File.basename($0)} [-h|--help] <attrname>"
+    opts.banner = "Usage: #{File.basename($0)} [-h|--help] <attrname>|all|report"
 
     # Help
     opts.on('-h', '--help', 'Display usage information') do
@@ -131,7 +209,11 @@ if attrname == nil then
 end
 
 scrub_input attrname
-
-value = get_cgroup_attribute attrname, username
-
-puts value
+puts case attrname
+       when 'all'
+         puts get_cgroup_attribute_names(username).join("\n")
+       when 'report'
+         report_cgroup_attributes(username).to_json
+       else
+         get_cgroup_attribute attrname, username
+     end

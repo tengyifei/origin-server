@@ -2,7 +2,7 @@ require 'rubygems'
 require 'dnsruby'
 
 class NameServerCache
-  
+
   def self.get_cached(key, opts={})
     unless Rails.configuration.action_controller.perform_caching
       if block_given?
@@ -39,13 +39,13 @@ class NameServerCache
     rescue Exception => e
       raise OpenShift::OOException.new("Error getting nameservers for domain '#{Rails.application.config.openshift[:domain_suffix]}: #{e.message}'",141)
     end
-    
+
     raise OpenShift::OOException.new("Unable to find nameservers for domain '#{Rails.application.config.openshift[:domain_suffix]}'",
                                        141) if resources.empty?
     @nameservers = []
     resources.each do |resource|
       @nameservers.push(resource.domainname.to_s)
-    end                
+    end
     get_cached("name_servers", :expires_in => 1.hour) {@nameservers}
   end
 end

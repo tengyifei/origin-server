@@ -1,9 +1,9 @@
 class CartridgeTypesController < ConsoleController
+  include Console::ModelHelper
+  include CostAware
 
   def index
-    user_default_domain
-
-    @application = @domain.find_application(params[:application_id], :params => {:include => :cartridges})
+    @application = Application.find(params[:application_id], :params => {:include => :cartridges}, :as => current_user)
     installed_carts = @application.cartridges
 
     types = CartridgeType.cached.embedded
@@ -21,13 +21,32 @@ class CartridgeTypesController < ConsoleController
   end
 
   def show
-    @domain = user_default_domain
     name = params[:id].presence
     url = params[:url].presence
+    @wizard = !params[:direct].present?
 
-    @application = @domain.find_application params[:application_id]
+    url = "http://#{url}" if url and (URI.parse(url).scheme rescue nil).blank?
+
+    @application = Application.find(params[:application_id], :as => current_user)
+    @capabilities = @application.domain.capabilities
     @cartridge_type = url ? CartridgeType.for_url(url) : CartridgeType.cached.find(name)
+    @gear_sizes = add_cartridge_gear_sizes(@application, @cartridge_type, @capabilities)
     @cartridge = Cartridge.new :as => current_user
+  end
+
+  def estimate
+    cart_params = params[:cartridge] || params
+
+    name = cart_params[:name].presence
+    url = cart_params[:url].presence
+    gear_size = cart_params[:gear_size].presence
+
+    application = Application.find(params[:application_id], :as => current_user)
+    cartridge_type = url ? CartridgeType.for_url(url) : CartridgeType.cached.find(name)
+
+    render :inline => gear_increase_indicator({'1' => [cartridge_type]}, application.scales?, gear_size, true, application.domain.capabilities, application.owner?)
+  rescue => e
+    render :inline => e.message, :status => 500
   end
 
   def conflicts?(cart_type)
@@ -44,12 +63,18 @@ class CartridgeTypesController < ConsoleController
   def requires?(cart_type)
     t = cart_type
 
-    return true if @installed.nil? && !t.requires.empty?
-    return false if t.requires.empty?
+    return true if @installed.nil? && !t.requires.blank?
+    return false if t.requires.blank?
 
     # if this cart has requirements and the required cart is not
     # installed add this cart to the requires list
-    @installed.each { |c| return false if t.requires.include? c.name }
+    @installed.each { |c| return false if t.requires.any?{ |r| r.include? c.name } }
     return true
   end
+
+
+  protected
+    def active_tab
+      :applications
+    end
 end

@@ -1,7 +1,6 @@
-- breadcrumb_for_application @application, 'Enable Builds'
-- content_for :page_title, 'Enable Builds'
+- content_for :page_title, 'Enable Jenkins Builds'
 
-%h1 Enable Jenkins Builds
+%h1 Enable Jenkins Builds for #{link_to @application.name, application_path(@application)}
 = flashes
 
 %section
@@ -37,7 +36,7 @@
         .control-group.control-group-important{:data => errors ? {:"server-error" => 'true'} : {}}
           %h3.control-label Public URL
           .controls
-            = render :partial => 'applications/name', :locals => {:form => f, :application => @jenkins_server}
+            = render :partial => 'applications/name', :locals => {:form => f, :application => @jenkins_server, :can_create => false, :domains => [@application.domain]}
 
     %h2 Create cartridge
     %p
@@ -54,4 +53,8 @@
     = f.buttons do
       = link_to "Back", application_path(@application), :class => 'btn'
       = f.commit_button("Add Jenkins")
+      - unless @jenkins_server.persisted?
+        %span#gear_increase
+          = gear_increase_indicator(nil, false, nil, false, @application.domain.capabilities, @application.owner?)
+
       = f.loading

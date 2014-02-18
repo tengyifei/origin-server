@@ -1,16 +1,23 @@
+@import "compass/css3/border-radius";
+
 // ALERT STYLES
 // ------------
 
 // Base alert styles
 .alert {
-  padding: 15px;
-  margin: 15px 0;
-  //text-shadow: 0 1px 0 rgba(255,255,255,.5);
   background-color: $warningBackground;
-  //border: 1px solid $warningBorder;
-  @include border-radius(4px);
+  position: relative;
+  clear: left;
+  margin: 15px 0;
+  padding: 6px 18px;
+  overflow: visible;
+  line-height: 1.5;
+  @include border-radius(2px);
   > p:last-child {
     margin-bottom: 0;
+  }
+  #flash & {
+    margin-top: 0;
   }
 }
 .alert,
@@ -25,6 +32,25 @@
 .alert.alert-error a, .alert.alert-error a:hover, .alert.alert-error a:active,
 .alert.alert-danger a, .alert.alert-danger a:hover, .alert.alert-danger a:active {
   color:$errorText;
+}
+
+// Alert details
+.alert.with-alert-details.detailed {
+  margin-bottom: 0;
+  @include border-bottom-radius(0);
+}
+.alert-details {
+  background-color: $openshiftLightRed;
+  border-left-color: #ae1b2d;
+  border-right: 2px solid $openshiftRed;
+  border-bottom: 2px solid $openshiftRed;
+  @include border-bottom-radius(2px);
+  ul {
+    font-size: 90%;
+    li {
+      padding-top: 6px;
+    }
+  }
 }
 
 // Adjust close link position
@@ -57,7 +83,7 @@
 .alert-error .alert-heading {
   color: $errorText !important;
 }
-.alert-info {
+.alert-info, .alert-status {
   background-color: $infoBackground;
   border-color: $infoBorder;
   a {
@@ -85,4 +111,57 @@
 }
 .alert-block p + p {
   margin-top: 5px;
+}
+
+
+// Alert icon blocks
+// -----------------------
+
+.section-console,
+.column-content {
+  .alert {
+    border-left: 32px solid $warningBorder;
+  }
+  .alert.alert-info, .alert.alert-status {
+    border-left: 32px solid $infoBorder;
+  }
+  .alert.alert-success {
+    border-left: 32px solid $successBorder;
+  }
+  .alert.alert-error {
+    border-left: 32px solid $errorBorder;
+  }
+  .alert:before,
+  .alert.alert-success:before,
+  .alert.alert-error:before,
+  .alert.alert-info:before {
+    font-family: 'openshift-icon';
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 1);
+    color: #fff;
+    position: absolute;
+    left: -23px;
+    top: 9px;
+    opacity: .75;
+  }
+  .alert.alert-success:before {
+    content: "\ee21";
+  }
+  .alert.alert-info:before,
+  .alert.alert-status:before {
+    content: "\ee07";
+    left: -22px
+  }
+  .alert:before,
+  .alert.alert-error:before {
+    content: "\ee01";
+    top: 8px;
+  }
 }

@@ -1,5 +1,6 @@
-Feature: V2 SDK Ruby Cartridge
-  @cartridge_v2_ruby
+@cartridge_extended1
+
+Feature: Ruby Cartridge
   Scenario Outline: Add cartridge, create and destroy an app
     Given a new ruby-<cart_version> type application
     Then the application git repo will exist
@@ -13,23 +14,6 @@ Feature: V2 SDK Ruby Cartridge
     When I destroy the application
     Then the application git repo will not exist
 
-    @fedora-19-only
-    @cartridge_v2_ruby_20
-    @runtime_extended1
-    Scenarios: r2.0
-      | cart_version | label     | proc_name |
-      |      2.0     | Passenger | ruby-mri  |
-
-    @not-fedora-19
-    @cartridge_v2_ruby_19
-    @runtime_extended3
     Scenarios: r1.9
       | cart_version | label     | proc_name |
       |      1.9     | Passenger | ruby      |
-
-    @rhel-only
-    @runtime_extended1
-    @cartridge_v2_ruby_18
-    Scenarios: r1.8
-      | cart_version | label     | proc_name |
-      |      1.8     | Passenger | ruby      |

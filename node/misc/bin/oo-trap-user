@@ -1,7 +1,7 @@
 #!/usr/bin/python -tt
 
+import ast
 import sys, os
-import syslog
 import pwd
 import syslog
 import glob
@@ -19,6 +19,7 @@ commands_map = {
     "git-upload-pack": "/usr/bin/git-upload-pack",
     "snapshot": "/bin/bash",
     "restore": "/bin/bash",
+    "binary-deploy": "/bin/bash",
     "tail": "/usr/bin/tail",
     "rhcsh": "/bin/bash",
     "true": "/bin/true",
@@ -50,12 +51,7 @@ def load_env(directory):
 
         with open(entry, 'r') as file:
             contents = file.read().rstrip()
-
-            if contents.startswith('export '):
-                value = contents.split('=')[1].strip('\'"')
-                os.environ[env] = value
-            else:
-                os.environ[env] = contents
+            os.environ[env] = contents
 
 
 def gear_env():
@@ -87,6 +83,7 @@ def gear_env():
 
     os.environ['PATH'] = ':'.join(elements)
 
+    load_env('~/.env/user_vars')
 
 # Calling oo-get-mcs-level gets into trouble due to BZ 957257.  Use an
 # internal call which produces the same logic.
@@ -124,42 +121,66 @@ def read_config():
       config[split_line[0]] = value
   return config
 
+#  There are two possible command sources:
+#  
+#  1) authenticate with SSH public key, and key has command= section
+#     Get command and args from SSH_ORIGINAL_COMMAND
+#  2) Authenticate with other means (Kerberos or ...)
+#     Get command and args from sys.argv
 #
-# Join the user's cgroup if available
+# Three possible command conditions exist
+# 
+#  1) user did not specify a remote command to execute
+#     use rhcsh
+#  2) user specified a command which is in commands_map
+#     adjust the arguments and environment and execute the command
+#  3) user specified a command which is not in commands_map
+#     pass to bash with -c
 #
-def join_cgroup():
-    """
-    Determine a user's cgroup and join it if possible
-    """
-
-    username = pwd.getpwuid(os.getuid())[0]
-    cgpath = "/openshift/%s" % username
-    pid = os.getpid()
-
-    cmd_template = "cgclassify -g %s:%s %d"
-    cmd = cmd_template % (openshift_cgroup_subsystems, cgpath, pid)
-    syslog.syslog("user %s: putting process %d in cgroups %s" % (username, pid, openshift_cgroup_subsystems))
-
-    retval = subprocess.call(cmd.split())
-    if retval != 0:
-        syslog.syslog("user %s: cgroup classification failed: retval = %d" % (username, retval))
-
-    # should raise an exception? MAL
-
 if __name__ == '__main__':
-    # first self-apply restrictions
-    # join_cgroup()
+
+    # Customize logging information
+    syslog.openlog('oo-trap-user')
+
     config = read_config()
     gear_env()
 
-    orig_cmd = os.environ.get('SSH_ORIGINAL_COMMAND', "rhcsh")
-    syslog.syslog(orig_cmd)
-    allargs = orig_cmd.split()
+    # Determine the command source
+    #
+    # has sys.argv been replaced by an ssh key command?
+    orig_cmd = os.environ.get('SSH_ORIGINAL_COMMAND')
+    if orig_cmd != None:
+        # extract the command which was replaced by SSH auth key command
+        #syslog.syslog(syslog.LOG_DEBUG, "orig_cmd: " + orig_cmd)
+        allargs = orig_cmd.split() if orig_cmd else []
+    else:
+        # use the command passed by the user through SSH 
+        # be careful not to recurse (ssh adds $SHELL -c)
+        allargs = sys.argv
+
+    if allargs[:2] == ['/usr/bin/oo-trap-user', '-c']:
+        # the final command is a SINGLE string
+        #syslog.syslog(syslog.LOG_DEBUG, "allargs: " + str(allargs))
+        allargs = allargs[2].split()
+    
+    if allargs == ['/usr/bin/oo-trap-user'] or allargs == []:
+        # no command, avoid recursion, drop to shell
+        #syslog.syslog(syslog.LOG_DEBUG, "no command: drop to rhcsh")
+        allargs = ['rhcsh']
+
+    # Determine the command to execute: use from command_map if provided
     try:
+        # Check the commmand_map for special "trapped" commands
+        #syslog.syslog(syslog.LOG_DEBUG,
+        #              "trying trapped commands from: " + str(allargs))
         basecmd = os.path.basename(allargs[0])
+        #syslog.syslog(syslog.LOG_DEBUG, "basecmd = " + basecmd)
         cmd = commands_map[basecmd]
+        #syslog.syslog(syslog.LOG_DEBUG, "cmd = " + cmd)
     except:
         # Catch all, just run the command as is via bash.
+        #syslog.syslog(syslog.LOG_DEBUG, 
+        #              "executing command with bash: " + ' '.join(allargs))
         cmd = "/bin/bash"
         str = ' '.join(allargs)
         allargs = ['-c', str]
@@ -175,6 +196,8 @@ if __name__ == '__main__':
         allargs = ['oo-restore']
         if include_git:
             allargs.append('INCLUDE_GIT')
+    if basecmd in ('binary-deploy',):
+        allargs = ['oo-binary-deploy']
     elif basecmd in ('rhcsh',):
         os.environ["PS1"] = "rhcsh> "
         if len(allargs) < 2:
@@ -239,14 +262,21 @@ if __name__ == '__main__':
             sys.exit(3)
 
         if not os.path.isdir(realpath):
-            syslog.syslog("Invalid repository %s (%s)" %
-                          (thearg, realpath))
+            syslog.syslog("Invalid repository %s (%s)" % (thearg, realpath))
             print "Invalid repository %s: not a directory" % thearg
             sys.exit(3)
         allargs = [thearg]
 
     elif basecmd in ('quota',):
         allargs = ['--always-resolve']
+
+    # Set umask same as the ssh session - BZ990441
+    try:
+      umask = ast.literal_eval(os.environ['OPENSHIFT_UMASK'])
+    except (ValueError, SyntaxError, KeyError) as e:
+      umask = 077
+
+    os.umask(umask)
 
     runcon = '/usr/bin/runcon'
     mcs_level = get_mcs_level(os.getuid())

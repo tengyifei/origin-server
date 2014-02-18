@@ -1,0 +1,224 @@
+#
+# OpenShift route to gears
+#
+# This replaces having a virtual host per gear for efficiency.
+#
+
+RewriteEngine              On
+
+ProxyPassInterpolateEnv On
+
+# Set RewriteLogLevel to 6 for debugging
+RewriteLog logs/rewrite_log
+RewriteLogLevel 0
+
+# Apache 2.4
+#LogLevel alert rewrite:trace3
+
+# Maps
+RewriteMap    lowercase int:tolower
+RewriteMap      openshift-nodes    dbm=db:/var/lib/openshift/.httpd.d/nodes.db
+RewriteMap      openshift-aliases  dbm=db:/var/lib/openshift/.httpd.d/aliases.db
+RewriteMap      openshift-idler    dbm=db:/var/lib/openshift/.httpd.d/idler.db
+RewriteMap      openshift-sts      dbm=db:/var/lib/openshift/.httpd.d/sts.db
+
+# Set X-Request-Start header to allow checking request life cycle.
+RequestHeader set X-Request-Start "%t"
+
+
+# Set X-Client-IP to the node which contacted the front-end
+# This being Apache, you can't just use %{REMOTE_ADDR}e.
+RewriteCond %{REMOTE_ADDR} ^(.*)$
+RewriteRule ^.*$ - [E=X_CLIENT_IP:%1]
+RequestHeader set X-Client-IP %{X_CLIENT_IP}e
+
+# Resolve aliases
+RewriteCond ${lowercase:%{HTTP_HOST}} ^([^:]+)
+RewriteCond ${openshift-aliases:%1} ^(.+)$    [OR]
+RewriteCond ${lowercase:%{HTTP_HOST}} ^([^:]+)
+RewriteRule ^.*$ - [E=V_MATCH_HOST:%1,NS]
+
+# Provides the ability to override the HTTP_HOST header
+# by letting a client set the X-OpenShift-Host header
+RewriteCond %{HTTP:X-OpenShift-Host} ^(.+)$
+RewriteRule ^.*$ - [E=V_MATCH_HOST:%1,NS]
+
+# Call the unidler and redirect back to the original request.
+# www.example.com => uuid
+RewriteCond ${openshift-idler:%{ENV:V_MATCH_HOST}} ^(.+)$
+RewriteRule ^/(.*)$ /var/www/html/restorer.php/%1/$1 [NS,L]
+
+# If STS is set then this domain will always force https.
+# Redirect to https or set the STS header if already on https.
+RewriteCond %{openshift-sts:%{ENV:V_MATCH_HOST}} ^(.+)$
+RewriteRule ^(.*)$ - [E=FORCEHTTPS:%1,NS]
+
+RewriteCond %{HTTPS} =off
+RewriteCond %{ENV:FORCEHTTPS} ^(.+)$
+RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R,NS,L]
+
+RewriteCond %{HTTPS} =on
+RewriteCond %{ENV:FORCEHTTPS} ^(.+)$
+RewriteRule ^(.*)$ - [E=STSHEADER:%1,NS]
+
+Header set Strict-Transport-Security "max-age=%{STSHEADER}e" env=STSHEADER
+
+
+# Route resolution.
+#
+# Attempt to pull out up to a set number of path elements
+# and populate the following variables:
+# 1. V_MATCH_PATH: The part of the path included in the match/route
+# 2. V_PATH:       The remainder of the path
+# 3. V_ROUTE:      The matched route
+#
+# A path element is a word with a starting slash (Apache normalizes
+# before we see it).  Note, we never include the trailing slash in
+# the match, its always passed through.
+#
+# Most specific match wins.  Since there's no loops, the search must be
+# unrolled in source and we only do three deep.
+#
+# Example table entries
+# www.example.com             => 127.0.250.1:8181|<app uuid>|<gear uuid>
+# www.example.com/foo         => 127.0.250.1:8181/bar|<app uuid>|<gear uuid>
+# www.example.com/health      => NOPROXY|<app uuid>|<gear uuid>
+# www.example.com/bar         => REDIRECT:/baz|<app uuid>|<gear uuid>
+# www.example.com/a/b/c       => GONE|<app uuid>|<gear uuid>
+
+
+# Just match the host
+RewriteRule ^(.*)$ - [E=V_TMP_MATCH_PATH:,E=V_TMP_PATH:$1,E=V_TMP_LVL:0,NS]
+
+RewriteCond %{ENV:V_TMP_LVL} =0
+RewriteCond %{ENV:V_MATCH_HOST}%{ENV:V_TMP_MATCH_PATH} ^(.+)$
+RewriteRule ^(.*)$ - [E=V_MATCH_NODE_LOOKUP:%{ENV:V_MATCH_HOST}%{ENV:V_TMP_MATCH_PATH},E=V_MATCH_NODE_DEFAULT:__default__%{ENV:V_TMP_MATCH_PATH},NS]
+
+RewriteCond %{ENV:V_TMP_LVL} =0
+RewriteCond ${openshift-nodes:%{ENV:V_MATCH_NODE_LOOKUP}} ^(.+)$ [OR]
+RewriteCond ${openshift-nodes:%{ENV:V_MATCH_NODE_DEFAULT}} ^(.+)$
+RewriteRule ^(.*)$ - [E=V_ROUTE:%1,E=V_MATCH_PATH:/,E=V_PATH:%{ENV:V_TMP_PATH},NS]
+
+
+# One path element (/a)
+RewriteRule ^(/[^/]+)(.*)$ - [E=V_TMP_MATCH_PATH:$1,E=V_TMP_PATH:$2,E=V_TMP_LVL:1,NS]
+
+RewriteCond %{ENV:V_TMP_LVL} =1
+RewriteCond %{ENV:V_MATCH_HOST}%{ENV:V_TMP_MATCH_PATH} ^(.+)$
+RewriteRule ^(.*)$ - [E=V_MATCH_NODE_LOOKUP:%{ENV:V_MATCH_HOST}%{ENV:V_TMP_MATCH_PATH},E=V_MATCH_NODE_DEFAULT:__default__%{ENV:V_TMP_MATCH_PATH},NS]
+
+RewriteCond %{ENV:V_TMP_LVL} =1
+RewriteCond ${openshift-nodes:%{ENV:V_MATCH_NODE_LOOKUP}} ^(.+)$ [OR]
+RewriteCond ${openshift-nodes:%{ENV:V_MATCH_NODE_DEFAULT}} ^(.+)$
+RewriteRule ^(.*)$ - [E=V_ROUTE:%1,E=V_MATCH_PATH:%{ENV:V_TMP_MATCH_PATH},E=V_PATH:%{ENV:V_TMP_PATH},NS]
+
+
+# Two path elements (/a/b)
+RewriteRule ^(/[^/]+/[^/]+)(.*)$ - [E=V_TMP_MATCH_PATH:$1,E=V_TMP_PATH:$2,E=V_TMP_LVL:2,NS]
+
+RewriteCond %{ENV:V_TMP_LVL} =2
+RewriteCond %{ENV:V_MATCH_HOST}%{ENV:V_TMP_MATCH_PATH} ^(.+)$
+RewriteRule ^(.*)$ - [E=V_MATCH_NODE_LOOKUP:%{ENV:V_MATCH_HOST}%{ENV:V_TMP_MATCH_PATH},E=V_MATCH_NODE_DEFAULT:__default__%{ENV:V_TMP_MATCH_PATH},NS]
+
+RewriteCond %{ENV:V_TMP_LVL} =2
+RewriteCond ${openshift-nodes:%{ENV:V_MATCH_NODE_LOOKUP}} ^(.+)$ [OR]
+RewriteCond ${openshift-nodes:%{ENV:V_MATCH_NODE_DEFAULT}} ^(.+)$
+RewriteRule ^(.*)$ - [E=V_ROUTE:%1,E=V_MATCH_PATH:%{ENV:V_TMP_MATCH_PATH},E=V_PATH:%{ENV:V_TMP_PATH},NS]
+
+
+# Three path elements (/a/b/c)
+RewriteRule ^(/[^/]+/[^/]+/[^/]+)(.*)$ - [E=V_TMP_MATCH_PATH:$1,E=V_TMP_PATH:$2,E=V_TMP_LVL:3,NS]
+
+RewriteCond %{ENV:V_TMP_LVL} =3
+RewriteCond %{ENV:V_MATCH_HOST}%{ENV:V_TMP_MATCH_PATH} ^(.+)$
+RewriteRule ^(.*)$ - [E=V_MATCH_NODE_LOOKUP:%{ENV:V_MATCH_HOST}%{ENV:V_TMP_MATCH_PATH},E=V_MATCH_NODE_DEFAULT:__default__%{ENV:V_TMP_MATCH_PATH},NS]
+
+RewriteCond %{ENV:V_TMP_LVL} =3
+RewriteCond ${openshift-nodes:%{ENV:V_MATCH_NODE_LOOKUP}} ^(.+)$ [OR]
+RewriteCond ${openshift-nodes:%{ENV:V_MATCH_NODE_DEFAULT}} ^(.+)$
+RewriteRule ^(.*)$ - [E=V_ROUTE:%1,E=V_MATCH_PATH:%{ENV:V_TMP_MATCH_PATH},E=V_PATH:%{ENV:V_TMP_PATH},NS]
+
+
+# Extract app uuid and gear uuid
+RewriteCond %{ENV:V_ROUTE} ^([^|]+)\|([^|]+)\|(.+)$
+RewriteRule ^(.*)$ - [E=V_ROUTE:%1,E=APP_UUID:%2,E=GEAR_UUID:%3,NS]
+
+
+# Route based on the populated variables,
+
+# Return 410 Gone
+RewriteCond %{ENV:V_ROUTE} =GONE
+RewriteRule ^(.*)$ - [E=V_ROUTE:127.0.0.1%{ENV:V_MATCH_PATH},NS,G]
+
+# Return 403 Forbidden
+RewriteCond %{ENV:V_ROUTE} =FORBIDDEN
+RewriteRule ^(.*)$ - [E=V_ROUTE:127.0.0.1%{ENV:V_MATCH_PATH},NS,F]
+
+# Do not proxy
+RewriteCond %{ENV:V_ROUTE} =NOPROXY
+RewriteRule ^(.*)$ - [E=V_ROUTE:127.0.0.1%{ENV:V_MATCH_PATH},NS,L]
+
+# Discard original request and load the health check file
+RewriteCond %{ENV:V_ROUTE} =HEALTH
+RewriteRule ^(.*)$ /var/www/html/health.txt [E=V_ROUTE:127.0.0.1%{ENV:V_MATCH_PATH},NS,L]
+
+# Issue a redirect
+RewriteCond %{ENV:V_ROUTE} ^REDIRECT:(.*)$
+RewriteRule ^(.*)$ %1%{ENV:V_PATH} [E=V_ROUTE:127.0.0.1%{ENV:V_MATCH_PATH},R,NS,L]
+
+# Discard original request and load a file
+RewriteCond %{ENV:V_ROUTE} ^FILE:(.*)$
+RewriteRule ^(.*)$ %1 [E=V_ROUTE:127.0.0.1%{ENV:V_MATCH_PATH},NS,L]
+
+# Redirect the original request to https, target is final route
+RewriteCond %{ENV:V_ROUTE} ^TOHTTPS:(.*)$
+RewriteRule ^(.*)$ - [E=V_ROUTE:%1,E=TOHTTPS:1,NS]
+
+# If SSL_TO_GEAR is enabled, set variable
+RewriteCond %{ENV:V_ROUTE} ^SSL_TO_GEAR:(.*)$
+RewriteRule ^(.*)$ - [E=V_ROUTE:%1,E=SSL_TO_GEAR:1,NS]
+
+RewriteCond %{ENV:TOHTTPS} =1
+RewriteCond %{HTTPS} =off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R,NS,L]
+
+RewriteCond %{ENV:SSL_TO_GEAR} =1
+RewriteCond %{HTTPS} =off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R,NS,L]
+
+# If SSL_TO_GEAR is enabled, proxy to https
+RewriteCond %{ENV:SSL_TO_GEAR} =1
+RewriteCond %{ENV:V_ROUTE} ^.+$
+RewriteRule ^(.*)$ https://%{ENV:V_ROUTE}%{ENV:V_PATH} [P,NS]
+
+# By default, attempt to proxy to the match
+RewriteCond %{ENV:V_ROUTE} ^.+$
+RewriteRule ^(.*)$ http://%{ENV:V_ROUTE}%{ENV:V_PATH} [P,NS]
+
+# No route, set ProxyPassReverse with valid but useless data
+RewriteRule ^(.*)$ - [E=V_ROUTE:127.0.0.1/,E=V_MATCH_PATH:/]
+
+#
+# Configure reverse proxy based on set variable
+#
+ProxyPassReverse ${V_MATCH_PATH} http://${V_ROUTE} interpolate
+
+#
+# Log custom format for OpenShift parsing.
+# Log format is:
+<IfDefine OpenShiftAnnotateFrontendAccessLog>
+  LogFormat "%h %{V_MATCH_HOST}e %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" (%Dus) %X %{V_ROUTE}e%{V_PATH}e %{APP_UUID}e %{GEAR_UUID}e" openshift
+</IfDefine>
+<IfDefine !OpenShiftAnnotateFrontendAccessLog>
+  LogFormat "%h %{V_MATCH_HOST}e %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" (%Dus) %X %{V_ROUTE}e%{V_PATH}e" openshift
+</IfDefine>
+
+#
+# If the `OpenShiftFrontendSyslogEnabled` option is defined, pipe output to syslog rather than a file.
+#
+<IfDefine OpenShiftFrontendSyslogEnabled>
+  CustomLog "|logger -t openshift-node-frontend" openshift env=V_PATH
+</IfDefine>
+<IfDefine !OpenShiftFrontendSyslogEnabled>
+  CustomLog logs/openshift_log openshift env=V_PATH
+</IfDefine>

@@ -24,7 +24,11 @@ def usage
   puts <<USAGE
 == Synopsis
 
-#{$0}: Check all user applications and delete all pending_op_groups that were created before a given time
+#{$0}: Check user applications and delete all pending_op_groups that were created before a given time.
+
+User operations (start/stop/add cart/etc.) are queued per-app; occasionally one may get stuck, unable
+to operate and holding up the queue so that no other operations can proceed on that application.
+This tool removes stale operations from the application queue.
 
 == Usage
 
@@ -32,7 +36,7 @@ def usage
 
 Options:
 -t|--time
-    Time in hours where the pending ops older than this age will get deleted (default 1)
+    Age in hours (default 1) to delete; pending ops older than this will be deleted.
 -u|--uuid
     Specific app's uuid where the pruning operation will be done - if not given all apps, domains and users will be screened
 -h|--help
@@ -55,7 +59,17 @@ end
 
 usage if args["--help"]
 
-require "/var/www/openshift/broker/config/environment"
+require "#{ENV['OPENSHIFT_BROKER_DIR'] || '/var/www/openshift/broker'}/config/environment"
+ 
+# Reset the logging options. We want DEBUG level stuff.
+module Broker
+  class Application < Rails::Application
+    Mongoid.logger = Rails.logger
+    Moped.logger = Rails.logger
+    Mongoid.logger.level = Logger::DEBUG
+    Moped.logger.level = Logger::DEBUG
+  end
+end
 
 $count = 0
 def clean_app(a)
@@ -65,12 +79,12 @@ def clean_app(a)
   Application.run_in_application_lock(a) do
     a.reload
     a.pending_op_groups.each { |op| 
-      if op.op_type.nil? 
-        puts "ERROR in cleaning up application's op because the type is nil. App uuid - #{a.uuid}. Op - #{op.inspect}"
+      if op._type.nil? 
+        puts "ERROR in cleaning up application's op because the _type is nil. App uuid - #{a.uuid}. Op - #{op.inspect}"
         next
       end
       puts "WARNING : Application #{a.uuid} has created_at field nil for op - #{op.inspect}" if op.created_at.nil?
-    
+
       if op.created_at.nil? or op.created_at < $t 
         puts
         puts "Executing op for app (#{a.uuid}) - #{op.inspect} "
@@ -80,20 +94,21 @@ def clean_app(a)
             raise Exception.new("Op already being rolled back.. continuing.")
           end
           op.execute 
-          a.unreserve_gears(op.num_gears_removed)
+          op.unreserve_gears(op.num_gears_removed, a)
           success = true
-          delete_app = true if op.op_type == :delete_app
+          delete_app = true if (op.class == DeleteAppOpGroup) or (op.class == RemoveFeaturesOpGroup and op.remove_all_features)
         rescue Exception => e
           print "Execution failed. Rolling back.."
           begin
             op.execute_rollback
             num_gears_recovered = op.num_gears_added - op.num_gears_created + op.num_gears_rolled_back + op.num_gears_destroyed
-            a.unreserve_gears(num_gears_recovered)
+            op.unreserve_gears(num_gears_recovered, a)
             success = true
             puts " complete."
-          rescue Exception=>ex
+          rescue Exception=> ex
             success = false
             puts " failed again!"
+            puts ex.backtrace.inspect
           end
         end
         dlist << op if success
@@ -103,15 +118,15 @@ def clean_app(a)
     dlist.each { |op| op.delete }
   end # end of lock
   if not delete_app
-    a.save
-    a.pending_op_groups.each { |op| 
+    a.save!
+    a.pending_op_groups.each { |op|
       if op.created_at.nil? or op.created_at < $t 
-        next if op.op_type.nil?
+        next if op._type.nil?
         puts
         puts "Failed to clear op for app (#{a.uuid}) - #{op.inspect} "
       end
     } 
-    if (a.group_instances.nil? or a.group_instances.empty?) and (a.component_instances.nil? or a.component_instances.empty?)
+    unless a.group_instances.present? or a.component_instances.present?
       a.delete
     end
   end
@@ -121,11 +136,10 @@ $domain_count = 0
 def clean_domain(d)
   $domain_count += 1
   d.reload
-  dlist = d.pending_ops.select { |op| op.op_type.nil? }
+  dlist = d.pending_ops.select { |op| op._type.nil? }
   dlist.each { |op| op.delete }
   d.pending_ops.delete_if { |op| op.nil? }
-  d.pending_ops.each { |op| op.state = :init if op.state==:queued and (op.created_at.nil? or op.created_at < $t) }
-  d.save
+  d.pending_ops.each { |op| op.set_state(:init) if op.state == :queued and (op.created_at.nil? or op.created_at < $t) }
   d.run_jobs rescue nil
   d.reload
   dlist = d.pending_ops.select { |op| (op.created_at.nil? or op.created_at < $t) and op.completed? }
@@ -137,18 +151,17 @@ def clean_domain(d)
       op.state = :queued if op.state == :init
     end
   }
-  d.save
+  d.save!
 end
 
 $user_count = 0
 def clean_user(u)
   $user_count += 1
   u.reload
-  dlist = u.pending_ops.select { |op| op.op_type.nil? or op.pending_domains.empty? }
+  dlist = u.pending_ops.select { |op| op._type.nil? }
   dlist.each { |op| op.delete }
   u.pending_ops.delete_if { |op| op.nil? }
-  u.pending_ops.each { |op| op.state = :init if op.state==:queued and (op.created_at.nil? or op.created_at < $t) }
-  u.save
+  u.pending_ops.each { |op| op.set_state(:init) if op.state == :queued and (op.created_at.nil? or op.created_at < $t) }
   u.run_jobs rescue nil
   u.reload
   dlist = u.pending_ops.select { |op| (op.created_at.nil? or op.created_at < $t) and op.completed? }
@@ -161,7 +174,7 @@ def clean_user(u)
       op.state = :queued if op.state == :init
     end
   }
-  u.save
+  u.save!
 end
 
 hours = args["--time"] || 1
@@ -180,22 +193,22 @@ if uuid.nil?
   }
   Domain.no_timeout.lt("pending_ops.created_at" => $t).each { |d| 
     begin
-      clean_domain(d) 
-    rescue Exception=>e 
+      clean_domain(d)
+    rescue Exception=>e
       puts e.message
       puts e.backtrace
     end
   }
   CloudUser.no_timeout.lt("pending_ops.created_at" => $t).each { |u| 
     begin
-      clean_user(u) 
+      clean_user(u)
     rescue Exception=>e
       puts e.message
       puts e.backtrace
     end
   }
 else
-  Application.where(:uuid => uuid).lt("pending_op_groups.created_at" => $t).each { |a| clean_app(a) }
+  Application.where("_id" => uuid).lt("pending_op_groups.created_at" => $t).each { |a| clean_app(a) }
 end
 
 puts "#{$count} applications were cleaned up. #{$user_count} users were cleaned up. #{$domain_count} domains were cleaned up."

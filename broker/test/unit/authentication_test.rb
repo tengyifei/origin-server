@@ -1,3 +1,4 @@
+ENV["TEST_NAME"] = "unit_authentication_test"
 require File.expand_path('../../test_helper', __FILE__)
 
 class AuthenticationTest < ActiveSupport::TestCase
@@ -36,8 +37,8 @@ class AuthenticationTest < ActiveSupport::TestCase
     end
     def assert_log_action?(action, message=nil)
       assert a = @log_actions.find{ |a| a[3] == action }
-      assert a[5].include?(message) if message.is_a?(String)
-      assert message.match(a[5]) if message.is_a?(Regexp)
+      assert a[6].include?(message) if message.is_a?(String)
+      assert message.match(a[6]) if message.is_a?(Regexp)
     end
 
     attr_writer :auth_service
@@ -172,7 +173,7 @@ class AuthenticationTest < ActiveSupport::TestCase
     token.expects(:user).returns(user)
     Authorization.expects(:authenticate).with('foo').returns(token)
 
-    controller.expects(:render_error).with(:forbidden, 'This action is not allowed with your current authorization.', 1, 'AUTHORIZE')
+    controller.expects(:render_error).with(:forbidden, 'This action is not allowed with your current authorization.', 1)
     controller.authenticate_user!
   end
 
@@ -184,15 +185,17 @@ class AuthenticationTest < ActiveSupport::TestCase
     token.expects(:user).returns(user)
     Authorization.expects(:authenticate).with('foo').returns(token)
 
-    controller.expects(:render_error).with(:forbidden, 'This action is not allowed with your current authorization.', 1, 'AUTHORIZE')
+    controller.expects(:render_error).with(:forbidden, 'This action is not allowed with your current authorization.', 1)
     controller.authenticate_user!
   end
 
   test 'should read secondary then primary for authorization tokens on authenticate' do
     qualifier = mock
+    fully = mock
     s = sequence('load')
     Authorization.expects(:with).with(consistency: :eventual).in_sequence(s).returns(qualifier)
-    qualifier.expects(:where).with(:token => 'foo').in_sequence(s).raises(Mongoid::Errors::DocumentNotFound.new(Authorization, nil, ['foo']))
+    qualifier.expects(:where).with(:token => 'foo').in_sequence(s).returns(fully)
+    fully.expects(:find_by).in_sequence(s).raises(Mongoid::Errors::DocumentNotFound.new(Authorization, nil, ['foo']))
     Authorization.expects(:where).with(:token => 'foo').in_sequence(s).returns([true])
 
     assert Authorization.authenticate('foo')

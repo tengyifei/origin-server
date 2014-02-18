@@ -18,6 +18,7 @@
 require 'rubygems'
 require 'parseconfig'
 require 'getoptlong'
+require 'ipaddr'
 
 def usage
   puts <<USAGE
@@ -73,15 +74,22 @@ if args["--help"] || (ip.nil? || ip.empty? || node_hostname.nil? || node_hostnam
   usage
 end
 
+rectype = IPAddr.new(ip).ipv6? ? "AAAA" : "A"
+
 command =<<-EOF
 server #{server}
-update delete #{node_hostname}.#{node_domain} A
-update add #{node_hostname}.#{node_domain} 180 A #{ip}
+update delete #{node_hostname}.#{node_domain} #{rectype}
+update add #{node_hostname}.#{node_domain} 180 #{rectype} #{ip}
 send
 EOF
 
 if args["--gss-tsig"]
   system "nsupdate -g <<EOF\n#{command}\nEOF"
-else
+elsif args["--key-file"] or File.exists? key
+  # We were explicitly told to use a keyfile, or a keyfile exists at the
+  # default location.
   system "nsupdate -k #{key} <<EOF\n#{command}\nEOF"
+else
+  # Try to do an unauthenticated update.
+  system "nsupdate <<EOF\n#{command}\nEOF"
 end

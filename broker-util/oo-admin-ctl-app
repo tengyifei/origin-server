@@ -3,7 +3,7 @@
 require 'rubygems'
 require 'getoptlong'
 
-CTL_APP_COMMANDS = "(start|stop|force-stop|restart|status|destroy|force-destroy|remove-gear|remove-cartridge)"
+CTL_APP_COMMANDS = "(start|stop|force-stop|restart|status|destroy|force-destroy|remove-gear|remove-cartridge|run-connection-hooks|set-multiplier|update-cluster)"
 
 def usage
   puts <<USAGE
@@ -28,6 +28,8 @@ Options:
     Gear uuid to operate on
 --cartridge
     Cartridge to operate on
+--multiplier
+    Multiplier factor to be set for the cartridge
 -h|--help
     Show Usage info
 USAGE
@@ -40,6 +42,7 @@ opts = GetoptLong.new(
     ["--command",          "-c", GetoptLong::REQUIRED_ARGUMENT],
     ["--gear_uuid",              GetoptLong::REQUIRED_ARGUMENT],
     ["--cartridge",              GetoptLong::REQUIRED_ARGUMENT],
+    ["--multiplier",             GetoptLong::REQUIRED_ARGUMENT],
     ["--bypass",           "-b", GetoptLong::NO_ARGUMENT],    
     ["--help",             "-h", GetoptLong::NO_ARGUMENT]
 )
@@ -57,12 +60,15 @@ command  = args['--command']
 bypass   = args['--bypass']
 gear_uuid = args['--gear_uuid']
 cartridge = args['--cartridge']
+multiplier = args['--multiplier']
 
 if login.nil? or app_name.nil? or command.nil? or args["--help"]
   usage
 end
 
-require "/var/www/openshift/broker/config/environment"
+require "#{ENV['OPENSHIFT_BROKER_DIR'] || '/var/www/openshift/broker'}/config/environment"
+include AdminHelper
+
 # Disable analytics for admin scripts
 Rails.configuration.analytics[:enabled] = false
 
@@ -75,7 +81,7 @@ unless user
   puts "User #{login} not found."
   exit 1
 end
-app = Application.find(user, app_name)
+app = Application.find_by_user(user, app_name)
 unless app
   puts "Application #{app_name} for user #{login} not found."
   exit 1
@@ -84,7 +90,7 @@ end
 def check_user_response
   begin
     agree = gets.chomp
-    if agree != 'y'
+    unless agree.to_s.strip =~ /^(true|t|yes|y|1)$/i
       puts "\n"
       exit 217
     end
@@ -106,75 +112,131 @@ begin
   when "restart"
     reply.append app.restart  
   when "status"
-    app.requires.each { |feature|
-      reply.append app.status(feature)
-    }
+    app.cartridges.each do |cart|
+      reply.append app.status(cart.name)
+    end
   when "force-destroy","destroy"
     unless bypass
       puts <<-WARNING
     !!!! WARNING !!!! WARNING !!!! WARNING !!!!
-    You are about to destroy the #{app_name} application.
+    You are about to delete the #{app_name} application.
   
     This is NOT reversible, all remote data for this application will be removed.
     WARNING
   
-      print "Do you want to destroy this application (y/n): "
+      print "Do you want to delete this application (y/n): "
       check_user_response
     end
     
     if command=="destroy"
       app.destroy_app
     elsif command=="force-destroy"
-      puts "Force destroying application #{app.name}.. user's consumed_gear count may get skewed"
-      # gather all gears and destroy, then delete app
-      app.group_instances.each { |gi| 
-        gi.gears.each { |g| 
+      puts "Force deleting application #{app.name}..."
+      premium_carts = get_premium_carts
+      gear_count = 0
+      # delete all gears, then delete app
+      app.group_instances.each do |gi|
+        gi.gears.each do |g|
+          gear_count += 1
           g.deregister_dns rescue nil
           g.destroy_gear rescue nil 
-        } if gi.gears
-      } if app.group_instances
+          begin
+            UsageRecord.track_usage(user._id, app.name, g._id, UsageRecord::EVENTS[:end], UsageRecord::USAGE_TYPES[:gear_usage], gi.gear_size)
+            addtl_fs_gb = gi.addtl_fs_gb
+            UsageRecord.track_usage(user._id, app.name, g._id, UsageRecord::EVENTS[:end], UsageRecord::USAGE_TYPES[:addtl_fs_gb], nil, addtl_fs_gb) if addtl_fs_gb > 0
+            component_instances = gi.component_instances + g.sparse_carts.map {|s| gi.application.component_instances.find_by(_id: s) }
+            carts = component_instances.map { |ci| ci.cartridge_name }.uniq
+            carts.each do |cart|
+              UsageRecord.track_usage(user._id, app.name, g._id, UsageRecord::EVENTS[:end], UsageRecord::USAGE_TYPES[:premium_cart], nil, nil, cart) if premium_carts.include?(cart)
+            end
+          rescue Exception => e
+            puts e.message
+            puts e.backtrace.inspect
+          end
+        end if gi.gears.present?
+      end if app.group_instances.present?
+
+      owner = app.domain.owner
+      begin
+        retries = 5
+        until lock_user_without_app(owner.id)
+          sleep 1
+          retries -= 1
+          if retries < 0
+            puts "Unable to acquire user lock. User's consumed gear count will be skewed."
+            raise
+          end
+        end
+        owner.consumed_gears -= gear_count
+        owner.save!
+      rescue Exception
+        #ignore
+      ensure
+        unlock_user_without_app(owner.id)
+      end      
       app.delete
     end
-    reply.resultIO << "Successfully destroyed application: #{app.name}" if reply.resultIO.string.empty?
+    reply.resultIO << "Successfully deleted application: #{app.name}" if reply.resultIO.string.empty?
   when "remove-cartridge"
     unless cartridge
       puts "Cartridge is required to remove-dependency"
       exit 1
     end
-    app.remove_features([cartridge])
+    app.remove_cartridges([cartridge])
   when "remove-gear"
     unless gear_uuid
       puts "Gear uuid is required to remove-gear"
       exit 1
     end
 
-    group_instance = nil
     gear_id = nil
-    found = false
-
-    app.group_instances.each do |gi|
-      gi.gears.each do |g|
-        if g._id.to_s == gear_uuid or g.uuid == gear_uuid
-          if g.host_singletons
-            puts "Gear #{gear_uuid} hosts singleton components within its group instance. You cannot remove it."
-            puts "You can either remove the cartridge or delete the application."
+    app.gears.select {|g| (g._id.to_s == gear_uuid) or (g.uuid == gear_uuid)}.each do |g|
+      if g.sparse_carts and (g.sparse_carts.length > 0)
+        puts "Gear #{gear_uuid} hosts sparse components within its group instance. You cannot remove it."
+        puts "You can either remove the cartridge or delete the application."
+        exit 1
+      else
+        cis = g.component_instances
+        cis.each do |ci|
+          if ci.gears.length == 1
+            puts "Gear #{gear_uuid} cannot be removed. You need to remove cartridge #{ci.cartridge_name}."
             exit 1
-          else  
-            group_instance = gi
-            gear_id = g._id.to_s
-            found = true
-            break
           end
         end
+        gear_id = g._id.to_s
+        break
       end
-      break if found
     end
 
-    unless found
+    unless gear_id
       puts "Gear #{gear_uuid} not found in #{app.name}"
       exit 1
     end
     app.remove_gear(gear_id)
+  when "run-connection-hooks"
+    app.run_connection_hooks
+  when "set-multiplier"
+    unless cartridge
+      puts "Cartridge is required to remove-dependency"
+      exit 1
+    end
+    unless multiplier
+      puts "Multiplier factor is a required argument"
+      exit 1
+    end
+    begin
+      ci = app.component_instances.find_by(cartridge_name: cartridge)
+    rescue Exception => e
+      puts "Cartridge #{cartridge} not found in the application #{app.name}"
+      exit 1
+    end
+    unless ci.is_sparse?
+      puts "Cannot set multiplier factor. Cartridge #{cartridge} needs to be a sparse cart."
+      exit 1
+    end
+    app.update_component_limits(ci, nil, nil, nil, multiplier)
+  when "update-cluster"
+    app.update_cluster
   else
     puts "Command must be one of: #{CTL_APP_COMMANDS}"
     usage

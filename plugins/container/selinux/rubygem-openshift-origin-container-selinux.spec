@@ -9,7 +9,7 @@
 
 Summary:       OpenShift plugin for SELinux based containers
 Name:          rubygem-%{gem_name}
-Version: 0.1.1
+Version: 0.7.0
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -77,34 +77,25 @@ cp %{buildroot}/%{gem_instdir}/conf/openshift-origin-container-selinux.conf.exam
 /etc/openshift/node-plugins.d/
 
 %changelog
-* Fri Jul 12 2013 Adam Miller <admiller@redhat.com> 0.1.1-1
-- bump_minor_versions for sprint 31 (admiller@redhat.com)
+* Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 0.6.3-1
+- Bug 1056426 - last-access info not deleted when gear deleted
+  (jhonce@redhat.com)
 
-* Fri Jul 12 2013 Adam Miller <admiller@redhat.com> 0.0.7-1
-- Merge pull request #3056 from kraman/libvirt-f19-2
+* Mon Feb 10 2014 Adam Miller <admiller@redhat.com> 0.6.2-1
+- Cleaning specs (dmcphers@redhat.com)
+- Merge pull request #4616 from brenton/deployment_dir1
   (dmcphers+openshiftbot@redhat.com)
-- Bugfix #983308 (kraman@gmail.com)
-
-* Wed Jul 10 2013 Adam Miller <admiller@redhat.com> 0.0.6-1
-- Merge pull request #3016 from pmorie/dev/fix_tests
+- Merge pull request #4149 from mfojtik/fixes/bundler
   (dmcphers+openshiftbot@redhat.com)
-- Fix upgrade functionality and associated tests (pmorie@gmail.com)
+- Bug 1049089 - Speed up selinux labeling usage (jhonce@redhat.com)
+- First pass at avoiding deployment dir create on app moves
+  (bleanhar@redhat.com)
+- Switch to use https in Gemfile to get rid of bundler warning.
+  (mfojtik@redhat.com)
 
-* Tue Jul 09 2013 Adam Miller <admiller@redhat.com> 0.0.5-1
-- Fix module path for FrontendProxyServer (kraman@gmail.com)
-- Making module resolution for UserCreationException and UserDeletionException
-  explicit (kraman@gmail.com)
+* Thu Jan 30 2014 Adam Miller <admiller@redhat.com> 0.6.1-1
+- bump_minor_versions for sprint 40 (admiller@redhat.com)
 
-* Mon Jul 08 2013 Adam Miller <admiller@redhat.com> 0.0.4-1
--  Revamp the cgroups and pam scripts to leverage the system setup for better
-  performance and simplify the code. (rmillner@redhat.com)
-
-* Wed Jul 03 2013 Adam Miller <admiller@redhat.com> 0.0.3-1
-- artificial bump to get build reporting back in line (admiller@redhat.com)
-
-* Wed Jul 03 2013 Adam Miller <admiller@redhat.com> 0.0.2-1
-- First tito tag
-
-* Sun Jun 23 2013 Krishna Raman <kraman@gmail.com> 0.0.1-1
-- new package built with tito
+* Tue Jan 14 2014 Adam Miller <admiller@redhat.com> 0.5.2-1
+- Bug 1051833 - PathUtils.flock() not removing lock file (jhonce@redhat.com)
 

@@ -1,5 +1,5 @@
-@runtime_extended3
-Feature: V2 SDK Perl Cartridge
+@cartridge_extended3
+Feature: Perl Cartridge
 
   Scenario Outline: Add cartridge
     Given a new <cart_name> type application
@@ -12,27 +12,6 @@ Feature: V2 SDK Perl Cartridge
     When I destroy the application
     Then the application git repo will not exist
 
-    @rhel-only
     Scenarios: RHEL scenarios
       | cart_name |
       | perl-5.10 |
-
-    @fedora-19-only
-    Scenarios: RHEL scenarios
-      | cart_name |
-      | perl-5.16 |
-
-  Scenario Outline: Destroy application
-    Given a new <cart_name> type application
-    When I destroy the application
-    Then the application git repo will not exist
-
-    @rhel-only
-    Scenarios: RHEL scenarios
-      | cart_name |
-      | perl-5.10 |
-
-    @fedora-19-only
-    Scenarios: RHEL scenarios
-      | cart_name |
-      | perl-5.16 |

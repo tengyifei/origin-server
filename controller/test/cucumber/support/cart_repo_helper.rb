@@ -11,12 +11,41 @@ end
 def clean_cart_repo
   cart_repo = OpenShift::Runtime::CartridgeRepository.instance
 
-  if cart_repo.exist?('mock', '0.0.2', '0.1')
-    $logger.info('Erasing test-generated version mock-0.1')
-    cart_repo.erase('mock', '0.1', '0.0.2')
+  check_carts = ['mock', 'mock-plugin']
 
-    %x(pkill -USR1 -f /usr/sbin/mcollectived)
+  restart_mcollectived = false
+
+  check_carts.each do |cart|
+    manifest_path        = File.join(%W(/ usr libexec openshift cartridges #{cart} metadata manifest.yml))
+    manifest_backup_path = manifest_path + '~'
+
+    if cart_repo.exist?(cart, '0.1', '0.0.2')
+      $logger.info("Erasing test-generated version #{cart}-0.1 (0.0.2)")
+      cart_repo.erase(cart, '0.1', '0.0.2', true)
+
+      if cart_repo.exist?(cart, '0.2', '0.0.2')
+        $logger.info("Erasing test-generated version #{cart}-0.2 (0.0.2)")
+        cart_repo.erase(cart, '0.2', '0.0.2', true)
+      end
+
+      if File.exist?(manifest_backup_path)
+        $logger.info("Restoring #{cart} #{manifest_path}")
+        FileUtils.copy(manifest_backup_path, manifest_path)
+      end
+
+      restart_mcollectived = true
+    end
   end
+
+  if restart_mcollectived
+    if File.exists?("/etc/fedora-release")
+      %x(service mcollective restart)
+    else
+      %x(service ruby193-mcollective restart)
+    end
+  end
+
+  sleep 5
 
   cart_repo.clear
   cart_repo.load

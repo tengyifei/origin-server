@@ -1,7 +1,7 @@
-- breadcrumb_for_application @application, 'Add a Cartridge'
 - content_for :page_title, 'Add a Cartridge'
+- content_for :page_style, 'highlight'
 
-%h1.invisible Add a New Cartridge
+%h1.invisible Add a Cartridge
 = cartridge_wizard_steps_create 0
 
 %section.row
@@ -10,7 +10,7 @@
 
   - else
     .span8
-      %p Choose a cartridge to add to your application.
+      %h3 Choose a cartridge to add to your application.
       .row
         - @carts.in_groups(2, false).each do |types|
           .span4
@@ -21,7 +21,7 @@
         %form.form-inline{:method => :get, :action => application_cartridge_type_path(@application, 'custom')}
           %p You may also add your own cartridges by providing a link to a #{link_to 'downloadable cartridge', downloadable_cartridges_help_url}.  OpenShift will download and install the cart into your application.  Remember that downloaded cartridges will not automatically receive updates.
 
-          %input{:type => :text, :name => :url, :placeholder => 'URL to a cartridge definition'}
+          %input.span6{:type => :text, :name => :url, :placeholder => 'URL to a cartridge definition'}
           %input.btn{:type => :submit, :value => 'Next', :title => 'Download a cartridge into this app'}
 
   - unless @installed.empty? and @requires.empty? and @conflicts.empty? and @blocked.empty?
@@ -39,6 +39,6 @@
 - content_for :javascripts do
   :javascript
     jQuery('.cartridge_type').click(function() {
-      a = $('a.btn', this)[0];
+      a = $('a.tile-target', this)[0];
       window.location = a.href
     });

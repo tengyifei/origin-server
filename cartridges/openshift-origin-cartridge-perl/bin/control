@@ -6,32 +6,44 @@ source $OPENSHIFT_CARTRIDGE_SDK_BASH
 
 
 HTTPD_CFG_FILE=$OPENSHIFT_PERL_DIR/etc/conf/httpd_nolog.conf
+HTTPD_PASSENV_FILE=$OPENSHIFT_PERL_DIR/etc/conf.d/passenv.conf
 HTTPD_PID_FILE=$OPENSHIFT_PERL_DIR/run/httpd.pid
+
+# construct the configuration directives for httpd
+HTTPD_CMD_CONF="-C 'Include $OPENSHIFT_PERL_DIR/etc/conf.d/*.conf' -f $HTTPD_CFG_FILE"
+for dir in /etc/openshift/cart.conf.d/httpd{,/perl} ; do
+    [ -d $dir ] && HTTPD_CMD_CONF="$HTTPD_CMD_CONF -c 'Include $dir/*.conf'"
+done
 
 # Functions called from case statement below
 function start() {
-  update_httpd_passenv $HTTPD_CFG_FILE
+  echo "Starting Perl cartridge"
+  write_httpd_passenv $HTTPD_PASSENV_FILE
   ensure_valid_httpd_process "$HTTPD_PID_FILE" "$HTTPD_CFG_FILE"
-  /usr/sbin/httpd -C "Include $OPENSHIFT_PERL_DIR/etc/conf.d/*.conf" -f $HTTPD_CFG_FILE -k start
+  eval "/usr/sbin/httpd $HTTPD_CMD_CONF -k start"
+  [ "$?" == "0" ] && wait_for_pid_file $HTTPD_PID_FILE
 }
 
 function stop() {
+  echo "Stopping Perl cartridge"
   ensure_valid_httpd_process "$HTTPD_PID_FILE" "$HTTPD_CFG_FILE"
   if [ -f "$HTTPD_PID_FILE" ]; then
     httpd_pid=`cat "$HTTPD_PID_FILE" 2> /dev/null`
+    eval "/usr/sbin/httpd $HTTPD_CMD_CONF -k stop"
+    wait_for_stop $httpd_pid
   fi
-  /usr/sbin/httpd -C "Include $OPENSHIFT_PERL_DIR/etc/conf.d/*.conf" -f $HTTPD_CFG_FILE -k stop
-  wait_for_stop $httpd_pid
 }
 
 function restart() {
-  update_httpd_passenv $HTTPD_CFG_FILE
-  /usr/sbin/httpd -C "Include $OPENSHIFT_PERL_DIR/etc/conf.d/*.conf" -f $HTTPD_CFG_FILE -k restart
+  echo "Restarting Perl cartridge"
+  write_httpd_passenv $HTTPD_PASSENV_FILE
+  ensure_httpd_restart_succeed "$HTTPD_PID_FILE" "$HTTPD_CFG_FILE"
+  eval "/usr/sbin/httpd $HTTPD_CMD_CONF -k restart"
 }
 
 # Is the packaged software really running?
 function status() {
-  if ps --no-headers --pid $(< $HTTPD_PID_FILE) > /dev/null
+  if [ -f "$HTTPD_PID_FILE" ] && ps --no-headers --pid $(< $HTTPD_PID_FILE) > /dev/null
   then
     client_result 'Perl is running'
   else

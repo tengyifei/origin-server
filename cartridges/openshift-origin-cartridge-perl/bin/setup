@@ -9,4 +9,8 @@ esac
 shopt -s dotglob
 mkdir -p $OPENSHIFT_PERL_DIR/etc
 cp -r $OPENSHIFT_PERL_DIR/versions/$version/etc/* $OPENSHIFT_PERL_DIR/etc
-mkdir -p $OPENSHIFT_HOMEDIR/.cpanm
+
+# Create/truncate Apache PassEnv configuration file
+echo > $OPENSHIFT_PERL_DIR/etc/conf.d/passenv.conf
+
+echo $version >$OPENSHIFT_PERL_DIR/env/OPENSHIFT_PERL_VERSION

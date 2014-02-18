@@ -4,35 +4,49 @@ source $OPENSHIFT_CARTRIDGE_SDK_BASH
 
 export PHPRC="${OPENSHIFT_PHPMYADMIN_DIR}conf/php.ini"
 
-httpd_config=${OPENSHIFT_PHPMYADMIN_DIR}conf/httpd_nolog.conf
-httpd_pid_file=${OPENSHIFT_PHPMYADMIN_DIR}run/httpd.pid
+HTTPD_CFG_FILE=${OPENSHIFT_PHPMYADMIN_DIR}conf/httpd_nolog.conf
+HTTPD_PASSENV_FILE=${OPENSHIFT_PHPMYADMIN_DIR}conf.d/passenv.conf
+HTTPD_PID_FILE=${OPENSHIFT_PHPMYADMIN_DIR}run/httpd.pid
+
+# construct the configuration directives for httpd
+HTTPD_CMD_CONF="-C 'Include ${OPENSHIFT_PHPMYADMIN_DIR}conf.d/*.conf' -f $HTTPD_CFG_FILE"
+for dir in /etc/openshift/cart.conf.d/httpd{,/phpmyadmin} ; do
+    [ -d $dir ] && HTTPD_CMD_CONF="$HTTPD_CMD_CONF -c 'Include $dir/*.conf'"
+done
 
 function start {
-  update_httpd_passenv $httpd_config
-  ensure_valid_httpd_process "$httpd_pid_file" "$httpd_config"
-  /usr/sbin/httpd -C "Include ${OPENSHIFT_PHPMYADMIN_DIR}conf.d/*.conf" -f $httpd_config -k start
+  echo "Starting PHPMyAdmin cartridge"
+  write_httpd_passenv $HTTPD_PASSENV_FILE
+  ensure_valid_httpd_process "$HTTPD_PID_FILE" "$HTTPD_CFG_FILE"
+  eval "/usr/sbin/httpd $HTTPD_CMD_CONF -k start"
 }
 
 function stop {
-  ensure_valid_httpd_process "$httpd_pid_file" "$httpd_config"
-  if [ -f "$httpd_pid_file" ]; then
-      httpd_pid=`cat "$httpd_pid_file" 2> /dev/null`
+  echo "Stopping PHPMyAdmin cartridge"
+  ensure_valid_httpd_process "$HTTPD_PID_FILE" "$HTTPD_CFG_FILE"
+  if [ -f "$HTTPD_PID_FILE" ]; then
+      httpd_pid=`cat "$HTTPD_PID_FILE" 2> /dev/null`
+      eval "/usr/sbin/httpd $HTTPD_CMD_CONF -k stop"
+      wait_for_stop $httpd_pid
   fi
-  /usr/sbin/httpd -C "Include ${OPENSHIFT_PHPMYADMIN_DIR}conf.d/*.conf" -f $httpd_config -k stop
-  wait_for_stop $httpd_pid
 }
 
 function restart {
-  update_httpd_passenv $httpd_config
-  /usr/sbin/httpd -C "Include ${OPENSHIFT_PHPMYADMIN_DIR}conf.d/*.conf" -f $httpd_config -k restart
+  echo "Restarting PHPMyAdmin cartridge"
+  write_httpd_passenv $HTTPD_PASSENV_FILE
+  eval "/usr/sbin/httpd $HTTPD_CMD_CONF -k restart"
 }
 
 function status {
-  if ps --no-headers --pid $(< $httpd_pid_file) > /dev/null; then
-    client_result 'PHPMyAdmin is running'
-  else
-    client_result 'PHPMyAdmin is either stopped or inaccessible'
+  if [ -f $HTTPD_PID_FILE ]
+  then
+    if ps --no-headers --pid $(< $HTTPD_PID_FILE) > /dev/null
+    then
+      client_result 'PHPMyAdmin is running'
+      exit 0
+    fi
   fi
+  client_result 'PHPMyAdmin is either stopped or inaccessible'
 }
 
 # Clean up any log files

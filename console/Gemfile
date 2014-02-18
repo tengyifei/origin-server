@@ -1,9 +1,17 @@
-source 'http://rubygems.org'
+source 'https://rubygems.org'
 
 gemspec
 
 gem 'pry', :require => 'pry' if ENV['PRY']
 gem 'perftools.rb', :require => 'perftools' if ENV['PERFTOOLS']
+gem 'syslog-logger', '~> 1.6.8', :require => false
+
+# NON-RUNTIME BEGIN
+
+# To simplify the packaging burden for distro maintainers it's important to
+# place all gems not needed at runtime in this section.  It can be removed
+# during package build time to avoid having to ship/support development-only
+# packages.
 
 group :test do
   gem 'ci_reporter',   '>= 1.7.0', :require => false
@@ -22,6 +30,8 @@ group :test, :development do
   gem 'konacha',       '~> 2.6.0'
 end
 
+# NON-RUNTIME END
+
 group :assets do
   gem 'compass-rails', '~> 1.0.3'
   gem 'sass-rails',    '~> 3.2.5'
@@ -29,7 +39,6 @@ group :assets do
   gem 'jquery-rails',  '~> 2.0.2'
   gem 'uglifier',      '>= 1.2.6'
   gem 'therubyracer',  '>= 0.10'
+  gem 'sass-twitter-bootstrap',  '2.0.1'
 end
-
-
 

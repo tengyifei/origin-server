@@ -22,6 +22,11 @@
   margin-right: $gridGutterWidth/2;
 }
 
+// Use to set generic bottom margin between elements
+.gutter-bottom, .column-content section, .row-content  {
+  margin-bottom: $gridGutterWidth;
+}
+
 // Put content into a box with gutters compatible with the grid
 .box-content {
   padding: 20px $gridGutterWidth;
@@ -46,5 +51,42 @@
   &.span2:nth-child(6n + 1) {
     clear: left;
     margin-left: 0;
+  }
+}
+
+// Custom grid equivalent for flow
+.flow {
+  display: table;
+  width: 100%;
+  //table-layout: fixed;
+
+  > .flow-block {
+    display: table-cell;
+    vertical-align: middle;
+
+    > ul.inline {
+      display: inline-block;
+      white-space: nowrap;
+      margin-bottom: 0;
+
+      > li {
+        font-size: $tinyFontSize;
+
+        > div {
+          margin-top: 2px;
+          white-space: normal;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .flow > .flow-block {
+    display: inline-block;
+
+    &.right {
+      float: right;
+    }
   }
 }

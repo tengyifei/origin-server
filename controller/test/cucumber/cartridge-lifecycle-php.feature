@@ -1,6 +1,5 @@
-@runtime_extended2
-@runtime
-@not-enterprise
+@cartridge_extended1
+@node
 Feature: Cartridge Lifecycle PHP Verification Tests
   Scenario Outline: Application Creation
   #Given a new <cart_name> application, verify its availability
@@ -40,12 +39,7 @@ Feature: Cartridge Lifecycle PHP Verification Tests
     Then the application should not be accessible
     Then the application should not be accessible via node-web-proxy
 
-  @rhel-only
   Scenarios: RHEL scenarios
     | cart_name |
     | php-5.3   |
-
-  @fedora-19-only
-  Scenarios: RHEL scenarios
-    | cart_name |
-    | php-5.5   |
+    | php-5.4   |

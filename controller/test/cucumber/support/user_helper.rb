@@ -1,5 +1,3 @@
-#require '/var/www/openshift/broker/config/environment'
-
 module UserHelper
   #
   # Obtain a unique username from S3.
@@ -29,6 +27,11 @@ module UserHelper
 
   def register_user(login, password)
     command = $user_register_script_format % [login, password]
+    run command
+  end
+
+  def set_max_domains(login, max_domains)
+    command = "/usr/sbin/oo-admin-ctl-user -l #{login} --setmaxdomains #{max_domains}"
     run command
   end
 

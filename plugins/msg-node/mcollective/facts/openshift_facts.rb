@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'parseconfig'
+require 'openshift-origin-node/model/node'
 
 def get_node_config_value(key, default)
   config_file = ParseConfig.new('/etc/openshift/node.conf')
@@ -21,9 +22,13 @@ if File.exists?(district_conf)
   config_file = ParseConfig.new(district_conf)
   district_uuid = config_file['uuid'] ? config_file['uuid'] : 'NONE'
   district_active = config_file['active'] ? config_file['active'] == "true" : false
+  district_first_uid = config_file['first_uid'] ? config_file['first_uid'] : 1000
+  district_max_uid = config_file['max_uid'] ? config_file['max_uid'] : 6999
 end
 Facter.add(:district_uuid) { setcode { district_uuid } }
 Facter.add(:district_active) { setcode { district_active } }
+Facter.add(:district_first_uid) { setcode { district_first_uid } }
+Facter.add(:district_max_uid) { setcode { district_max_uid } }
 
 #
 # Pull public_ip and public_hostname out of the node_data config
@@ -34,105 +39,35 @@ Facter.add(:public_ip) { setcode { public_ip } }
 Facter.add(:public_hostname) { setcode { public_hostname } }
 
 #
-# Find node_profile, max_apps, max_active_apps
+# Pull node_utilization data from node model
 #
-node_profile = 'small'
-max_apps = nil
-max_active_apps = nil
-max_active_gears = nil
-if File.exists?('/etc/openshift/resource_limits.conf')
-  config_file = ParseConfig.new('/etc/openshift/resource_limits.conf')
-  node_profile = config_file['node_profile'] || 'small'
-  quota_blocks = config_file['quota_blocks'] || '1048576'
-  quota_files = config_file['quota_files'] || '40000'
-  # use max_{active_,}gears if set in resource limits, or fall back to old "apps" names
-  max_active_gears = config_file['max_active_gears'] ||
-    config_file['max_active_apps'] || '0'
-end
+results = OpenShift::Runtime::Node.node_utilization
 
-Facter.add(:node_profile) { setcode { node_profile } }
-Facter.add(:max_active_gears) { setcode { max_active_gears || '0' } }
-Facter.add(:quota_blocks) { setcode { quota_blocks } }
-Facter.add(:quota_files) { setcode { quota_files } }
-
-#
-# Count number of git repos and stopped apps
-#
-git_repos_count = 0
-stopped_app_count = 0
-gears_active_count = 0 # includes everything but idle and stopped
-gears_total_count = 0
-gears_idled_count = 0
-gears_stopped_count = 0
-gears_started_count = 0
-gears_deploying_count = 0
-gears_unknown_count = 0
-Dir.glob("/var/lib/openshift/*").each do |app_dir|
-  if File.directory?(app_dir) && !File.symlink?(app_dir)
-    git_repos_count += Dir.glob(File.join(app_dir, "git/*.git")).count
-
-    # note: only considered a gear if .state file is present. There are
-    # other directories that aren't gears, e.g. ".httpd.d"
-    Dir.glob(File.join(app_dir, %w{app-root runtime .state})).each do |file|
-      gears_total_count += 1
-      case File.read(file).chomp
-        # expected values: building, deploying, started, idle, new, stopped, or unknown
-      when 'idle'
-          stopped_app_count += 1 # legacy
-          gears_idled_count += 1
-      when 'stopped'
-          stopped_app_count += 1 # legacy
-          gears_stopped_count += 1
-      when 'started'
-          gears_started_count += 1
-      when *%w[new building deploying]
-          gears_deploying_count += 1
-      else # literally 'unknown' or something else
-          gears_unknown_count += 1
-      end
-    end
-  end
-  # consider a gear active unless explicitly not
-  gears_active_count = gears_total_count - gears_idled_count - gears_stopped_count
-end
-
-#
-# Record gear-based counts and capacity
-#
-Facter.add(:gears_active_count) { setcode { gears_active_count } }
-Facter.add(:gears_total_count) { setcode { gears_total_count } }
-Facter.add(:gears_idle_count) { setcode { gears_idled_count } }
-Facter.add(:gears_stopped_count) { setcode { gears_stopped_count } }
-Facter.add(:gears_started_count) { setcode { gears_started_count } }
-Facter.add(:gears_deploying_count) { setcode { gears_deploying_count } }
-Facter.add(:gears_unknown_count) { setcode { gears_unknown_count } }
-gears_usage_pct = begin gears_total_count * 100.0 / max_active_gears.to_f; rescue; 0.0; end
-gears_active_usage_pct = begin gears_active_count * 100.0 / max_active_gears.to_f; rescue; 0.0; end
-Facter.add(:gears_usage_pct) { setcode { gears_usage_pct } }
-Facter.add(:gears_active_usage_pct) { setcode { gears_active_usage_pct } }
+Facter.add(:node_profile) { setcode { results['node_profile'] } }
+Facter.add(:max_active_gears) { setcode { results['max_active_gears'] || '0' } }
+Facter.add(:no_overcommit_active) { setcode { results['no_overcommit_active'] || false } }
+Facter.add(:quota_blocks) { setcode { results['quota_blocks'] } }
+Facter.add(:quota_files) { setcode { results['quota_files'] } }
+Facter.add(:gears_active_count) { setcode { results['gears_active_count'] } }
+Facter.add(:gears_total_count) { setcode { results['gears_total_count'] } }
+Facter.add(:gears_idle_count) { setcode { results['gears_idled_count'] } }
+Facter.add(:gears_stopped_count) { setcode { results['gears_stopped_count'] } }
+Facter.add(:gears_started_count) { setcode { results['gears_started_count'] } }
+Facter.add(:gears_deploying_count) { setcode { results['gears_deploying_count'] } }
+Facter.add(:gears_unknown_count) { setcode { results['gears_unknown_count'] } }
+Facter.add(:gears_usage_pct) { setcode { results['gears_usage_pct'] } }
+Facter.add(:gears_active_usage_pct) { setcode { results['gears_active_usage_pct'] } }
 
 # Old "app" count, excludes some gears
-Facter.add(:git_repos) { setcode { git_repos_count } }
-#
+Facter.add(:git_repos) { setcode { results['git_repos_count'] } }
+
 # capacity and active capacity - deprecated but kept for backward compat
-Facter.add(:capacity) { setcode { gears_usage_pct.to_s } }
-Facter.add(:active_capacity) { setcode { gears_active_usage_pct.to_s } }
+Facter.add(:capacity) { setcode { results['capacity'] } }
+Facter.add(:active_capacity) { setcode { results['active_capacity'] } }
 
 #
 # Get sshfp record
 #
 Facter.add(:sshfp) do
     setcode { %x[/usr/bin/ssh-keygen -r $(hostname) -f /etc/ssh/ssh_host_rsa_key]}
-end
-
-#
-# List cartridges on the host
-#   Convert from name-m.n.p to name-m.n
-#   This is the *full* list.
-#
-Facter.add(:cart_list) do
-    carts = `oo-cartridge-list`.split
-    # The first element is the text "Cartridges:"
-    carts.shift
-    setcode { carts.join('|') }
 end

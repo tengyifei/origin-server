@@ -1,13 +1,13 @@
-@runtime_extended3
-@runtime_extended
-@not-enterprise
+@cartridge_extended3
+@cartridge_nodejs
+@cartridge_extended
 Feature: Cartridge Lifecycle NodeJS Verification Tests
-  Scenario: Application Creation
+  Scenario Outline: Application Creation
     Given the libra client tools
-    When 1 nodejs applications are created
+    When 1 <cart_name> applications are created
     Then the applications should be accessible
     #Scenario: Application Modification
-    Given an existing nodejs application
+    Given an existing <cart_name> application
     When the application is changed
     Then it should be updated successfully
     And the application should be accessible
@@ -20,6 +20,23 @@ Feature: Cartridge Lifecycle NodeJS Verification Tests
     #Scenario: Application Restarting
     When the application is restarted
     Then the application should be accessible
+    #Scenario: Added the use_npm marker to nodejs application
+    When the use_npm marker is added
+    Then the application should be accessible
+    And the application should run using npm
+    #Scenario: Removed the use_npm marker from nodejs application
+    When the use_npm marker is removed
+    Then the application should be accessible
+    And the application should run using supervisor
     #Scenario: Application Destroying
     When the application is destroyed
     Then the application should not be accessible
+
+    Scenarios: RHEL SCL scenarios
+      |  cart_name  |
+      | nodejs-0.10 |
+
+    @not-enterprise
+    Scenarios: RHEL non-SCL scenarios
+      |  cart_name  |
+      | nodejs-0.6  |

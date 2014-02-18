@@ -14,6 +14,7 @@
 # limitations under the License.
 #++
 
+require 'openshift-origin-node/utils/logger/logger_support'
 require 'logger'
 require 'fileutils'
 
@@ -35,31 +36,33 @@ module OpenShift
       # Note: File IO for the underlying loggers is synchronous.
       #
       class SplitTraceLogger
-        PROFILES = {
-            :standard => {
-                file_config:   'PLATFORM_LOG_FILE',
+        include LoggerSupport
+
+        @@DEFAULT_PROFILES = {
+          :standard => {
+            file_config:   'PLATFORM_LOG_FILE',
             level_config:  'PLATFORM_LOG_LEVEL',
             default_file:  File.join(File::SEPARATOR, %w{var log openshift node platform.log}),
             default_level: Logger::DEBUG
-        },
-            :trace    => {
+          },
+          :trace    => {
             file_config:   'PLATFORM_TRACE_LOG_FILE',
             level_config:  'PLATFORM_TRACE_LOG_LEVEL',
             default_file:  File.join(File::SEPARATOR, %w{var log openshift node platform-trace.log}),
             default_level: Logger::INFO
-        }
+          }
         }
 
-        def initialize(config, context)
+        def initialize(config, profiles = nil)
           @config = config
-          @context = context
+          @profiles = profiles || @@DEFAULT_PROFILES
 
           reinitialize
         end
 
         def reinitialize
-          @logger = build_logger(PROFILES[:standard])
-          @trace_logger = build_logger(PROFILES[:trace])
+          @logger = build_logger(@profiles[:standard])
+          @trace_logger = build_logger(@profiles[:trace])
         end
 
         def info(*args, &block)
@@ -124,7 +127,7 @@ module OpenShift
             logger.level = log_level
 
             logger.formatter = proc do |severity, datetime, progname, msg|
-              "#{datetime.strftime("%B %d %H:%M:%S")} #{severity} #{msg}\n"
+              "#{datetime.strftime("%B %d %H:%M:%S")} #{severity} #{format(msg)}\n"
             end
 
             logger

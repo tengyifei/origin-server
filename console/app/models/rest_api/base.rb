@@ -6,6 +6,7 @@ require 'active_support/concern'
 require 'active_model/dirty'
 require 'active_resource/persistent_connection'
 require 'net/http'
+require 'cgi'
 
 module Net
   class HTTP
@@ -189,7 +190,7 @@ module RestApi
         resource.as = @as
       end
     end
-   
+
     #
     # Ensure Fixnums and booleans can be cloned
     #
@@ -218,17 +219,33 @@ module RestApi
       end
     end
 
-    def initialize(attributes = {}, persisted=false)
+    def child_prefix_options
+      {}
+    end
+
+    def initialize(attributes = {}, persisted=false, prefix_options=nil)
       @as = attributes.delete :as
       @attributes     = HashWithSimpleIndifferentAccess.new
-      @prefix_options = {}
+      @prefix_options = prefix_options || split_options(attributes).first
       @persisted = persisted
       load(attributes)
     end
 
+    def attribute_load_order_sort
+      lambda do |key|
+        if schema and schema.has_key?(key)
+          [-1, key.to_s]
+        elsif reflections and reflections.has_key?(key.to_sym)
+          [1,  key.to_s]
+        else
+          [0,  key.to_s]
+        end
+      end
+    end
+
     def load(attributes, remove_root=false)
       raise ArgumentError, "expected an attributes Hash, got #{attributes.inspect}" unless attributes.is_a?(Hash)
-      self.prefix_options, attributes = split_options(attributes)
+      #self.prefix_options, attributes = split_options(attributes)
 
       # Clear calculated messages
       self.messages = nil
@@ -242,7 +259,9 @@ module RestApi
         send("#{to}=", value) unless value.nil?
       end
 
-      attributes.each do |key, value|
+      attributes.keys.sort_by(&attribute_load_order_sort).each do |key|
+        value = attributes[key]
+
         if !known.include? key.to_s and !calculated.include? key and self.class.method_defined?("#{key}=")
           send("#{key}=", value)
         else
@@ -254,7 +273,11 @@ module RestApi
                     value.map do |attrs|
                       if attrs.is_a?(Hash)
                         attrs[:as] = as if resource.method_defined? :as=
-                        resource.new(attrs)
+                        if resource < RestApi::Base
+                          resource.new(attrs, persisted?, child_prefix_options)
+                        else
+                          resource.new(attrs)
+                        end
                       else
                         attrs
                       end
@@ -268,7 +291,11 @@ module RestApi
               when Hash
                 if resource = find_or_create_resource_for(key)
                   value[:as] = as if resource.method_defined? :as=
-                  resource.new(value)
+                  if resource < RestApi::Base
+                    resource.new(value, persisted?, child_prefix_options)
+                  else
+                    resource.new(value)
+                  end
                 else
                   value
                 end
@@ -305,6 +332,33 @@ module RestApi
       save || raise_on_invalid
     end
 
+    def save_with_exception_handling(options={})
+      save_without_exception_handling(options)
+
+    rescue ActiveResource::ConnectionError => error
+      raise if self.class.unhandled_exceptions.any?{ |c| c === error }
+
+      # If the server returns a body that has messages, filter them through
+      # the error handler.  If one or more errors were set, assume that the message
+      # is more useful than the exception and return false. Special case is "server under
+      # maintenance" where we raise even having messages, to be able to logout with
+      # :cause => :server_unavailable. As an improvement the broker could return an exit_code
+      # for us to handle on translate_api_error. Otherwise throw as ActiveResource would.
+      server_unavailable = error.response.present? &&
+        error.response.respond_to?(:code) &&
+        error.response.code.to_i == 503
+
+      remote_errors = set_remote_errors(error, true)
+
+      if server_unavailable
+        raise ServerUnavailable.new(error.response)
+      elsif !remote_errors
+        raise
+      end
+      false
+    end
+    alias_method_chain :save, :exception_handling
+
     def save_with_change_tracking(*args, &block)
       save_without_change_tracking(*args, &block).tap do |valid|
         if valid
@@ -312,30 +366,14 @@ module RestApi
           @changed_attributes.clear
         end
       end
-
-    rescue ActiveResource::ForbiddenAccess, ActiveResource::UnauthorizedAccess
-      # Aggressively raise the error - TODO, parse codes or specialize
-      raise
-    rescue ActiveResource::ConnectionError => error
-      # If the server returns a body that has messages, filter them through
-      # the error handler.  If one or more errors were set, assume that the message
-      # is more useful than the exception and return false. Special case is "server under
-      # maintenance" where we raise even having messages, to be able to logout with 
-      # :cause => :server_unavailable. As an improvement the broker could return an exit_code
-      # for us to handle on translate_api_error. Otherwise throw as ActiveResource would.
-      server_unavailable = error.response.present? && 
-        error.response.respond_to?(:code) && 
-        error.response.code.to_i == 503
-
-      remote_errors = set_remote_errors(error, true)
-
-      if server_unavailable 
-        raise ServerUnavailable.new(error.response)
-      elsif !remote_errors 
-        raise
-      end
     end
     alias_method_chain :save, :change_tracking
+
+    class << self
+      def unhandled_exceptions
+        [ActiveResource::UnauthorizedAccess]
+      end
+    end
 
     # Copy calculated attribute errors
     def valid?
@@ -357,10 +395,17 @@ module RestApi
       end
     end
 
-    def destroy
-      super
+    # Overrides ActiveResource::Base#destroy
+    def destroy_without_notifications
+      response = connection.delete(element_path, self.class.headers)
+      set_remote_errors(response, true) if response.code != 204
+      true
     rescue ActiveResource::ResourceNotFound => e
       raise ResourceNotFound.new(self.class.model_name, id, e.response)
+    rescue ActiveResource::ForbiddenAccess => error
+      @remote_errors = error
+      load_remote_errors(@remote_errors, true)
+      false
     end
 
     class << self
@@ -394,6 +439,10 @@ module RestApi
         end
       end
 
+      def encode_path_component(c)
+        CGI.escape(c).gsub('+', '%20') unless c.nil?
+      end
+
       def element_path(id = nil, prefix_options = {}, query_options = nil) #changed
         check_prefix_options(prefix_options)
 
@@ -408,7 +457,7 @@ module RestApi
         end
         unless singleton?
           raise ArgumentError, "id is required for non-singleton resources #{self}" if id.nil?
-          path << "/#{URI.parser.escape id.to_s}"
+          path << "/#{encode_path_component id.to_s}"
         end
         path << ".#{format.extension}#{query_string(query_options)}"
       end
@@ -434,14 +483,18 @@ module RestApi
 
         case from = options[:from]
         when Symbol
-          instantiate_record(get(from, options[:params]))
+          response = connection(call_options).get(custom_method_collection_url(from, options[:params]), headers)
+          hashified = format.decode(response.body)
+          instantiate_record(Formats.remove_root(hashified), as, nil, response)
         when String
           path = "#{from}#{query_string(options[:params])}"
-          instantiate_record(format.decode(connection(options).get(path, headers).body), as) #changed
+          response = connection(options).get(path, headers)
+          instantiate_record(format.decode(response.body), as, nil, response) #changed
         when nil #begin add
           prefix_options, query_options = split_options(options[:params])
           path = element_path(nil, prefix_options, query_options)
-          instantiate_record(format.decode(connection(options).get(path, headers).body), as) #end add
+          response = connection(options).get(path, headers)
+          instantiate_record(format.decode(response.body), as, nil, response) #end add
         end
       rescue ActiveResource::ResourceNotFound => e
         raise ResourceNotFound.new(self.model_name, nil, e.response)
@@ -483,14 +536,23 @@ module RestApi
         [(m['exit_code'].to_i rescue m['exit_code']),
           m['field'],
           m['text'],
+          (Integer(m['index']) if m['index'] rescue nil),
         ]
       end rescue []
     end
 
-    def load_remote_errors(remote_errors, save_cache=false, optional=false)
+    def load_remote_errors(remote_errors, save_cache=false, optional=false, indexed_items=nil, index_field=nil)
       begin
-        self.class.remote_errors_for(remote_errors.response).each do |m|
-          self.class.translate_api_error(errors, *m)
+        self.class.remote_errors_for(remote_errors.response).each do |(code, field, text, index)|
+          e = errors
+          if index
+            if indexed_items && item = indexed_items[index]
+              e = item.errors
+            else
+              field = index_attr
+            end
+          end
+          self.class.translate_api_error(e, code, field, text)
         end
         Rails.logger.debug "  Found errors on the response object: #{errors.to_hash.inspect}"
         duplicate_errors
@@ -536,12 +598,16 @@ module RestApi
     class Message < Struct.new(:exit_code, :field, :severity, :text)
       def self.from_array(messages)
         Array(messages).map do |m|
-          Message.new(
-            m['exit_code'].to_i,
-            m['field'],
-            m['severity'],
-            m['text']
-          ) if m['text'].present?
+          if m.is_a? Message
+            m
+          elsif m['text'].present?
+            Message.new(
+              m['exit_code'].to_i,
+              m['field'],
+              m['severity'],
+              m['text']
+            ) 
+          end
         end.compact
       end
 
@@ -553,7 +619,7 @@ module RestApi
     def self.messages_for(response)
       Message.from_array(format.decode(response.body)['messages']) rescue []
     end
-    
+
     def messages
       @messages ||= (Message.from_array(attributes[:messages]) rescue [])
     end
@@ -565,6 +631,19 @@ module RestApi
       else
         attributes.delete(:messages)
       end
+    end
+
+    def extract_messages(response)
+      results = RestApi::Base.format.decode(response.body)
+      if results.is_a? Hash
+        results['messages'] || []
+      elsif results.is_a? Array
+        results.first['messages'] || []
+      else
+        []
+      end
+    rescue
+      []
     end
 
     #FIXME may be refactored
@@ -584,8 +663,8 @@ module RestApi
       def on_exit_code(code, handles=nil, &block)
         (@exit_code_conditions ||= {})[code] = handles || block
       end
-      def translate_api_error(errors, code, field, text)
-        Rails.logger.debug "  Server error: :#{field} \##{code}: #{text}"
+      def translate_api_error(errors, code, field, text, index=nil)
+        Rails.logger.debug "  Server error: :#{field} \##{code}: #{text} #{index}"
         if @exit_code_conditions
           handler = @exit_code_conditions[code]
           handler = handler[:raise] if Hash === handler
@@ -595,11 +674,11 @@ module RestApi
           end
         end
         message = I18n.t(code, :scope => [:rest_api, :errors], :default => text.to_s)
-        field = (field && field.respond_to?(:to_sym) ? field : 'base').to_sym
+        field = field.presence || 'base'
         errors.add(field, message) unless message.blank?
 
         codes = errors.instance_variable_get(:@codes)
-        codes = errors.instance_variable_set(:@codes, {}) unless codes
+        codes = errors.instance_variable_set(:@codes, HashWithSimpleIndifferentAccess.new) unless codes
         (codes[field] ||= []).push(code)
       end
       def exception_for_code(code, type=nil)
@@ -616,12 +695,24 @@ module RestApi
     # Override method from CustomMethods to handle body objects
     #
     def get(custom_method_name, options = {})
-      self.class.send(:instantiate_collection, self.class.format.decode(connection.get(custom_method_element_url(custom_method_name, options), self.class.headers).body), as, prefix_options ) #changed
+      response = connection(options).get(custom_method_element_url(custom_method_name, options), self.class.headers)
+      self.class.send(:instantiate_collection, self.class.format.decode(response.body), as, prefix_options, response) #changed
     rescue ActiveResource::ResourceNotFound => e
       raise ResourceNotFound.new(self.class.model_name, id, e.response)
     end
 
-    [:post, :delete, :put, :patch].each do |sym|
+    #
+    # Define patch method
+    #
+    def patch(custom_method_name, options = {}, body = '')
+      begin
+        connection.patch(custom_method_element_url(custom_method_name, options), body, self.class.headers)
+      rescue ActiveResource::ResourceNotFound => e
+        raise ResourceNotFound.new(self.class.model_name, id, e.response)
+      end
+    end
+
+    [:post, :delete, :put].each do |sym|
       define_method sym do |*args|
         begin
           super *args
@@ -636,7 +727,8 @@ module RestApi
     # aware
     #
     def reload
-      self.load(prefix_options.merge(self.class.find(to_param, :params => prefix_options, :as => as).attributes))
+      p = prefix_options || {}
+      self.load(p.merge(self.class.find(to_param, :params => p, :as => as).attributes))
     end
 
     #
@@ -665,9 +757,12 @@ module RestApi
 
     class << self
       def get(custom_method_name, options = {}, call_options = {})
-        connection(call_options).get(custom_method_collection_url(custom_method_name, options), headers)
+        response = connection(call_options).get(custom_method_collection_url(custom_method_name, options), headers)
+        hashified = format.decode(response.body)
+        derooted  = Formats.remove_root(hashified)
+        derooted.is_a?(Array) ? derooted.map { |e| Formats.remove_root(e) } : derooted
       rescue ActiveResource::ResourceNotFound => e
-        raise ResourceNotFound.new(self.model_name, id, e.response)
+        raise ResourceNotFound.new(self.model_name, nil, e.response)
       end
       def delete(id, options = {})
         connection(options).delete(element_path(id, options)) #changed
@@ -702,7 +797,8 @@ module RestApi
         def find_single(scope, options)
           prefix_options, query_options = split_options(options[:params])
           path = element_path(scope, prefix_options, query_options)
-          instantiate_record(format.decode(connection(options).get(path, headers).body), options[:as], prefix_options) #changed
+          response = connection(options).get(path, headers)
+          instantiate_record(format.decode(response.body), options[:as], prefix_options, response) #changed
         rescue ActiveResource::ResourceNotFound => e
           raise ResourceNotFound.new(self.model_name, scope, e.response)
         end
@@ -712,14 +808,17 @@ module RestApi
             as = options[:as]
             case from = options[:from]
             when Symbol
-              instantiate_collection(format.decode(get(from, options[:params], options).body), as) #changed
+              response = get(from, options[:params], options)
+              instantiate_collection(format.decode(response.body), as, nil, response) #changed
             when String
               path = "#{from}#{query_string(options[:params])}"
-              instantiate_collection(format.decode(connection(options).get(path, headers).body) || [], as) #changed
+              response = connection(options).get(path, headers)
+              instantiate_collection(format.decode(response.body) || [], as, nil, response) #changed
             else
               prefix_options, query_options = split_options(options[:params])
               path = collection_path(prefix_options, query_options)
-              instantiate_collection(format.decode(connection(options).get(path, headers).body) || [], as, prefix_options ) #changed
+              response = connection(options).get(path, headers)
+              instantiate_collection(format.decode(response.body) || [], as, prefix_options, response ) #changed
             end
           rescue ActiveResource::ResourceNotFound => e
             rescue_parent_missing(e, options)
@@ -748,14 +847,15 @@ module RestApi
           connection
         end
 
-        def instantiate_collection(collection, as, prefix_options = {}) #changed
-          collection.collect! { |record| instantiate_record(record, as, prefix_options) } #changed
+        def instantiate_collection(collection, as, prefix_options = {}, response = nil) #changed
+          collection.collect! { |record| instantiate_record(record, as, prefix_options, response) } #changed
         end
 
-        def instantiate_record(record, as, prefix_options = {}) #changed
+        def instantiate_record(record, as, prefix_options = {}, response = nil) #changed
           record[:as] = as # changed - called before new so that nested resources are created
           new(record, true).tap do |resource| #changed for persisted flag
             resource.prefix_options = prefix_options
+            resource.load_headers(response) if resource.respond_to?(:load_headers)
           end
         end
     end
@@ -785,7 +885,12 @@ module RestApi
       self
     end
 
+    def load_headers(response)
+      self.api_identity_id = response['X-OpenShift-Identity-Id']
+    end
+
     protected
+      attr_accessor :api_identity_id
 
       # Support patch
       def update
@@ -798,7 +903,9 @@ module RestApi
         if (response_code_allows_body?(response.code) &&
             (response['Content-Length'].nil? || response['Content-Length'] != "0") &&
             !response.body.nil? && response.body.strip.size > 0)
-          load(prefix_options.merge(self.class.format.decode(response.body)), true)
+          p = prefix_options || {}
+          load(p.merge(self.class.format.decode(response.body)), true)
+          load_headers(response) if respond_to?(:load_headers)
           @persisted = true
         end
       end
@@ -837,7 +944,6 @@ module RestApi
       end
 
       def method_missing(method_symbol, *arguments) #:nodoc:
-        #puts "in method missing of RestApi::Base #{method_symbol}"
         method_name = method_symbol.to_s
 
         if method_name =~ /(=|\?)$/
@@ -852,7 +958,7 @@ module RestApi
         else
           return attributes[method_name] if attributes.include?(method_name)
           # not set right now but we know about it
-          return nil if known_attributes.include?(method_name)
+          return nil if known_attributes.include?(method_name) || reflections.has_key?(method_symbol)
           super
         end
       end
@@ -878,9 +984,12 @@ module RestApi
 
     def authorization_header(http_method, uri)
       headers = super
-      if @as.respond_to? :to_headers
+      if @as.respond_to?(:remote_ip) && (ip = @as.remote_ip.presence)
+        headers['X-Forwarded-For'] = ip
+      end
+      if @as.respond_to?(:to_headers)
         headers.merge!(@as.to_headers)
-      elsif @as.respond_to? :ticket and @as.ticket
+      elsif @as.respond_to?(:ticket) and @as.ticket
         (headers['Cookie'] ||= '') << "rh_sso=#{@as.ticket}"
       end
       headers

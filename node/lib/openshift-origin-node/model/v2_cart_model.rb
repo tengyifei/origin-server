@@ -15,10 +15,12 @@
 #++
 
 require 'rubygems'
+require 'shellwords'
 require 'openshift-origin-node/model/application_repository'
 require 'openshift-origin-node/model/cartridge_repository'
 require 'openshift-origin-common/models/manifest'
 require 'openshift-origin-node/model/pub_sub_connector'
+require 'openshift-origin-node/model/gear_registry'
 require 'openshift-origin-node/utils/shell_exec'
 require 'openshift-origin-node/utils/selinux'
 require 'openshift-origin-node/utils/node_logger'
@@ -117,8 +119,10 @@ module OpenShift
 
       # FIXME: Once Broker/Node protocol updated to provided necessary information this hack must go away
       def map_cartridge_name(cartridge_name)
-        results = cartridge_name.scan(/([a-zA-Z\d-]+)-([\d\.]+)/).first
-        raise "Invalid cartridge identifier '#{cartridge_name}': expected name-version" unless results && 2 == results.size
+        results = cartridge_name.split(/\-([0-9\.]+)$/)
+        if !Runtime::Manifest.valid_cartridge_name?(cartridge_name)
+          raise "Invalid cartridge identifier '#{cartridge_name}': expected name-version"
+        end
         results
       end
 
@@ -159,19 +163,19 @@ module OpenShift
           ident_path     = Dir.glob(PathUtils.join(cartridge_path, 'env', "OPENSHIFT_*_IDENT")).first
 
           raise "Cartridge manifest not found: #{manifest_path} missing" unless File.exists?(manifest_path)
-          raise "Cartridge Ident not found: #{ident_path} missing" unless File.exists?(ident_path)
+          raise "Cartridge Ident not found in #{cartridge_path}" unless ident_path
 
           _, _, version, _ = Runtime::Manifest.parse_ident(IO.read(ident_path))
 
-          @cartridges[directory] = Manifest.new(manifest_path, version, @container.container_dir)
+          @cartridges[directory] = Manifest.new(manifest_path, version, :file, @container.container_dir)
         end
         @cartridges[directory]
       end
 
       # Load the cartridge's local manifest from the Broker token 'name-version'
       def get_cartridge_fallback(cart_name)
-        directory = cartridge_directory(cart_name)
-        _, version  = map_cartridge_name(cart_name)
+        directory  = cartridge_directory(cart_name)
+        _, version = map_cartridge_name(cart_name)
 
         raise "Directory name is required" if (directory == nil || directory.empty?)
 
@@ -180,7 +184,7 @@ module OpenShift
 
         raise "Cartridge manifest not found: #{manifest_path} missing" unless File.exists?(manifest_path)
 
-        Manifest.new(manifest_path, version, @container.container_dir)
+        Manifest.new(manifest_path, version, :file, @container.container_dir)
       end
 
       # destroy(skip_hooks = false) -> [buffer, '', 0]
@@ -210,9 +214,6 @@ module OpenShift
           logger.warn("Cartridge teardown operation failed on gear #{@container.uuid} for some cartridge: #{e.message}")
           buffer << "CLIENT_ERROR: Abandoned cartridge teardowns. There may be extraneous data left on system."
         end
-
-        # Ensure we're not in the gear's directory
-        Dir.chdir(@config.get("GEAR_BASE_DIR"))
 
         # FIXME: V1 contract is there a better way?
         [buffer, '', 0]
@@ -251,7 +252,7 @@ module OpenShift
                                    CartridgeRepository.instance.select(name, software_version)
                                  end
 
-        ::OpenShift::Runtime::Utils::Cgroups::with_no_cpu_limits(@container.uuid) do
+        ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).boost do
           create_cartridge_directory(cartridge, software_version)
           # Note: the following if statement will check the following criteria long-term:
           # 1. Is the app scalable?
@@ -262,36 +263,36 @@ module OpenShift
           # of these criteria, and we do not have a way to explicitly check the first two
           # criteria.  However, it should be considered a TODO to add more explicit checks.
           if cartridge.web_proxy?
-            output << generate_ssh_key(cartridge)
+            ::OpenShift::Runtime::GearRegistry.new(@container)
           end
 
           create_private_endpoints(cartridge)
 
-          Dir.chdir(PathUtils.join(@container.container_dir, cartridge.directory)) do
-            unlock_gear(cartridge) do |c|
-              expected_entries = Dir.glob(PathUtils.join(@container.container_dir, '*'))
+          unlock_gear(cartridge) do |c|
+            expected_entries = Dir.glob(PathUtils.join(@container.container_dir, '*'))
 
-              output << cartridge_action(cartridge, 'setup', software_version, true)
-              process_erb_templates(c)
-              output << cartridge_action(cartridge, 'install', software_version)
+            create_dependency_directories(cartridge)
 
-              actual_entries  = Dir.glob(PathUtils.join(@container.container_dir, '*'))
-              illegal_entries = actual_entries - expected_entries
-              unless illegal_entries.empty?
-                raise RuntimeError.new(
-                          "Cartridge created the following directories in the gear home directory: #{illegal_entries.join(', ')}")
-              end
+            output << cartridge_action(cartridge, 'setup', software_version, true)
+            output << process_erb_templates(c)
+            output << cartridge_action(cartridge, 'install', software_version)
 
-              output << populate_gear_repo(c.directory, template_git_url) if cartridge.deployable?
+            actual_entries  = Dir.glob(PathUtils.join(@container.container_dir, '*'))
+            illegal_entries = actual_entries - expected_entries
+            unless illegal_entries.empty?
+              raise RuntimeError.new(
+                        "Cartridge created the following directories in the gear home directory: #{illegal_entries.join(', ')}")
             end
 
-            validate_cartridge(cartridge)
+            output << populate_gear_repo(c.directory, template_git_url) if cartridge.deployable?
           end
 
-          connect_frontend(cartridge)
+          validate_cartridge(cartridge)
+
+          output << connect_frontend(cartridge)
         end
 
-        logger.info "configure output: #{output}"
+        logger.info "configure output: #{Runtime::Utils.sanitize_credentials(output)}"
         return output
       rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
         rc_override = e.rc < 100 ? 157 : e.rc
@@ -306,11 +307,11 @@ module OpenShift
       def validate_cartridge(manifest)
         illegal_overrides = ::OpenShift::Runtime::Utils::Environ.load(PathUtils.join(@container.container_dir, '.env')).keys &
             ::OpenShift::Runtime::Utils::Environ.load(PathUtils.join(@container.container_dir, manifest.directory, 'env')).keys
-  
+
         # Older gears may have these and cartridges are allowed to override them
         illegal_overrides.delete('LD_LIBRARY_PATH')
         illegal_overrides.delete('PATH')
-  
+
         unless illegal_overrides.empty?
           raise RuntimeError.new(
                     "Cartridge attempted to override the following gear environment variables: #{illegal_overrides.join(', ')}")
@@ -329,9 +330,9 @@ module OpenShift
         name, software_version = map_cartridge_name(cartridge_name)
         cartridge              = get_cartridge(name)
 
-        ::OpenShift::Runtime::Utils::Cgroups::with_no_cpu_limits(@container.uuid) do
+        ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).boost do
           if empty_repository?
-            output << "CLIENT_MESSAGE: An empty Git repository has been created for your application.  Use 'git push' to add your code."
+            output << "CLIENT_MESSAGE: An empty Git repository has been created for your application.  Use 'git push' to add your code." if cartridge.name == primary_cartridge.name
           else
             output << start_cartridge('start', cartridge, user_initiated: true)
           end
@@ -375,7 +376,13 @@ module OpenShift
             cartridge = get_cartridge_fallback(cartridge_name)
           rescue
             logger.warn("Corrupted cartridge #{@container.uuid}/#{cartridge_name}. Attempting to auto-correct for deconfigure resorting to CartridgeRepository.")
-            cartridge = CartridgeRepository.instance.select(name, software_version)
+            begin
+              cartridge = CartridgeRepository.instance.select(name, software_version)
+            rescue
+              logger.warn("Cartridge #{cartridge_name} not found in CartridgeRepostory.")
+              teardown_output << "Cartridge #{cartridge_name} not found on the gear or in the CartridgeRepository. It is most likely a downloaded cartridge that failed to configure and was removed."
+              return teardown_output
+            end
           end
 
           ident = Runtime::Manifest.build_ident(cartridge.cartridge_vendor,
@@ -388,7 +395,7 @@ module OpenShift
         end
 
         delete_private_endpoints(cartridge)
-        ::OpenShift::Runtime::Utils::Cgroups::with_no_cpu_limits(@container.uuid) do
+        ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).boost do
           begin
             stop_cartridge(cartridge, user_initiated: true)
             unlock_gear(cartridge, false) do |c|
@@ -397,6 +404,8 @@ module OpenShift
           rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
             teardown_output << ::OpenShift::Runtime::Utils::Sdk::translate_out_for_client(e.stdout, :error)
             teardown_output << ::OpenShift::Runtime::Utils::Sdk::translate_out_for_client(e.stderr, :error)
+          rescue RuntimeError => e
+              teardown_output <<  "\n#{e.message}"
           ensure
             disconnect_frontend(cartridge)
             delete_cartridge_directory(cartridge)
@@ -411,12 +420,12 @@ module OpenShift
       # Prepare the given cartridge for the cartridge author
       #
       #   v2_cart_model.unlock_gear('php-5.3')
-      def unlock_gear(cartridge, relock = true)
+      def unlock_gear(cartridge, relock=true)
         begin
           do_unlock(@container.locked_files(cartridge))
           yield cartridge
         ensure
-          do_lock(@container.locked_files(cartridge)) if relock
+          do_lock(relock ? @container.locked_files(cartridge) : [])
         end
         nil
       end
@@ -427,8 +436,6 @@ module OpenShift
       #
       #   v2_cart_model.do_unlock_gear(entries)
       def do_unlock(entries)
-        mcs_label = ::OpenShift::Runtime::Utils::SELinux.get_mcs_label(@container.uid)
-
         entries.each do |entry|
           if entry.end_with?('/')
             entry.chomp!('/')
@@ -444,7 +451,7 @@ module OpenShift
             @container.set_rw_permission(entry)
           rescue Exception => e
             raise FileUnlockError.new("Failed to unlock file system entry [#{entry}]: #{e}",
-                                                 entry)
+                                      entry)
           end
         end
 
@@ -462,8 +469,6 @@ module OpenShift
       # Take the given array of file system entries and prepare them for the application developer
       #    v2_cart_model.do_lock_gear(entries)
       def do_lock(entries)
-        mcs_label = ::OpenShift::Runtime::Utils::SELinux.get_mcs_label(@container.uid)
-
         # It is expensive doing one file at a time but...
         # ...it allows reporting on the failed command at the file level
         # ...we don't have to worry about the length of argv
@@ -472,7 +477,7 @@ module OpenShift
             @container.set_ro_permission(entry)
           rescue Exception => e
             raise OpenShift::Runtime::FileLockError.new("Failed to lock file system entry [#{entry}]: #{e}",
-                                               entry)
+                                                        entry)
           end
         end
 
@@ -480,7 +485,7 @@ module OpenShift
           @container.set_ro_permission(@container.container_dir)
         rescue Exception => e
           raise OpenShift::Runtime::FileLockError.new("Failed to lock gear home [#{@container.container_dir}]: #{e}",
-                                             @container.container_dir)
+                                                      @container.container_dir)
         end
       end
 
@@ -531,20 +536,112 @@ module OpenShift
         nil
       end
 
-      def secure_cartridge(short_name, uid, gid=uid, cartridge_home)
-        Dir.chdir(cartridge_home) do
-          @container.set_rw_permission_R(cartridge_home)
+      # Creates cartridge dependency directories listed in managed_files.yml.
+      #
+      # The directories are created in ~/app-root/runtime/dependencies and/or
+      # ~/app-root/runtime/build-dependencies.
+      #
+      # This method also creates symlinks from the cartridge directory to the appropriate
+      # symlink in ~/app-root/runtime/{dependencies,build-dependencies}. For example:
+      #
+      # ~/php/phplib -> ~/app-root/runtime/dependencies/php/phplib
+      def create_dependency_directories(cartridge)
 
-          files = ManagedFiles::IMMUTABLE_FILES.collect do |file|
-            file.gsub!('*', short_name)
-            file if File.exist?(file)
-          end || []
-          files.compact!
-
-          unless files.empty?
-            @container.set_ro_permission(files)
-            FileUtils.chmod(0644, files)
+        %w(build-dependencies dependencies).each do |dependencies_dir_name|
+          if dependencies_dir_name == 'build-dependencies'
+            dirs = @container.build_dependency_dirs(cartridge)
+          else
+            dirs = @container.dependency_dirs(cartridge)
           end
+
+          dirs.each do |entry|
+            if entry.is_a?(String)
+              # e.g. phplib
+              link = target = entry
+            else
+              # e.g. jbossas/standalone/deployments
+              link = entry.keys[0]
+
+              # e.g. jbossas/deployments
+              target = entry.values[0]
+            end
+
+            # create the target dir inside the runtime dir
+            dependencies_dir = PathUtils.join(@container.container_dir, 'app-root', 'runtime', dependencies_dir_name)
+
+            FileUtils.mkdir_p(PathUtils.join(dependencies_dir, target))
+
+            full_link = PathUtils.join(@container.container_dir, link)
+
+            # if the link is something like foo/bar/baz or jbossas/standalone/deployments,
+            # need to mkdir -p everything up to the link (foo/bar or jbossas/standalone)
+            #
+            # also need to chown -R the first directory in the path that is new, e.g.
+            # if jbossas exists but standalone is new, chown -R standalone
+            if link.count('/') > 0
+              parts = link.split('/')
+
+              # start the path at the home dir
+              path = @container.container_dir
+
+              parts.each do |part|
+                # check each segment of the link
+                path = PathUtils.join(path, part)
+
+                # if the path exists, skip to the next one
+                next if File.exist?(path)
+
+                # if the path doesn't exist, exit the loop
+                #
+                # path is now either the first dir in the link's path that doesn't exist
+                # or it's the link itself
+                break
+              end
+
+              # now that we've figured out the portion of the link path that doesn't exist
+              # go ahead and create all the parent dirs for the link
+              FileUtils.mkdir_p(PathUtils.join(@container.container_dir, parts[0..-2]))
+
+              # if the path != the full link, we need to change ownership for the new
+              # dir and below
+              if path != full_link
+                PathUtils.oo_chown_R(@container.uid, @container.gid, path)
+              end
+            end
+
+            full_target = PathUtils.join(@container.container_dir, 'app-root', 'runtime', dependencies_dir_name, target)
+
+            # the link only needs to be created when the cartridge is installed,
+            # which means it's running via mcollective as root
+            #
+            # once the link exists, it should never need to change and does not
+            # need to be recreated during a clean build
+            if !File.exist?(full_link)
+              FileUtils.ln_s(full_target, full_link)
+
+              # make sure the symlink is owned by the gear user
+              PathUtils.oo_lchown(@container.uid, @container.gid, full_link)
+            end
+
+            # in case anything was created below the dependencies dir, correct its ownership
+            PathUtils.oo_chown_R(@container.uid, @container.gid, dependencies_dir)
+          end
+        end
+      end
+
+      def secure_cartridge(short_name, uid, gid=uid, cartridge_home)
+        @container.set_rw_permission_R(cartridge_home)
+
+        files = ManagedFiles::IMMUTABLE_FILES.collect do |file|
+          file = file.gsub('*', short_name)
+          file = PathUtils.join(cartridge_home, file)
+          file if File.exist?(file)
+        end || []
+        files.compact!
+
+        unless files.empty?
+          @container.set_ro_permission(files)
+          FileUtils.chmod(0644, files)
         end
       end
 
@@ -594,7 +691,7 @@ module OpenShift
         end
 
         if repo.exist?
-          repo.archive
+          repo.archive(PathUtils.join(@container.container_dir, 'app-root', 'runtime', 'repo'), 'master')
         end
         ""
       end
@@ -603,12 +700,26 @@ module OpenShift
       #
       # Search cartridge for any remaining <code>erb</code> files render them
       def process_erb_templates(cartridge)
+        buffer = ''
+
         directory = PathUtils.join(@container.container_dir, cartridge.name)
         logger.info "Processing ERB templates for #{cartridge.name}"
 
         env  = ::OpenShift::Runtime::Utils::Environ.for_gear(@container.container_dir, directory)
         erbs = @container.processed_templates(cartridge).map { |x| PathUtils.join(@container.container_dir, x) }
+        erbs.delete_if do |erb_file|
+          reject = !File.exists?(erb_file)
+
+          if reject
+            buffer << "CLIENT_ERROR: File declared in processed_templates does not exist and will not be rendered: #{erb_file}"
+          end
+
+          reject
+        end
+
         render_erbs(env, erbs)
+
+        buffer
       end
 
       #  cartridge_action(cartridge, action, software_version, render_erbs) -> buffer
@@ -628,20 +739,25 @@ module OpenShift
         gear_env           = ::OpenShift::Runtime::Utils::Environ.for_gear(@container.container_dir)
         cartridge_env_home = PathUtils.join(cartridge_home, 'env')
 
-        cartridge_env = gear_env.merge(Utils::Environ.load(cartridge_env_home))
+        cartridge_env = Utils::Environ.load(cartridge_env_home)
+        cartridge_env.delete('PATH')
+        cartridge_env = gear_env.merge(cartridge_env)
         if render_erbs
           erbs = Dir.glob(cartridge_env_home + '/*.erb', File::FNM_DOTMATCH).select { |f| File.file?(f) }
           render_erbs(cartridge_env, erbs)
-          cartridge_env = gear_env.merge(Utils::Environ.load(cartridge_env_home))
+
+          cartridge_env = Utils::Environ.load(cartridge_env_home)
+          cartridge_env.delete('PATH')
+          cartridge_env = gear_env.merge(cartridge_env)
         end
 
         action << " --version #{software_version}"
         out, _, _ = @container.run_in_container_context(action,
-            env:                 cartridge_env,
-            chdir:               cartridge_home,
-            timeout:             @hourglass.remaining,
-            expected_exitstatus: 0)
-        logger.info("Ran #{action} for #{@container.uuid}/#{cartridge.directory}\n#{out}")
+                                                        env:                 cartridge_env,
+                                                        chdir:               cartridge_home,
+                                                        timeout:             @hourglass.remaining,
+                                                        expected_exitstatus: 0)
+        logger.info("Ran #{action} for #{@container.uuid}/#{cartridge.directory}\n#{Runtime::Utils.sanitize_credentials(out)}")
         out
       end
 
@@ -654,14 +770,18 @@ module OpenShift
         erbs.each do |file|
           begin
             @container.run_in_container_context(%Q{/usr/bin/oo-erb -S 2 -- #{file} > #{file.chomp('.erb')}},
-                env:                 env,
-                chdir:               @container.container_dir,
-                timeout:             @hourglass.remaining,
-                expected_exitstatus: 0)
+                                                env:                 env,
+                                                chdir:               @container.container_dir,
+                                                timeout:             @hourglass.remaining,
+                                                expected_exitstatus: 0)
           rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
             logger.info("Failed to render ERB #{file}: #{e.stderr}")
           else
-            File.delete(file)
+            begin
+              File.delete(file)
+            rescue Errno::ENOENT
+              # already gone for some reason; ignore it
+            end
           end
         end
         nil
@@ -683,10 +803,10 @@ module OpenShift
 
         # FIXME: Will anyone retry if this reports error, or should we remove from disk no matter what?
         buffer, err, _ = @container.run_in_container_context(teardown,
-            env:                 env,
-            chdir:               cartridge_home,
-            timeout:             @hourglass.remaining,
-            expected_exitstatus: 0)
+                                                             env:                 env,
+                                                             chdir:               cartridge_home,
+                                                             timeout:             @hourglass.remaining,
+                                                             expected_exitstatus: 0)
 
         buffer << err
 
@@ -709,16 +829,16 @@ module OpenShift
 
       def list_proxy_mappings
         proxied_ports = []
-        gear_env = ::OpenShift::Runtime::Utils::Environ.for_gear(@container.container_dir)
+        gear_env      = ::OpenShift::Runtime::Utils::Environ.for_gear(@container.container_dir)
         each_cartridge do |cartridge|
           cartridge.endpoints.each do |endpoint|
             next if gear_env[endpoint.public_port_name].nil?
             proxied_ports << {
-              :private_ip_name  => endpoint.private_ip_name,
-              :public_port_name => endpoint.public_port_name,
-              :private_ip   => gear_env[endpoint.private_ip_name],
-              :private_port => endpoint.private_port,
-              :proxy_port   => gear_env[endpoint.public_port_name],
+                :private_ip_name  => endpoint.private_ip_name,
+                :public_port_name => endpoint.public_port_name,
+                :private_ip       => gear_env[endpoint.private_ip_name],
+                :private_port     => endpoint.private_port,
+                :proxy_port       => gear_env[endpoint.public_port_name],
             }
           end
         end
@@ -736,27 +856,37 @@ module OpenShift
 
         logger.info "Creating #{cartridge.endpoints.length} private endpoints for #{@container.uuid}/#{cartridge.directory}"
 
+        env           = ::OpenShift::Runtime::Utils::Environ.for_gear(@container.container_dir, PathUtils.join(@container.container_dir, cartridge.directory))
         allocated_ips = {}
+        allocated_endpoints = []
 
         cartridge.endpoints.each do |endpoint|
           # Reuse previously allocated IPs of the same name. When recycling
           # an IP, double-check that it's not bound to the target port, and
           # bail if it's unexpectedly bound.
           unless allocated_ips.has_key?(endpoint.private_ip_name)
-            # Allocate a new IP for the endpoint
-            private_ip = find_open_ip(endpoint.private_port)
+            if env.has_key?(endpoint.private_ip_name)
+              allocated_ips[endpoint.private_ip_name] = env[endpoint.private_ip_name]
+            else
+              # Allocate a new IP for the endpoint
+              private_ip = find_open_ip(endpoint.private_port)
 
-            if private_ip.nil?
-              raise "No IP was available to create endpoint for cart #{cartridge.name} in gear #{@container.uuid}: "\
-              "#{endpoint.private_ip_name}(#{endpoint.private_port})"
+              if private_ip.nil?
+                raise "No IP was available to create endpoint for cart #{cartridge.name} in gear #{@container.uuid}: "\
+                "#{endpoint.private_ip_name}(#{endpoint.private_port})"
+              end
+
+              @container.add_env_var(endpoint.private_ip_name, private_ip)
+
+              allocated_ips[endpoint.private_ip_name] = private_ip
             end
-
-            @container.add_env_var(endpoint.private_ip_name, private_ip)
-
-            allocated_ips[endpoint.private_ip_name] = private_ip
           end
 
           private_ip = allocated_ips[endpoint.private_ip_name]
+
+          next if env[endpoint.private_port_name]
+
+          allocated_endpoints << endpoint
 
           @container.add_env_var(endpoint.private_port_name, endpoint.private_port)
 
@@ -765,7 +895,6 @@ module OpenShift
           if endpoint.websocket_port_name && endpoint.websocket_port
             @container.add_env_var(endpoint.websocket_port_name, endpoint.websocket_port)
           end
-
 
           logger.info("Created private endpoint for cart #{cartridge.name} in gear #{@container.uuid}: "\
           "[#{endpoint.private_ip_name}=#{private_ip}, #{endpoint.private_port_name}=#{endpoint.private_port}]")
@@ -779,11 +908,11 @@ module OpenShift
 
         # Validate all the allocations to ensure they aren't already bound. Batch up the initial check
         # for efficiency, then do individual checks to provide better reporting before we fail.
-        address_list = cartridge.endpoints.map { |e| {ip: allocated_ips[e.private_ip_name], port: e.private_port} }
-        if !address_list.empty? && addresses_bound?(address_list)
+        address_list = allocated_endpoints.map { |e| {ip: allocated_ips[e.private_ip_name], port: e.private_port} }
+        if !address_list.empty? && @container.addresses_bound?(address_list, @hourglass)
           failures = ''
-          cartridge.endpoints.each do |endpoint|
-            if address_bound?(allocated_ips[endpoint.private_ip_name], endpoint.private_port)
+          allocated_endpoints.each do |endpoint|
+            if @container.address_bound?(allocated_ips[endpoint.private_ip_name], endpoint.private_port, @hourglass, true)
               failures << "#{endpoint.private_ip_name}(#{endpoint.private_port})=#{allocated_ips[endpoint.private_ip_name]};"
             end
           end
@@ -800,6 +929,16 @@ module OpenShift
         end
 
         logger.info "Deleted private endpoints for #{@container.uuid}/#{cartridge.directory}"
+      end
+
+      def delete_private_endpoint(cartridge, endpoint, remove_private_ip=false)
+        logger.info "Deleting private endpoint #{endpoint.private_ip_name}:#{endpoint.private_port_name} for #{@container.uuid}/#{cartridge.directory}"
+
+        @container.remove_env_var(endpoint.private_ip_name) if remove_private_ip
+        @container.remove_env_var(endpoint.private_port_name)
+        disconnect_frontend_for_endpoint(cartridge, endpoint)
+
+        logger.info "Deleted private endpoint #{endpoint.private_ip_name}:#{endpoint.private_port_name} for #{@container.uuid}/#{cartridge.directory}"
       end
 
       # Finds the next IP address available for binding of the given port for
@@ -827,23 +966,6 @@ module OpenShift
         open_ip
       end
 
-      # Returns true if the given IP and port are currently bound
-      # according to lsof, otherwise false.
-      def address_bound?(ip, port)
-        _, _, rc = @container.run_in_container_context("/usr/sbin/lsof -i @#{ip}:#{port}", timeout: @hourglass.remaining)
-        rc == 0
-      end
-
-      def addresses_bound?(addresses)
-        command = "/usr/sbin/lsof"
-        addresses.each do |addr|
-          command << " -i @#{addr[:ip]}:#{addr[:port]}"
-        end
-
-        _, _, rc = @container.run_in_container_context(command, timeout: @hourglass.remaining)
-        rc == 0
-      end
-
       # Returns an array containing all currently allocated endpoint private
       # IP addresses assigned to carts within the current gear, or an empty
       # array if none are currently defined.
@@ -868,10 +990,25 @@ module OpenShift
         allocated_ips
       end
 
+      def disconnect_frontend_for_endpoint(cartridge, endpoint)
+        mappings = []
+        endpoint.mappings.each do |mapping|
+          mappings << mapping.frontend
+        end
+
+        logger.info("Disconnecting frontend mapping for #{@container.uuid}/#{cartridge.name}: #{mappings.inspect}")
+        unless mappings.empty?
+          FrontendHttpServer.new(@container).disconnect(*mappings)
+        end
+      end
+
       # disconnect cartridge from frontend proxy
       #
       # This is only called when a cartridge is removed from a cartridge not a gear delete
       def disconnect_frontend(cartridge)
+        gear_env       = ::OpenShift::Runtime::Utils::Environ.for_gear(@container.container_dir)
+        app_dns        = gear_env["OPENSHIFT_APP_DNS"]
+
         mappings = []
         cartridge.endpoints.each do |endpoint|
           endpoint.mappings.each do |mapping|
@@ -881,15 +1018,27 @@ module OpenShift
 
         logger.info("Disconnecting frontend mapping for #{@container.uuid}/#{cartridge.name}: #{mappings.inspect}")
         unless mappings.empty?
-          FrontendHttpServer.new(@container).disconnect(*mappings)
+          fe_server =  FrontendHttpServer.new(@container)
+          fe_server.disconnect(*mappings)
+          if cartridge.web_proxy?
+            gear_fqdn = fe_server.fqdn
+            if gear_fqdn != app_dns
+              # secondary web-proxy gear
+              fe_server.set_fqdn(app_dns)
+              fe_server.disconnect(*mappings)
+              fe_server.set_fqdn(gear_fqdn)
+            end
+          end
         end
       end
 
-      def connect_frontend(cartridge)
+      def connect_frontend(cartridge, rebuild=false)
         frontend       = FrontendHttpServer.new(@container)
         gear_env       = ::OpenShift::Runtime::Utils::Environ.for_gear(@container.container_dir)
         web_proxy_cart = web_proxy
+        app_dns        = gear_env["OPENSHIFT_APP_DNS"]
 
+        output = ""
         begin
           # TODO: exception handling
           cartridge.endpoints.each do |endpoint|
@@ -902,8 +1051,10 @@ module OpenShift
                 options["websocket_port"] = endpoint.websocket_port
               end
 
+              options["protocols"]=endpoint.protocols
+
               # Make sure that the mapping does not collide with the default web_proxy mapping
-              if mapping.frontend == "" and not cartridge.web_proxy? and web_proxy_cart
+              if mapping.frontend == "" and not cartridge.web_proxy? and web_proxy_cart and not rebuild
                 logger.info("Skipping default mapping as web proxy owns it for the application")
                 next
               end
@@ -914,15 +1065,43 @@ module OpenShift
                 next
               end
 
+              # If the mapping contains the option ssl_to_gear, create an environment
+              if options["ssl_to_gear"]
+                @container.add_env_var("SSL_TO_GEAR", 1)
+                logger.debug("Adding SSL_TO_GEAR env var")
+              end
               logger.info("Connecting frontend mapping for #{@container.uuid}/#{cartridge.name}: "\
                       "[#{mapping.frontend}] => [#{backend_uri}] with options: #{mapping.options}")
-              frontend.connect(mapping.frontend, backend_uri, options)
+              reported_urls = frontend.connect(mapping.frontend, backend_uri, options)
+              if cartridge.web_proxy?
+                gear_fqdn = frontend.fqdn
+                if gear_fqdn != app_dns
+                  # secondary web-proxy gear
+                  frontend.set_fqdn(app_dns)
+                  new_options = options.dup
+                  # target_update will misfire because fqdn has changed
+                  new_options.delete("target_update")
+                  reported_urls += frontend.connect(mapping.frontend, backend_uri, new_options)
+                  frontend.set_fqdn(gear_fqdn)
+                end
+              end
+              if reported_urls
+                reported_urls.each do |url|
+                  outstr = "Cartridge #{cartridge.name} exposed URL #{url}"
+                  if endpoint.description
+                    outstr << " for #{endpoint.description}"
+                  end
+                  output << "CLIENT_RESULT: #{outstr}\n"
+                  output << "NOTIFY_MAPPING_CREATE #{outstr}\n"
+                end
+              end
             end
           end
         rescue Exception => e
           logger.warn("V2CartModel#connect_frontend: #{e.message}\n#{e.backtrace.join("\n")}")
           raise
         end
+        output
       end
 
       # Run code block against each cartridge in gear
@@ -1002,7 +1181,7 @@ module OpenShift
           vstr = v.split("\n").map { |p| p + ";" }.join(' ')
           new_args.push "'#{k}'='#{vstr}'"
         end
-        (args[0, 2] << Shellwords::shellescape(new_args.join(' '))).join(' ')
+        (args[0, 2] << ::Shellwords::shellescape(new_args.join(' '))).join(' ')
       end
 
       # :call-seq:
@@ -1025,14 +1204,14 @@ module OpenShift
 
         if conn.reserved?
           begin
-            return send(conn.action_name)
+            return send(conn.action_name, cartridge, args)
           rescue NoMethodError => e
             logger.debug "#{e.message}; falling back to script"
           end
         end
 
         cartridge_home = PathUtils.join(@container.container_dir, cartridge.directory)
-        script = PathUtils.join(cartridge_home, 'hooks', conn.name)
+        script         = PathUtils.join(cartridge_home, 'hooks', conn.name)
 
         unless File.executable?(script)
           if env_var_hook
@@ -1045,9 +1224,9 @@ module OpenShift
 
         command      = script << " " << args
         out, err, rc = @container.run_in_container_context(command,
-            env:             env,
-            chdir:           cartridge_home,
-            timeout:         @hourglass.remaining)
+                                                           env:     env,
+                                                           chdir:   cartridge_home,
+                                                           timeout: @hourglass.remaining)
         if 0 == rc
           logger.info("(#{rc})\n------\n#{Runtime::Utils.sanitize_credentials(out)}\n------)")
           return out
@@ -1074,6 +1253,8 @@ module OpenShift
       #                                        +nil+ (the default), output is logged.
       #   :err                               : An +IO+ object to which control script STDERR should be directed. If
       #                                        +nil+ (the default), output is logged.
+      #   :env_overrides                     : environment variable overrides
+      #
       def do_control_with_directory(action, options={})
         cartridge_dir             = options[:cartridge_dir]
         pre_action_hooks_enabled  = options.has_key?(:pre_action_hooks_enabled) ? options[:pre_action_hooks_enabled] : true
@@ -1083,7 +1264,8 @@ module OpenShift
         logger.debug { "#{@container.uuid} #{action} against '#{cartridge_dir}'" }
         buffer       = ''
         gear_env     = ::OpenShift::Runtime::Utils::Environ.for_gear(@container.container_dir)
-        action_hooks = PathUtils.join(@container.container_dir, %w{app-root runtime repo .openshift action_hooks})
+        gear_env.merge!(options[:env_overrides]) if options[:env_overrides]
+        action_hooks = PathUtils.join(gear_env['OPENSHIFT_REPO_DIR'], %w{.openshift action_hooks})
 
         if pre_action_hooks_enabled
           pre_action_hook = prefix_action_hooks ? "pre_#{action}" : action
@@ -1094,6 +1276,7 @@ module OpenShift
         process_cartridges(cartridge_dir) { |path|
           # Make sure this cartridge's env directory overrides that of other cartridge envs
           cartridge_local_env = ::OpenShift::Runtime::Utils::Environ.load(PathUtils.join(path, 'env'))
+          cartridge_local_env.delete('PATH')
 
           ident                            = cartridge_local_env.keys.grep(/^OPENSHIFT_.*_IDENT/)
           _, software, software_version, _ = Runtime::Manifest.parse_ident(cartridge_local_env[ident.first])
@@ -1104,24 +1287,29 @@ module OpenShift
 
           command = []
           command << hooks[:pre] unless hooks[:pre].empty?
-          command << "#{control} #{action}" if File.executable? control
+          if File.executable? control
+            if options[:args]
+              args = Shellwords::shellescape(options[:args])
+            end
+            command << "#{control} #{action} #{args}"
+          end
           command << hooks[:post] unless hooks[:post].empty?
 
           unless command.empty?
             command = ['set -e'] | command
 
             out, err, rc = @container.run_in_container_context(command.join('; '),
-                env:             cartridge_env,
-                chdir:           path,
-                timeout:         @hourglass.remaining,
-                out:             options[:out],
-                err:             options[:err])
+                                                               env:     cartridge_env,
+                                                               chdir:   path,
+                                                               timeout: @hourglass.remaining,
+                                                               out:     options[:out],
+                                                               err:     options[:err])
 
             buffer << out if out.is_a?(String)
             buffer << err if err.is_a?(String)
 
             raise ::OpenShift::Runtime::Utils::ShellExecutionException.new(
-                      "Failed to execute: 'control #{action}' for #{path}", rc, out, err
+                      "CLIENT_ERROR: Failed to execute: 'control #{action}' for #{path}", rc, out, err
                   ) if rc != 0
           end
         }
@@ -1144,19 +1332,19 @@ module OpenShift
       def do_action_hook(action, env, options)
         action = action.gsub(/-/, '_')
 
-        action_hooks_dir = PathUtils.join(@container.container_dir, %w{app-root runtime repo .openshift action_hooks})
+        action_hooks_dir = PathUtils.join(env['OPENSHIFT_REPO_DIR'], %w{.openshift action_hooks})
         action_hook      = PathUtils.join(action_hooks_dir, action)
         buffer           = ''
 
         if File.executable?(action_hook)
           out, err, rc = @container.run_in_container_context(action_hook,
-              env:             env,
-              chdir:           @container.container_dir,
-              timeout:         @hourglass.remaining,
-              out:             options[:out],
-              err:             options[:err])
+                                                             env:     env,
+                                                             chdir:   @container.container_dir,
+                                                             timeout: @hourglass.remaining,
+                                                             out:     options[:out],
+                                                             err:     options[:err])
           raise ::OpenShift::Runtime::Utils::ShellExecutionException.new(
-                    "Failed to execute action hook '#{action}' for #{@container.uuid} application #{@container.application_name}",
+                    "CLIENT_ERROR: Failed to execute action hook '#{action}' for #{@container.uuid} application #{@container.application_name}",
                     rc, out, err
                 ) if rc != 0
         end
@@ -1185,12 +1373,14 @@ module OpenShift
       # in the gear.
       #
       # +options+: hash
-      #   :user_initiated => [boolean]  : Indicates whether the operation was user initated.
-      #                                   Default is +true+.
-      #   :out                          : An +IO+ object to which control script STDOUT should be directed. If
-      #                                   +nil+ (the default), output is logged.
-      #   :err                          : An +IO+ object to which control script STDERR should be directed. If
-      #                                   +nil+ (the default), output is logged.
+      #   :user_initiated => [boolean]    : Indicates whether the operation was user initated.
+      #                                     Default is +true+.
+      #   :exclude_web_proxy => [boolean] : Indicates whether to exclude stopping the web proxy cartridge.
+      #                                     Default is +false+
+      #   :out                            : An +IO+ object to which control script STDOUT should be directed. If
+      #                                     +nil+ (the default), output is logged.
+      #   :err                            : An +IO+ object to which control script STDERR should be directed. If
+      #                                     +nil+ (the default), output is logged.
       #
       # Returns the combined output of all +stop+ action executions as a +String+.
       def stop_gear(options={})
@@ -1199,6 +1389,8 @@ module OpenShift
         buffer = ''
 
         each_cartridge do |cartridge|
+          next if options[:exclude_web_proxy] and cartridge.web_proxy?
+
           buffer << stop_cartridge(cartridge, options)
         end
 
@@ -1213,16 +1405,18 @@ module OpenShift
       # to be started is configurable via +options+.
       #
       # +options+: hash
-      #   :primary_only   => [boolean]  : If +true+, only the primary cartridge will be started.
-      #                                   Mutually exclusive with +secondary_only+.
-      #   :secondary_only => [boolean]  : If +true+, all cartridges except the primary cartridge
-      #                                   will be started. Mutually exclusive with +primary_only+.
-      #   :user_initiated => [boolean]  : Indicates whether the operation was user initated.
-      #                                   Default is +true+.
-      #   :out                          : An +IO+ object to which control script STDOUT should be directed. If
-      #                                   +nil+ (the default), output is logged.
-      #   :err                          : An +IO+ object to which control script STDERR should be directed. If
-      #                                   +nil+ (the default), output is logged.
+      #   :primary_only   => [boolean]    : If +true+, only the primary cartridge will be started.
+      #                                     Mutually exclusive with +secondary_only+.
+      #   :secondary_only => [boolean]    : If +true+, all cartridges except the primary cartridge
+      #                                     will be started. Mutually exclusive with +primary_only+.
+      #   :user_initiated => [boolean]    : Indicates whether the operation was user initated.
+      #                                     Default is +true+.
+      #   :exclude_web_proxy => [boolean] : Indicates whether to exclude stopping the web proxy cartridge.
+      #                                     Default is +false+
+      #   :out                            : An +IO+ object to which control script STDOUT should be directed. If
+      #                                     +nil+ (the default), output is logged.
+      #   :err                            : An +IO+ object to which control script STDERR should be directed. If
+      #                                     +nil+ (the default), output is logged.
       #
       # Returns the combined output of all +start+ action executions as a +String+.
       def start_gear(options={})
@@ -1233,13 +1427,19 @@ module OpenShift
         end
 
         buffer = ''
-        each_cartridge do |cartridge|
-          next if options[:primary_only] and cartridge.name != primary_cartridge.name
-          next if options[:secondary_only] and cartridge.name == primary_cartridge.name
 
-          buffer << start_cartridge('start', cartridge, options)
+        if options[:primary_only] || options[:secondary_only]
+          each_cartridge do |cartridge|
+            next if options[:primary_only] and cartridge.name != primary_cartridge.name
+            next if options[:secondary_only] and cartridge.name == primary_cartridge.name
+            next if options[:exclude_web_proxy] and cartridge.web_proxy?
+
+            buffer << start_cartridge('start', cartridge, options)
+          end
+        else
+          buffer << start_gear(options.merge({secondary_only: true}))
+          buffer << start_gear(options.merge({primary_only: true}))
         end
-
         buffer
       end
 
@@ -1347,82 +1547,17 @@ module OpenShift
       # Writes the +stop_lock+ file and changes its ownership to the gear user.
       def create_stop_lock
         unless stop_lock?
-          mcs_label = ::OpenShift::Runtime::Utils::SELinux.get_mcs_label(@container.uid)
           File.new(stop_lock, File::CREAT|File::TRUNC|File::WRONLY, 0644).close()
           @container.set_rw_permission(stop_lock)
         end
       end
 
-      ##
-      # Generate an RSA ssh key
-      def generate_ssh_key(cartridge)
-        ssh_dir        = PathUtils.join(@container.container_dir, '.openshift_ssh')
-        known_hosts    = PathUtils.join(ssh_dir, 'known_hosts')
-        ssh_config     = PathUtils.join(ssh_dir, 'config')
-        ssh_key        = PathUtils.join(ssh_dir, 'id_rsa')
-        ssh_public_key = ssh_key + '.pub'
-
-        FileUtils.mkdir_p(ssh_dir)
-        @container.set_rw_permission(ssh_dir)
-
-        @container.run_in_container_context("/usr/bin/ssh-keygen -N '' -f #{ssh_key}",
-            chdir:               @container.container_dir,
-            timeout:             @hourglass.remaining,
-            expected_exitstatus: 0)
-
-        FileUtils.touch(known_hosts)
-        FileUtils.touch(ssh_config)
-
-        @container.set_rw_permission_R(ssh_dir)
-
-        FileUtils.chmod(0750, ssh_dir)
-        FileUtils.chmod(0600, [ssh_key, ssh_public_key])
-        FileUtils.chmod(0660, [known_hosts, ssh_config])
-
-        @container.add_env_var('APP_SSH_KEY', ssh_key, true)
-        @container.add_env_var('APP_SSH_PUBLIC_KEY', ssh_public_key, true)
-
-        public_key_bytes = IO.read(ssh_public_key)
-        public_key_bytes.sub!(/^ssh-rsa /, '')
-
-        output = "APP_SSH_KEY_ADD: #{cartridge.directory} #{public_key_bytes}\n"
-        # The BROKER_AUTH_KEY_ADD token does not use any arguments.  It tells the broker
-        # to enable this gear to make REST API calls on behalf of the user who owns this gear.
-        output << "BROKER_AUTH_KEY_ADD: \n"
-        output
+      def has_repository?
+        ApplicationRepository.new(@container).exists?
       end
 
       private
       ## special methods that are handled especially by the platform
-      def publish_gear_endpoint
-        begin
-          # TODO:
-          # There is some concern about how well-behaved Facter is
-          # when it is require'd.
-          # Instead, we use run_in_container_context here to avoid it altogether.
-          # For the long-term, then, figure out a way to reliably
-          # determine the IP address from Ruby.
-          out, err, status = @container.run_in_container_context('facter ipaddress',
-              env:                 cartridge_env,
-              chdir:               @container.container_dir,
-              timeout:             @hourglass.remaining,
-              expected_exitstatus: 0)
-          private_ip       = out.chomp
-        rescue
-          require 'socket'
-          addrinfo     = Socket.getaddrinfo(Socket.gethostname, 80) # 80 is arbitrary
-          private_addr = addrinfo.select { |info|
-            info[3] !~ /^127/
-          }.first
-          private_ip   = private_addr[3]
-        end
-
-        env = ::OpenShift::Runtime::Utils::Environ::for_gear(@container.container_dir)
-
-        output = "#{env['OPENSHIFT_GEAR_UUID']}@#{private_ip}:#{primary_cartridge.name};#{env['OPENSHIFT_GEAR_DNS']}"
-        logger.debug output
-        output
-      end
 
       def empty_repository?
         ApplicationRepository.new(@container).empty?

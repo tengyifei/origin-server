@@ -120,12 +120,18 @@ jenkins_build    = #{@jenkins_build}
     def persist
       # Because the system I/O is high during testing, this doesn't always
       # succeed right away.
+      success=false
       5.times do
         begin
           File.open(@file, "w") {|f| f.puts self.to_json}
+          success=true
+          $logger.debug("Successfully wrote file #{@file}")
           break
         rescue Errno::ENOENT
-          $logger.debug("Retrying file write for #{@file}")
+          $logger.error("Retrying file write for #{@file}")
+        end
+        if !success
+          raise "Failed to write to #{@file}"
         end
       end
     end
@@ -149,6 +155,21 @@ jenkins_build    = #{@jenkins_build}
         when "jbosseap" then "src/main/webapp/index.html"
         when "jbossews" then "src/main/webapp/index.html"
         when "nodejs"   then "index.html"
+      end
+    end
+
+    def get_pom_file
+      case @type.gsub(/-.*/,'')
+        when "jbossas"  then "pom.xml"
+        when "jbosseap" then "pom.xml"
+        when "jbossews" then "pom.xml"
+      end
+    end
+
+    def get_standalone_config
+      case @type.gsub(/-.*/,'')
+        when "jbossas"  then ".openshift/config/standalone.xml"
+        when "jbosseap" then ".openshift/config/standalone.xml"
       end
     end
 
@@ -237,15 +258,15 @@ jenkins_build    = #{@jenkins_build}
       File.exists? "/var/lib/openshift/.last_access/#{uid}"
     end
 
-    def connect(use_https=false, max_retries=30)
+    def connect(use_https=false, max_retries=30, timeout=1, path="")
       prefix = use_https ? "https://" : "http://"
-      url = prefix + hostname
+      url = prefix + hostname + path
 
       $logger.info("Connecting to #{url}")
       beginning_time = Time.now
 
       max_retries.times do |i|
-        code, body = curl(url, 1)
+        code, body = curl(url, timeout)
 
         if code == 0
           @response_code = code.to_i

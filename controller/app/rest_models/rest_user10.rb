@@ -28,7 +28,7 @@
 # @!attribute [r] consumed_gears
 #   @return [Integer] Number of gears currently being used in applications
 # @!attribute [r] max_gears
-#   @return [Integer] Maximum number of gears avaiable to the user
+#   @return [Integer] Maximum number of gears available to the user
 # @!attribute [r] capabilities
 #   @return [Hash] Map of user capabilities
 # @!attribute [r] plan_id
@@ -42,10 +42,9 @@ class RestUser10 < OpenShift::Model
     self.login = cloud_user.login
     self.consumed_gears = cloud_user.consumed_gears
 
-    capabilities = cloud_user.get_capabilities
-    self.max_gears = capabilities["max_gears"]
-    capabilities.delete("max_gears")
-    self.capabilities = capabilities
+    self.capabilities = cloud_user.capabilities.serializable_hash
+    self.max_gears = self.capabilities["max_gears"]
+    self.capabilities.delete("max_gears")
 
     self.plan_id = cloud_user.plan_id
     self.usage_account_id = cloud_user.usage_account_id
@@ -55,7 +54,7 @@ class RestUser10 < OpenShift::Model
         "LIST_KEYS" => Link.new("Get SSH keys", "GET", URI::join(url, "user/keys")),
         "ADD_KEY" => Link.new("Add new SSH key", "POST", URI::join(url, "user/keys"), [
           Param.new("name", "string", "Name of the key"),
-          Param.new("type", "string", "Type of Key", SshKey.get_valid_ssh_key_types()),
+          Param.new("type", "string", "Type of Key", SshKey.get_valid_ssh_key_types),
           Param.new("content", "string", "The key portion of an rsa key (excluding ssh-rsa and comment)"),
         ]),
       }
@@ -64,7 +63,7 @@ class RestUser10 < OpenShift::Model
       ]) if cloud_user.parent_user_id
     end
   end
-  
+
   def to_xml(options={})
     options[:tag_name] = "user"
     super(options)

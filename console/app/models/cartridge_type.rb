@@ -53,18 +53,51 @@ class CartridgeType < RestApi::Base
     @display_name ||= url_basename || name
   end
 
+  def suggest_name
+    if name.present?
+      name_prefix
+    elsif url.present?
+      url_suggested_name
+    end
+  end
+
   def to_param
-    url || name
+    name || url
+  end
+
+  def url_suggested_name
+    uri = URI.parse(url)
+    name = uri.fragment
+    name = Rack::Utils.parse_nested_query(uri.query)['name'] if name.blank? && uri.query
+    name.presence
+  rescue
+    nil
   end
 
   def url_basename
     uri = URI.parse(url)
-    name = uri.fragment
-    name = Rack::Utils.parse_nested_query(uri.query)['name'] if name.blank? && uri.query
+    name = url_suggested_name
     name = File.basename(uri.path) if name.blank? && uri.path.present? && uri.path != '/'
     name.presence || url
-  rescue 
+  rescue
     url
+  end
+
+  def support_type
+    @support_type ||=
+      if vendor = @attributes[:maintained_by].presence
+        vendor == 'redhat' ? :openshift : :community
+      else
+        :community
+      end
+  end
+
+  def automatic_updates?
+    v = @attributes[:automatic_updates]
+    if v.nil?
+      v = !(tags.include?('no_updates') || custom?)
+    end
+    v
   end
 
   # Legacy, use #tags
@@ -81,6 +114,28 @@ class CartridgeType < RestApi::Base
   def tags=(tags)
     @tags = nil
     @attributes[:tags] = tags
+  end
+
+  def service?
+    tags.include?(:service)
+  end
+  def plugin?
+    tags.include?(:plugin)
+  end
+  def database?
+    tags.include?(:database)
+  end
+  def web_framework?
+    tags.include?(:web_framework)
+  end
+  def builder?
+    tags.include?(:ci_builder)
+  end
+  def jenkins_client?
+    builder? && name_prefix == 'jenkins-client'
+  end
+  def haproxy_balancer?
+    tags.include?(:web_proxy) && name_prefix == 'haproxy'
   end
 
   def conflicts
@@ -104,9 +159,31 @@ class CartridgeType < RestApi::Base
   end
 
   def scalable
-    self.attributes['supported_scales_to'] != self.attributes['supported_scales_from']
+    @attributes['supported_scales_to'] != @attributes['supported_scales_from']
   end
   alias_method :scalable?, :scalable
+
+  def name_parts
+    @name_parts ||= begin
+      if match = /\A(.+)-(\d+(?:\.\d+)*)\Z/.match(name)
+        n, v = match.values_at(1,2)
+        [n, v.split('.').map(&:to_i)]
+      else
+        [name, '0']
+      end
+    end
+  end
+
+  def name_prefix
+    name_parts[0]
+  end
+  def name_version
+    name_parts[1]
+  end
+
+  def newer_than(other)
+    other.name_prefix == name_prefix && (other.name_version <=> name_version) == -1
+  end
 
   def ==(o)
     to_param == o.to_param
@@ -136,6 +213,30 @@ class CartridgeType < RestApi::Base
 
   def self.standalone(*arguments)
     all(*arguments).select(&:standalone?)
+  end
+
+  def self.suggest!(*arguments)
+    limit = arguments.pop if arguments.last.is_a? Numeric
+    source = arguments.shift if arguments.length > 1
+    arr = []
+    arr =
+      if source.is_a?(Array)
+        source.delete_if{ |c| arr << c if arguments.any?{ |sym| c.send(sym) } }
+        arr
+      else
+        send(source || :all).select{ |c| arguments.any?{ |sym| c.send(sym) } }
+      end
+    arr.delete_if{ |c| arr.any?{ |other| other.newer_than(c) } } # remove older versions of the same cart
+    arr.sort!
+    arr = arr.first(limit) if limit
+    arr
+  end
+
+  def self.suggest_useful!(app, carts, *filters)
+    carts = carts.select{ filters.any?{ |sym| c.send(sym) } } if filters.present?
+    requires = app.cartridges.inject([]){ |arr, cart| arr.concat(carts.select{ |c| c.requires.any?{ |r| r.include?(cart.name) } }) }
+    carts.delete_if{ |c| requires.include?(c) }
+    requires
   end
 
   def self.matches(s, opts=nil)

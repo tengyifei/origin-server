@@ -51,7 +51,7 @@ class Usage
   def validate_addtl_fs_gb?
     (self.usage_type == UsageRecord::USAGE_TYPES[:addtl_fs_gb]) ? true : false
   end
-  
+
   def validate_cart_name?
     (self.usage_type == UsageRecord::USAGE_TYPES[:premium_cart]) ? true : false
   end
@@ -59,7 +59,7 @@ class Usage
   def self.find_all
     get_list(self.each)
   end
- 
+
   def self.find_by_user(user_id)
     get_list(where(:user_id => user_id))
   end
@@ -120,7 +120,7 @@ class Usage
     where(gear_id: gear_id).delete
   end
 
-  def get_usage_rate(plan_id)
+  def self.get_usage_rate(plan_id, usage_type, gear_size, cart_name)
     nil
   end
 

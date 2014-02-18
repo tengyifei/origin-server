@@ -1,3 +1,9 @@
+%if 0%{?fedora}%{?rhel} <= 6
+    %global scl ruby193
+    %global scl_prefix ruby193-
+%endif
+%{!?scl:%global pkg_name %{name}}
+%{?scl:%scl_package rubygem-%{gem_name}}
 %global gem_name openshift-origin-dns-avahi
 %global rubyabi 1.9.1
 
@@ -14,8 +20,8 @@ Requires:      ruby(release)
 %else
 Requires:      %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
 %endif
-Requires:      rubygems
-Requires:      rubygem(json)
+Requires:      %{?scl:%scl_prefix}rubygems
+Requires:      %{?scl:%scl_prefix}rubygem(json)
 Requires:      rubygem(openshift-origin-common)
 Requires:      openshift-origin-broker
 Requires:      selinux-policy-targeted
@@ -25,8 +31,8 @@ BuildRequires: ruby(release)
 %else
 BuildRequires: %{?scl:%scl_prefix}ruby(abi) >= %{rubyabi}
 %endif
-BuildRequires: rubygems
-BuildRequires: rubygems-devel
+BuildRequires: %{?scl:%scl_prefix}rubygems
+BuildRequires: %{?scl:%scl_prefix}rubygems-devel
 BuildArch:     noarch
 Provides:      rubygem(%{gem_name}) = %version
 
@@ -78,15 +84,5 @@ cp %{buildroot}/%{gem_dir}/gems/%{gem_name}-%{version}/conf/openshift-origin-dns
 %changelog
 * Tue Jun 11 2013 Troy Dawson <tdawson@redhat.com> 1.10.2-1
 - Bug 928675 (asari.ruby@gmail.com)
-
-* Tue Jun 11 2013 Troy Dawson <tdawson@redhat.com> 1.10.1-1
-- Bump up version to 1.10
-
-* Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 0.0.2-1
-- Updating rest-client and rake gem versions to match F18 (kraman@gmail.com)
-- Make packages build/install on F19+ (tdawson@redhat.com)
-
-* Sat Mar 09 2013 Krishna Raman <kraman@gmail.com> 0.0.1-1
-- new package built with tito
 
 

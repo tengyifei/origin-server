@@ -18,11 +18,15 @@ require 'rubygems'
 require 'openshift-origin-node/model/frontend_proxy'
 require 'openshift-origin-node/model/frontend_httpd'
 require 'openshift-origin-node/model/v2_cart_model'
+require 'openshift-origin-node/model/node'
+require 'openshift-origin-node/model/gear_registry'
+require 'openshift-origin-node/model/deployment_metadata'
 require 'openshift-origin-common/models/manifest'
 require 'openshift-origin-node/model/application_container_ext/environment'
 require 'openshift-origin-node/model/application_container_ext/setup'
 require 'openshift-origin-node/model/application_container_ext/snapshots'
 require 'openshift-origin-node/model/application_container_ext/cartridge_actions'
+require 'openshift-origin-node/model/application_container_ext/deployments'
 require 'openshift-origin-node/utils/shell_exec'
 require 'openshift-origin-node/utils/application_state'
 require 'openshift-origin-node/utils/environ'
@@ -30,6 +34,7 @@ require 'openshift-origin-node/utils/sdk'
 require 'openshift-origin-node/utils/node_logger'
 require 'openshift-origin-node/utils/hourglass'
 require 'openshift-origin-node/utils/cgroups'
+require 'openshift-origin-node/utils/tc'
 require 'openshift-origin-common'
 require 'yaml'
 require 'active_model'
@@ -46,6 +51,9 @@ module OpenShift
     class UserDeletionException < Exception
     end
 
+    class GearCreationException < Exception
+    end
+
     # == Application Container
     class ApplicationContainer
       include ActiveModel::Observing
@@ -55,6 +63,7 @@ module OpenShift
       include ApplicationContainerExt::Setup
       include ApplicationContainerExt::Snapshots
       include ApplicationContainerExt::CartridgeActions
+      include ApplicationContainerExt::Deployments
 
       GEAR_TO_GEAR_SSH = "/usr/bin/ssh -q -o 'BatchMode=yes' -o 'StrictHostKeyChecking=no' -i $OPENSHIFT_APP_SSH_KEY "
       DEFAULT_SKEL_DIR = PathUtils.join(OpenShift::Config::CONF_DIR,"skel")
@@ -65,7 +74,7 @@ module OpenShift
                   :cartridge_model, :container_plugin, :hourglass
       attr_accessor :uid, :gid
 
-      containerization_plugin_gem = ::OpenShift::Config.new.get('CONTAINERIZATION_PLUGIN') 
+      containerization_plugin_gem = ::OpenShift::Config.new.get('CONTAINERIZATION_PLUGIN')
       containerization_plugin_gem ||= 'openshift-origin-container-selinux'
 
       begin
@@ -77,7 +86,7 @@ module OpenShift
       if !::OpenShift::Runtime::Containerization::Plugin.respond_to?(:container_dir)
         raise ArgumentError.new('containerization plugin must respond to container_dir')
       end
-      
+
       def initialize(application_uuid, container_uuid, user_uid = nil, application_name = nil, container_name = nil,
                      namespace = nil, quota_blocks = nil, quota_files = nil, hourglass = nil)
         @config           = ::OpenShift::Config.new
@@ -88,15 +97,19 @@ module OpenShift
         @namespace        = namespace
         @quota_blocks     = quota_blocks
         @quota_files      = quota_files
-        @uid              = user_uid
-        @gid              = user_uid
         @base_dir         = @config.get("GEAR_BASE_DIR")
         @skel_dir         = @config.get("GEAR_SKEL_DIR") || DEFAULT_SKEL_DIR
         @supplementary_groups = @config.get("GEAR_SUPPLEMENTARY_GROUPS")
         @hourglass        = hourglass || ::OpenShift::Runtime::Utils::Hourglass.new(3600)
 
         begin
-          user_info         = Etc.getpwnam(@uuid)
+          user_info = user_uid
+          [:uid, :gid, :gecos, :dir].each do |meth|
+            if not user_info.respond_to?(meth)
+              user_info = Etc.getpwnam(@uuid)
+              break
+            end
+          end
           @uid              = user_info.uid
           @gid              = user_info.gid
           @gecos            = user_info.gecos
@@ -104,7 +117,7 @@ module OpenShift
           @container_plugin = Containerization::Plugin.new(self)
         rescue ArgumentError => e
           @uid              = user_uid
-          @gid              = user_uid 
+          @gid              = user_uid
           @gecos            = @config.get("GEAR_GECOS") || "OO application container"
           @container_dir    = Containerization::Plugin.container_dir(self)
           @container_plugin = nil
@@ -120,23 +133,37 @@ module OpenShift
       # Caveat: the quota information will not be populated.
       #
       def self.from_uuid(container_uuid, hourglass=nil)
-        config = ::OpenShift::Config.new
-        gecos  = config.get("GEAR_GECOS") || "OO application container"
-        pwent  = Etc.getpwnam(container_uuid)
 
-        if pwent.gecos != gecos
-          raise ArgumentError, "Not an OpenShift gear: #{container_uuid}"
-        end
+        raise ArgumentError, "container_uuid is required!" if container_uuid.nil? or container_uuid.empty?
 
-        env = ::OpenShift::Runtime::Utils::Environ.for_gear(pwent.dir)
+        pwent = passwd_for(container_uuid)
+
+        env = ::OpenShift::Runtime::Utils::Environ.load(File.join(pwent.dir, '.env', 'OPENSHIFT_{APP,GEAR}_{UUID,NAME,DNS}*'))
+
         if env['OPENSHIFT_GEAR_DNS'] == nil
           namespace = nil
         else
           namespace = env['OPENSHIFT_GEAR_DNS'].sub(/\..*$/,"").sub(/^.*\-/,"")
         end
 
-        ApplicationContainer.new(env["OPENSHIFT_APP_UUID"], container_uuid, pwent.uid, env["OPENSHIFT_APP_NAME"],
+        raise "OPENSHIFT_APP_UUID is missing!" if env["OPENSHIFT_APP_UUID"].nil?
+        raise "OPENSHIFT_APP_NAME is missing!" if env["OPENSHIFT_APP_NAME"].nil?
+        raise "OPENSHIFT_GEAR_NAME is missing!" if env["OPENSHIFT_GEAR_NAME"].nil?
+
+        ApplicationContainer.new(env["OPENSHIFT_APP_UUID"], container_uuid, pwent, env["OPENSHIFT_APP_NAME"],
                                  env["OPENSHIFT_GEAR_NAME"], namespace, nil, nil, hourglass)
+      end
+
+      def self.passwd_for(container_uuid)
+        config = ::OpenShift::Config.new
+        gecos  = config.get("GEAR_GECOS") || "OO application container"
+        pwent  = Etc.getpwnam(container_uuid)
+        raise ArgumentError, "Not an OpenShift gear: #{container_uuid}" if pwent.gecos != gecos
+        pwent
+      end
+
+      def self.exists?(container_uuid)
+        passwd_for(container_uuid) rescue false
       end
 
       def name
@@ -151,28 +178,51 @@ module OpenShift
       #
       # - model/unix_user.rb
       # context: root
-      def create
+      # @param secret_token     [String]      value of OPENSHIFT_SECRET_TOKEN for application
+      # @param generate_app_key [true, false] Should application ssh key be generated?
+      # @return [String] output from operations creating gear
+      def create(secret_token = nil, generate_app_key = false, create_initial_deployment_dir = true)
+        output = ''
         notify_observers(:before_container_create)
         # lock to prevent race condition between create and delete of gear
-        uuid_lock_file = "/var/lock/oo-create.#{@uuid}"
-        File.open(uuid_lock_file, File::RDWR|File::CREAT|File::TRUNC, 0o0600) do | uuid_lock |
-          uuid_lock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-          uuid_lock.flock(File::LOCK_EX)
+        PathUtils.flock("/var/lock/oo-create.#{@uuid}") do
+          resource             = OpenShift::Runtime::Node.resource_limits
+          no_overcommit_active = resource.get_bool('no_overcommit_active', false)
+          overcommit_lock_file = "/var/lock/oo-create.overcommit"
+          File.open(overcommit_lock_file, File::RDWR|File::CREAT|File::TRUNC, 0600) do |overcommit_lock|
+            overcommit_lock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 
-          @container_plugin = Containerization::Plugin.new(self)
-          @container_plugin.create
+            begin
+              if no_overcommit_active
+                overcommit_lock.flock(File::LOCK_EX)
 
-          if @config.get("CREATE_APP_SYMLINKS").to_i == 1
-            unobfuscated = PathUtils.join(File.dirname(@container_dir),"#{@container_name}-#{@namespace}")
-            if not File.exists? unobfuscated
-              FileUtils.ln_s File.basename(@container_dir), unobfuscated, :force=>true
+                nu = OpenShift::Runtime::Node.node_utilization
+                if (nu['gears_active_usage_pct'] >= 100)
+                  raise GearCreationException.new("ERROR: Node capacity exceeded, unable to create container #{@uuid}")
+                end
+              end
+
+              @container_plugin = Containerization::Plugin.new(self)
+              @container_plugin.create(create_initial_deployment_dir)
+            ensure
+              overcommit_lock.flock(File::LOCK_UN) if no_overcommit_active
             end
           end
 
-          uuid_lock.flock(File::LOCK_UN)
+          add_env_var('SECRET_TOKEN', secret_token, true) if secret_token
+
+          output = generate_ssh_key if generate_app_key
+
+          if @config.get("CREATE_APP_SYMLINKS").to_i == 1
+            unobfuscated = PathUtils.join(File.dirname(@container_dir), "#{@container_name}-#{@namespace}")
+            if not File.exists? unobfuscated
+              FileUtils.ln_s File.basename(@container_dir), unobfuscated, :force => true
+            end
+          end
         end
 
         notify_observers(:after_container_create)
+        output
       end
 
       # Destroy gear
@@ -183,9 +233,12 @@ module OpenShift
       def destroy(skip_hooks=false)
         notify_observers(:before_container_destroy)
 
-        if @uid.nil? or (@container_dir.nil? or !File.directory?(@container_dir.to_s))
-          # gear seems to have been destroyed already... suppress any error
+        if @uid.nil? or (@container_plugin.nil? or !File.directory?(@container_dir.to_s))
+          # gear seems to have been deleted already... suppress any error
           # TODO : remove remaining stuff if it exists, e.g. .httpd/#{uuid}* etc
+
+          remove_app_symlinks(@container_dir)
+          FileUtils.rm_rf(@container_dir) if File.directory?(@container_dir)
           return ['', '', 0]
         end
 
@@ -195,35 +248,20 @@ module OpenShift
         retcode = -1
 
         # Don't try to delete a gear that is being scaled-up|created|deleted
-        uuid_lock_file = "/var/lock/oo-create.#{@uuid}"
-        File.open(uuid_lock_file, File::RDWR|File::CREAT|File::TRUNC, 0o0600) do | lock |
-          lock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-          lock.flock(File::LOCK_EX)
-
+        PathUtils.flock("/var/lock/oo-create.#{@uuid}") do
           @cartridge_model.each_cartridge do |cart|
             env = ::OpenShift::Runtime::Utils::Environ::for_gear(@container_dir)
             cart.public_endpoints.each do |endpoint|
-              notify_endpoint_delete << "NOTIFY_ENDPOINT_DELETE: #{endpoint.public_port_name} #{@config.get('PUBLIC_IP')} #{env[endpoint.public_port_name]}\n"
+              notify_endpoint_delete << "NOTIFY_ENDPOINT_DELETE: #{@config.get('PUBLIC_IP')} #{env[endpoint.public_port_name]}\n"
             end
           end
           # possible mismatch across cart model versions
           output, errout, retcode = @cartridge_model.destroy(skip_hooks)
 
-          raise UserDeletionException.new("ERROR: unable to destroy user account #{@uuid}") if @uuid.nil?
+          raise UserDeletionException.new("ERROR: unable to delete user account #{@uuid}") if @uuid.nil?
 
           @container_plugin.destroy
-
-          if @config.get("CREATE_APP_SYMLINKS").to_i == 1
-            Dir.foreach(File.dirname(@container_dir)) do |dent|
-              unobfuscate = PathUtils.join(File.dirname(@container_dir), dent)
-              if (File.symlink?(unobfuscate)) &&
-                  (File.readlink(unobfuscate) == File.basename(@container_dir))
-                File.unlink(unobfuscate)
-              end
-            end
-          end
-
-          lock.flock(File::LOCK_UN)
+          remove_app_symlinks(@container_dir)
         end
 
         output += notify_endpoint_delete
@@ -233,37 +271,86 @@ module OpenShift
         return output, errout, retcode
       end
 
+      # Find and remove all symlinks for a gear
+      #
+      # @param container_dir [String] home dir for gear to cleanup
+      def remove_app_symlinks(container_dir)
+        if @config.get("CREATE_APP_SYMLINKS").to_i == 1
+          Dir.foreach(File.dirname(container_dir)) do |dent|
+            unobfuscate = PathUtils.join(File.dirname(container_dir), dent)
+            if (File.symlink?(unobfuscate)) &&
+                (File.readlink(unobfuscate) == File.basename(container_dir))
+              File.unlink(unobfuscate)
+            end
+          end
+        end
+      end
+
       # Public: Sets the app state to "stopped" and causes an immediate forced
       # termination of all gear processes.
       #
       # TODO: exception handling
-      def force_stop
+      def force_stop(options={})
         @state.value = State::STOPPED
         @cartridge_model.create_stop_lock
-        @container_plugin.stop
+        @container_plugin.stop(options)
       end
 
       #
       # Kill processes belonging to this app container.
       #
-      def kill_procs
+      # Options:
+      #    init_owned:   Only kill processes trees that start with a daemon (rooted in init).
+      #    term_delay:   Send SIGTERM first, wait term_delay seconds then send SIGKILL.
+      #
+      # Note: The init_owned and term_delay parameters are combined to
+      # safely kill daemons running in the gear without touching
+      # processes being run from outside the gear (ex: git push, cron,
+      # node API).
+      #
+      def kill_procs(options={})
         # Give it a good try to delete all processes.
-        # This abuse is neccessary to release locks on polyinstantiated
+        # This abuse is necessary to release locks on polyinstantiated
         #    directories by pam_namespace.
-        out = err = rc = nil
-        10.times do |i|
-          ::OpenShift::Runtime::Utils::oo_spawn(%{/usr/bin/pkill -9 -u #{uid}})
-          out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn(%{/usr/bin/pgrep -u #{uid}})
-          break unless 0 == rc
 
-          logger.error "ERROR: attempt #{i}/10 there are running \"killed\" processes for #{uid}(#{rc}): stdout: #{out} stderr: #{err}"
-          sleep 0.5
+        procfilter="-u #{uid}"
+        if options[:init_owned]
+          procfilter << " -P 1"
         end
 
-        # looks backwards but 0 implies processes still existed
-        if 0 == rc
-          out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn("ps -u #{uid} -o state,pid,ppid,cmd")
-          logger.error "ERROR: failed to kill all processes for #{uid}(#{rc}): stdout: #{out} stderr: #{err}"
+        # If the terminate delay is specified, try to terminate processes nicely
+        # first and wait for them to die.
+        if options[:term_delay]
+          ::OpenShift::Runtime::Utils::oo_spawn("/usr/bin/pkill #{procfilter}")
+          etime = Time.now + options[:term_delay].to_i
+          while (Time.now <= etime)
+            out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn("/usr/bin/pgrep #{procfilter}")
+            break unless rc == 0
+            sleep 0.5
+          end
+        end
+
+        oldproclist=""
+        stuckcount=0
+        while stuckcount <= 10
+          out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn("/usr/bin/pkill -9 #{procfilter}")
+          break unless rc == 0
+
+          sleep 0.5
+
+          out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn("/usr/bin/pgrep #{procfilter}")
+          if oldproclist == out
+            stuckcount += 1
+          else
+            oldproclist = out
+            stuckcount = 0
+          end
+        end
+
+        out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn("/usr/bin/pgrep #{procfilter}")
+        if rc == 0
+          procset = out.split.join(' ')
+          logger.error "ERROR: failed to kill all processes for #{uid}: PIDs #{procset}"
         end
       end
 
@@ -318,12 +405,14 @@ module OpenShift
       ##
       # Idles the gear if there is no stop lock and state is not already +STOPPED+.
       #
+      # +Note: + stop_lock is created here so Node start up scripts skip idled gears.
+      #   stop_lock removed during unidle
       def idle_gear(options={})
         if not stop_lock? and (state.value != State::STOPPED)
           frontend = FrontendHttpServer.new(self)
           frontend.idle
           begin
-            output = stop_gear
+            output = stop_gear(force: true, term_delay: 30, init_owned: true)
           ensure
             state.value = State::IDLE
           end
@@ -336,16 +425,16 @@ module OpenShift
       #
       def unidle_gear(options={})
         output = ""
-        OpenShift::Runtime::Utils::Cgroups::with_no_cpu_limits(@uuid) do
-          if stop_lock? and (state.value == State::IDLE)
-            state.value = State::STARTED
-            output      = start_gear
-          end
+        OpenShift::Runtime::Utils::Cgroups.new(@uuid).boost do
+        if stop_lock? and (state.value == State::IDLE)
+          state.value = State::STARTED
+          output      = start_gear
+        end
 
-          frontend = FrontendHttpServer.new(self)
-          if frontend.idle?
-            frontend.unidle
-          end
+        frontend = FrontendHttpServer.new(self)
+        if frontend.idle?
+          frontend.unidle
+        end
         end
         output
       end
@@ -360,11 +449,32 @@ module OpenShift
       ##
       # Sets the application state to +STOPPED+ and stops the gear. Gear stop implementation
       # is model specific, but +options+ is provided to the implementation.
+      #
+      # Options:
+      #    force       Forcibly kill gear processes after cartridges have been stopped.
+      #    hot_deploy  if true, don't rotate-out from the web proxy
+      #    init        if true, don't rotate-out from the web proxy
+      #
       def stop_gear(options={})
-        buffer = @cartridge_model.stop_gear(options)
+        buffer = ''
+        if proxy_cartridge = @cartridge_model.web_proxy
+          unless options[:hot_deploy] == true or options[:init]
+            result = update_proxy_status(cartridge: proxy_cartridge,
+                                         action: :disable,
+                                         gear_uuid: self.uuid,
+                                         persist: false)
+            result[:proxy_results].each do |proxy_gear_uuid, result|
+              buffer << result[:messages].join("\n")
+            end
+          end
+        end
+        buffer << @cartridge_model.stop_gear(options)
         unless buffer.empty?
           buffer.chomp!
           buffer << "\n"
+        end
+        if options[:force]
+          kill_procs(options)
         end
         buffer << stopped_status_attr
         buffer
@@ -416,32 +526,21 @@ module OpenShift
         app_name = gear_env['OPENSHIFT_APP_NAME']
         url = "https://#{broker_addr}/broker/rest/domains/#{domain}/applications/#{app_name}/gear_groups.json"
 
-        params = {
-          'broker_auth_key' => File.read(PathUtils.join(@config.get('GEAR_BASE_DIR'), uuid, '.auth', 'token')).chomp,
-          'broker_auth_iv' => File.read(PathUtils.join(@config.get('GEAR_BASE_DIR'), uuid, '.auth', 'iv')).chomp
-        }
+        params = broker_auth_params
 
         request = RestClient::Request.new(:method => :get,
                                           :url => url,
-                                          :timeout => 120,
+                                          :timeout => 30,
                                           :headers => { :accept => 'application/json;version=1.0', :user_agent => 'OpenShift' },
                                           :payload => params)
 
-        begin
-          response = request.execute()
+        response = request.execute
 
-          if 300 <= response.code
-            raise response
-          end
-        rescue
-          raise
+        if 300 <= response.code
+          raise response
         end
 
-        begin
-          gear_groups = JSON.parse(response)
-        rescue
-          raise
-        end
+        gear_groups = JSON.parse(response)
 
         gear_groups
       end
@@ -462,6 +561,40 @@ module OpenShift
         end
 
         secondary_groups
+      end
+
+      ##
+      # Send the deployments to the broker
+      #
+      def report_deployments(gear_env, options = {})
+        broker_addr = @config.get('BROKER_HOST')
+        domain = gear_env['OPENSHIFT_NAMESPACE']
+        app_name = gear_env['OPENSHIFT_APP_NAME']
+        app_uuid = gear_env['OPENSHIFT_APP_UUID']
+        url = "https://#{broker_addr}/broker/rest/domain/#{domain}/application/#{app_name}/deployments"
+
+        params = broker_auth_params
+        if params
+          deployments = calculate_deployments
+          params['deployments[]'] = deployments
+          params[:application_id] = app_uuid
+
+          begin
+            request = RestClient::Request.new(:method => :post,
+                                              :url => url,
+                                              :timeout => 30,
+                                              :headers => { :accept => 'application/json;version=1.6', :user_agent => 'OpenShift' },
+                                              :payload => params)
+
+            response = request.execute { |response, request, result| response }
+          rescue Errno::ECONNREFUSED
+            options[:out].puts "Failed to report deployment to broker.  This will be corrected on the next git push." if options[:out]
+          else
+            if 300 <= response.code
+              options[:out].puts "Failed to report deployment to broker.  This will be corrected on the next git push." if options[:out]
+            end
+          end
+        end
       end
 
       def stopped_status_attr
@@ -486,8 +619,10 @@ module OpenShift
       # Send a fire-and-forget request to the broker to report build analytics.
       #
       def report_build_analytics
+        return unless @config.get_bool('REPORT_BUILD_ANALYTICS', true)
+
         broker_addr = @config.get('BROKER_HOST')
-        url         = "https://#{broker_addr}/broker/nurture"
+        url         = "https://#{broker_addr}/broker/analytics"
 
         payload = {
           "json_data" => {
@@ -524,12 +659,32 @@ module OpenShift
       end
 
       #
+      # Public: Return an enumerator which provides a list of uuids
+      # for every OpenShift gear in the system.
+      #
+      def self.all_uuids(hourglass=nil)
+        Enumerator.new do |yielder|
+          config = OpenShift::Config.new
+          gecos = config.get("GEAR_GECOS") || "OO application container"
+
+          uuids = []
+          Etc.passwd do |pwent|
+            uuids << pwent.name if pwent.gecos == gecos
+          end
+
+          uuids.each do |uuid|
+            yielder.yield(uuid)
+          end
+        end
+      end
+
+      #
       # Public: Return an enumerator which provides an ApplicationContainer object
       # for every OpenShift gear in the system.
       #
       # Caveat: the quota information will not be populated.
       #
-      def self.all(hourglass=nil)
+      def self.all(hourglass=nil, loadenv=true)
         Enumerator.new do |yielder|
           config = OpenShift::Config.new
           gecos = config.get("GEAR_GECOS") || "OO application container"
@@ -543,8 +698,14 @@ module OpenShift
             end
           end
 
-          pwents.each do |pwent|
-            env = ::OpenShift::Runtime::Utils::Environ.for_gear(pwent.dir)
+          pwents.shuffle.each do |pwent|
+            # The path is a performance hack to load only the variables we need
+            if loadenv
+              env = ::OpenShift::Runtime::Utils::Environ.load(File.join(pwent.dir, '.env', 'OPENSHIFT_{APP,GEAR}_{UUID,NAME,DNS}*'))
+              else
+              env = {}
+            end
+
             if env['OPENSHIFT_GEAR_DNS'] == nil
               namespace = nil
             else
@@ -552,7 +713,7 @@ module OpenShift
             end
 
             begin
-              a=ApplicationContainer.new(env["OPENSHIFT_APP_UUID"], pwent.name, pwent.uid, env["OPENSHIFT_APP_NAME"],
+              a=ApplicationContainer.new(env["OPENSHIFT_APP_UUID"], pwent.name, pwent, env["OPENSHIFT_APP_NAME"],
                                          env["OPENSHIFT_GEAR_NAME"], namespace, nil, nil, hourglass)
             rescue => e
               NodeLogger.logger.error("Failed to instantiate ApplicationContainer for uid #{pwent.uid}/uuid #{env["OPENSHIFT_APP_UUID"]}: #{e}")
@@ -562,6 +723,14 @@ module OpenShift
             end
           end
         end
+      end
+
+      ##
+      # Returns +true+ if the user's disk block usage meets or exceeds +max_percent+ of
+      # the configured block limit, otherwise +false+.
+      def disk_usage_exceeds?(max_percent)
+        raise 'Percent must be between 1-100 (inclusive)' unless (1..100).member?(max_percent)
+        OpenShift::Runtime::Node.check_quotas(@uuid, max_percent).length != 0
       end
 
       # run_in_container_context(command, [, options]) -> [stdout, stderr, exit status]
@@ -617,6 +786,46 @@ module OpenShift
 
       def set_rw_permission(paths)
         @container_plugin.set_rw_permission(paths)
+      end
+
+      def chcon(path, label = nil, type=nil, role=nil, user=nil)
+        @container_plugin.chcon(path, label, type, role, user)
+      end
+
+      def memory_in_bytes
+        @container_plugin.memory_in_bytes(@uuid)
+      end
+
+      def address_bound?(ip, port, hourglass, ignoreClosed=false)
+        @container_plugin.address_bound?(ip, port, hourglass, ignoreClosed)
+      end
+
+      def addresses_bound?(addresses, hourglass, ignoreClosed=false)
+        @container_plugin.addresses_bound?(addresses, hourglass, ignoreClosed)
+      end
+
+      def gear_registry
+        if @gear_registry.nil? and @cartridge_model.web_proxy
+          @gear_registry = ::OpenShift::Runtime::GearRegistry.new(self)
+        end
+
+        @gear_registry
+      end
+
+      protected
+
+      def broker_auth_params
+        auth_token = PathUtils.join(@config.get('GEAR_BASE_DIR'), uuid, '.auth', 'token')
+        auth_iv = PathUtils.join(@config.get('GEAR_BASE_DIR'), uuid, '.auth', 'iv')
+        if File.exist?(auth_token) && File.exist?(auth_iv)
+          params = {
+            'broker_auth_key' => File.read(auth_token).chomp,
+            'broker_auth_iv' => File.read(auth_iv).chomp
+          }
+        else
+          params = nil
+        end
+        params
       end
     end
   end

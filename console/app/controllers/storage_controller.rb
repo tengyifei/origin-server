@@ -11,23 +11,27 @@ class StorageController < ConsoleController
     @cartridge.additional_gear_storage = Integer(params[:cartridge][:additional_gear_storage])
 
     if @cartridge.save
-      redirect_to application_storage_path, :flash => {:success => "Updated storage for cartridge '#{@cartridge.display_name}'"}
+      redirect_to application_storage_path(@application), :flash => flash_messages(@cartridge.messages).merge({:success => "Updated storage for cartridge '#{@cartridge.display_name}'"})
     else
       flash.now[:error] = @cartridge.errors.messages.values.flatten
       render :show
     end
   end
 
+  protected
+    def active_tab
+      :applications
+    end  
+
   private
   def user_information
-    user_default_domain
     @user = User.find :one, :as => current_user
-    @max_storage = @user.capabilities[:max_storage_per_gear] || 0
-    @can_modify_storage = @max_storage > 0
   end
 
   def application_information
-    @application = @domain.find_application params[:application_id]
+    @application = Application.find(params[:application_id], :as => current_user)
+    @max_storage = @application.domain.capabilities.max_storage_per_gear || 0
+    @can_modify_storage = @max_storage > 0
     @gear_groups = @application.cartridge_gear_groups
   end
 end

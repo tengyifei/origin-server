@@ -1,6 +1,6 @@
 class ResultIO
-  attr_accessor :debugIO, :resultIO, :messageIO, :errorIO, :appInfoIO, :exitcode, :data, :cart_commands, :properties, :hasUserActionableError
-  
+  attr_accessor :debugIO, :resultIO, :messageIO, :errorIO, :appInfoIO, :exitcode, :data, :cart_commands, :properties, :hasUserActionableError, :deployments
+
   def initialize(exitcode=nil, output=nil, gear_id=nil)
     @debugIO = StringIO.new
     @resultIO = StringIO.new
@@ -9,20 +9,19 @@ class ResultIO
     @appInfoIO = StringIO.new
     @data = ""
     @hasUserActionableError = false
-    
+
     @exitcode = exitcode || 0
     @cart_commands = []
-    @hasUserActionableError = false
     @properties = {}
     parse_output(output, gear_id) unless output.nil?
   end
-  
+
   def set_cart_property(gear_id, category, key, value)
     self.properties[category] = {} if self.properties[category].nil?
     self.properties[category][gear_id] = {} if self.properties[category][gear_id].nil?
     self.properties[category][gear_id][key] = value
   end
-  
+
   # Append a {ResultIO} to the current instance.
   # @note the last non-zero exitcode is retained
   def append(resultIO)
@@ -31,7 +30,7 @@ class ResultIO
     self.messageIO << resultIO.messageIO.string
     self.errorIO << resultIO.errorIO.string
     self.appInfoIO << resultIO.appInfoIO.string
-    
+
     if resultIO.exitcode != 0
       if resultIO.hasUserActionableError
         unless (!self.hasUserActionableError) && self.exitcode != 0
@@ -41,11 +40,11 @@ class ResultIO
         self.hasUserActionableError = false
       end
     end
-    
+
     self.cart_commands += resultIO.cart_commands
 
     self.data += resultIO.data
-    
+
     resultIO.properties.each do |category, cat_props|
       self.properties[category] = {} if self.properties[category].nil?
       self.properties[category] = self.properties[category].merge(cat_props) unless cat_props.nil?
@@ -64,7 +63,7 @@ class ResultIO
 
     self
   end
-  
+
   # Returns the output of this {ResultIO} object as a string. Primarily used for debug output.
   def to_s
     str = "--DEBUG--\n#{@debugIO.string}\n" +
@@ -79,25 +78,8 @@ class ResultIO
           "--USER ACTIONABLE--\n#{@hasUserActionableError}\n"
   end
 
-=begin
-  # Returns the output of this {ResultIO} object as a JSON string. Used by {LegacyReply}
-  def to_json(*args)
-    reply = LegacyReply.new
-    reply.debug = @debugIO.string
-    reply.messages = @messageIO.string
-    if !@errorIO.string.empty?
-      reply.result = @errorIO.string
-    else
-      reply.result = @resultIO.string
-    end
-    reply.data = @data
-    reply.exit_code = @exitcode
-    reply.to_json(*args)
-  end
-=end
-  
   def parse_output(output, gear_id)
-    if output && !output.empty?
+    if output.present?
       output.each_line do |line|
         if line =~ /^CLIENT_(MESSAGE|RESULT|DEBUG|ERROR|INTERNAL_ERROR): /
           case $1
@@ -114,24 +96,25 @@ class ResultIO
             self.hasUserActionableError = true
           end
         elsif line.start_with?('CART_DATA: ')
-          key,value = line['CART_DATA: '.length..-1].chomp.split('=')
+          key,value = line['CART_DATA: '.length..-1].chomp.split('=', 2)
           self.set_cart_property(gear_id, "attributes", key, value)
         elsif line.start_with?('CART_PROPERTIES: ')
-          key,value = line['CART_PROPERTIES: '.length..-1].chomp.split('=')
+          key,value = line['CART_PROPERTIES: '.length..-1].chomp.split('=', 2)
           self.set_cart_property(gear_id, "component-properties", key, value)
         elsif line.start_with?('ATTR: ')
-          key,value = line['ATTR: '.length..-1].chomp.split('=')
+          key,value = line['ATTR: '.length..-1].chomp.split('=', 2)
           self.set_cart_property(gear_id, "attributes", key, value)              
         elsif line.start_with?('APP_INFO: ')
           self.appInfoIO << line['APP_INFO: '.length..-1]
         elsif line =~ /^NOTIFY_ENDPOINT_(CREATE|DELETE): /
           # 'NOTIFY_ENDPOINT_CREATE: ' and 'NOTIFY_ENDPOINT_DELETE: '
           # both have length 24.
-          endpoint,address,port = line[23..-1].chomp.split(' ')
           if line =~ /^NOTIFY_ENDPOINT_CREATE: /
-            self.cart_commands.push({:command => "NOTIFY_ENDPOINT_CREATE", :args => [endpoint,address,port]})
+            endpoint_hash = JSON.parse(line[23..-1].chomp)
+            self.cart_commands.push({:command => "NOTIFY_ENDPOINT_CREATE", :args => [endpoint_hash]})
           else
-            self.cart_commands.push({:command => "NOTIFY_ENDPOINT_DELETE", :args => [endpoint,address,port]})
+            address,port = line[23..-1].chomp.split(' ')
+            self.cart_commands.push({:command => "NOTIFY_ENDPOINT_DELETE", :args => [address,port]})
           end
         elsif self.exitcode == 0
           if line.start_with?('SSH_KEY_ADD: ')
@@ -148,11 +131,9 @@ class ResultIO
           elsif line.start_with?('ENV_VAR_ADD: ')
             env_var = line['ENV_VAR_ADD: '.length..-1].chomp.split('=')
             self.cart_commands.push({:command => "ENV_VAR_ADD", :args => [env_var[0], env_var[1]]})
-          elsif line =~ /^BROKER_AUTH_KEY_(ADD|REMOVE): /
+          elsif line =~ /^BROKER_AUTH_KEY_(ADD): /
             if $1 == 'ADD'
               self.cart_commands.push({:command => "BROKER_KEY_ADD", :args => []})
-            else
-              self.cart_commands.push({:command => "BROKER_KEY_REMOVE", :args => []})
             end
           else
             #self.debugIO << line

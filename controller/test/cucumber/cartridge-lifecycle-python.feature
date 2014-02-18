@@ -1,5 +1,5 @@
-@runtime_extended
-@runtime_extended1
+@cartridge_extended
+@cartridge_extended2
 Feature: Cartridge Lifecycle Python Verification Tests
   Scenario Outline: Application Creation
   #Given a new <cart_name> application, verify its availability
@@ -45,12 +45,6 @@ Feature: Cartridge Lifecycle Python Verification Tests
     Then the application should not be accessible
     Then the application should not be accessible via node-web-proxy
 
-  @rhel-only
   Scenarios: RHEL scenarios
     | cart_name  |
     | python-2.6 |
-
-  @fedora-19-only
-  Scenarios: RHEL scenarios
-    | cart_name  |
-    | python-2.7 |

@@ -23,6 +23,12 @@ SafeYAML::OPTIONS[:default_mode] = :unsafe
 
 module OpenShift
 
+  # FIXME, exceptions should be changed to be a subclass of a generic 
+  #   InvalidManifestError
+
+  # Manifest is invalid
+  class InvalidManifest < KeyError; end
+
   # Manifest element in error
   class ElementError < KeyError
     attr_reader :element
@@ -33,13 +39,13 @@ module OpenShift
     end
 
     def to_s
-      super + ": '#{@element}'"
+      "#{@element} #{super}"
     end
   end
 
   # Missing required  manifest element
   class MissingElementError < ElementError
-    def initialize(message = 'Missing required element', element = nil)
+    def initialize(element, message = 'is a required element')
       super(message)
       @element = element
     end
@@ -47,7 +53,7 @@ module OpenShift
 
   # Invalid required  manifest element
   class InvalidElementError < ElementError
-    def initialize(message = 'Invalid value for required element', element = nil)
+    def initialize(element, message = 'is not valid')
       super(message)
       @element = element
     end
@@ -61,35 +67,72 @@ module OpenShift
     class Manifest
 
       def self.manifest_from_yaml(yaml_str)
-        YAML.load(yaml_str, :safe => true)
+        YAML.safe_load(yaml_str) or {}
+      rescue Psych::SyntaxError => e
+        raise InvalidManifest, "Unable to load the provided manifest: #{e.message} (#{e.class})", e.backtrace
+      end
+
+      def self.manifests_from_yaml(str)
+        projected_manifests(manifest_from_yaml(str))
       end
 
       #
       # Class to support Manifest +Endpoint+ elements
       class Endpoint
         attr_accessor :private_ip_name, :private_port_name, :private_port, :public_port_name,
-                      :websocket_port_name, :websocket_port, :mappings, :options
+                      :websocket_port_name, :websocket_port, :mappings, :protocols, :options,
+                      :description
 
         class Mapping
           attr_accessor :frontend, :backend, :options
+
+          def from_json_hash(json_hash={})
+            self.frontend = json_hash['frontend']
+            self.backend  = json_hash['backend']
+            self.options  = json_hash['options']
+            self
+          end
+        end
+
+        def from_json_hash(json_hash = {})
+          self.private_ip_name     = json_hash['private_ip_name']
+          self.private_port_name   = json_hash['private_port_name']
+          self.private_port        = json_hash['private_port']
+          self.public_port_name    = json_hash['public_port_name']
+          self.websocket_port_name = json_hash['websocket_port_name']
+          self.websocket_port      = json_hash['websocket_port']
+          self.options             = json_hash['options']
+          self.protocols           = json_hash['protocols']
+          self.description         = json_hash['description']
+
+          self.mappings = []
+          if json_hash.has_key?('mappings') and json_hash['mappings'].respond_to?(:each)
+            json_hash['mappings'].each do |m|
+              self.mappings << Endpoint::Mapping.new.from_json_hash(m)
+            end
+          end
+
+          self
         end
 
         # :call-seq:
-        #   Endpoint.parse(short_name, manifest) -> [Endpoint]
+        #   Endpoint.parse(short_name, manifest, categories) -> [Endpoint]
         #
         # Parse +Endpoint+ element and instantiate Endpoint objects to hold information
         #
         #   Endpoint.parse('PHP', manifest)  #=> [Endpoint]
-        def self.parse(short_name, manifest)
+        def self.parse(short_name, manifest, categories)
           return [] unless manifest['Endpoints']
 
           tag       = short_name.upcase
           errors    = []
+          endpoint_index =0
           endpoints = manifest['Endpoints'].each_with_object([]) do |entry, memo|
             unless entry.is_a? Hash
               errors << "Non-Hash endpoint entry: #{entry}"
               next
             end
+            endpoint_index += 1
 
             # TODO: validation
             begin
@@ -101,12 +144,26 @@ module OpenShift
               endpoint.websocket_port_name = build_name(tag, entry['WebSocket-Port-Name'])
               endpoint.websocket_port      = entry['WebSocket-Port'].to_i if entry['WebSocket-Port']
               endpoint.options             = entry['Options']
+              endpoint.description         = entry['Description']
+
+              if entry['Protocols']
+                endpoint.protocols = entry['Protocols']
+              elsif entry['Mappings']
+                endpoint.protocols = ['http']
+              else
+                endpoint.protocols = ['tcp']
+              end
 
               if entry['Mappings'].respond_to?(:each)
                 endpoint.mappings = entry['Mappings'].each_with_object([]) do |mapping_entry, mapping_memo|
                   mapping          = Endpoint::Mapping.new
-                  mapping.frontend = prepend_slash mapping_entry['Frontend']
-                  mapping.backend  = prepend_slash mapping_entry['Backend']
+                  if not (endpoint.protocols - [ 'http', 'https', 'ws', 'wss' ]).empty?
+                    mapping.frontend = mapping_entry['Frontend']
+                    mapping.backend  = mapping_entry['Backend']
+                  else
+                    mapping.frontend = prepend_slash mapping_entry['Frontend']
+                    mapping.backend  = prepend_slash mapping_entry['Backend']
+                  end
                   mapping.options  = mapping_entry['Options']
 
                   mapping_memo << mapping
@@ -192,25 +249,27 @@ module OpenShift
       #
       #   Cartridge.new('/var/lib/openshift/.cartridge_repository/php/1.0/metadata/manifest.yml', '3.5', '.../.cartridge_repository') -> Cartridge
       #   Cartridge.new('Name: ...', '3.5') -> Cartridge
-      def initialize(manifest, version=nil, repository_base_path='', check_names=true)
-
-        if File.exist? manifest
-          @manifest      = YAML.load_file(manifest)
-          @manifest_path = manifest
-        else
-          @manifest      = YAML.load(manifest)
+      def initialize(manifest, version=nil, type=:url, repository_base_path='', check_names=true)
+        if manifest.is_a?(Hash)
+          @manifest = manifest
+        elsif type == :url
+          @manifest = YAML.safe_load(manifest) || {}
           @manifest_path = :url
+        else
+          @manifest = YAML.safe_load_file(manifest) || {}
+          @manifest_path = manifest
         end
+        @repository_base_path = repository_base_path
 
         # Validate and use the provided version, defaulting to the manifest Version key
-        raise MissingElementError.new(nil, 'Version') unless @manifest.has_key?('Version')
-        raise InvalidElementError.new(nil, 'Versions') if @manifest.has_key?('Versions') && !@manifest['Versions'].kind_of?(Array)
+        raise MissingElementError.new('Version') unless @manifest.has_key?('Version')
+        raise InvalidElementError.new('Versions') if @manifest.has_key?('Versions') && !@manifest['Versions'].kind_of?(Array)
 
         if @manifest.has_key?('Compatible-Versions') && !@manifest['Compatible-Versions'].kind_of?(Array)
-          raise InvalidElementError.new(nil, 'Compatible-Versions')
+          raise InvalidElementError.new('Compatible-Versions')
         end
 
-        @versions = raw_versions.collect do |v|
+        @versions = self.class.raw_versions(@manifest).collect do |v|
           valid_version_number(v) ? v : '0.0.0'
         end
 
@@ -229,7 +288,6 @@ module OpenShift
                 ) unless versions.include?(version.to_s)
 
           @version = version.to_s
-
         else
           @version = @manifest['Version'].to_s
         end
@@ -240,8 +298,18 @@ module OpenShift
 
         # If version overrides are present, merge them on top of the manifest
         if @manifest.has_key?('Version-Overrides')
-          vtree = @manifest['Version-Overrides'][version]
-          @manifest.merge!(vtree) if vtree
+          vtree = @manifest['Version-Overrides'][@version]
+
+          if vtree
+            copy_manifest_if_equal(manifest)
+            @manifest.merge!(vtree)
+          end
+        end
+
+        # Ensure that the manifest version is accurate
+        if @manifest['Version'] != @version
+          copy_manifest_if_equal(manifest)
+          @manifest['Version'] = @version
         end
 
         @cartridge_vendor       = @manifest['Cartridge-Vendor']
@@ -256,9 +324,9 @@ module OpenShift
         #FIXME: reinstate code after manifests are updated
         #raise MissingElementError.new(nil, 'Cartridge-Vendor') unless @cartridge_vendor
         #raise MissingElementError.new(nil, 'Cartridge-Version') unless @cartridge_version
-        raise MissingElementError.new(nil, 'Cartridge-Short-Name') unless @short_name
-        raise InvalidElementError.new(nil, 'Cartridge-Short-Name') if @short_name.include?('-')
-        raise MissingElementError.new(nil, 'Name') unless @name
+        raise MissingElementError.new('Cartridge-Short-Name') unless @short_name
+        raise InvalidElementError.new('Cartridge-Short-Name') if @short_name.include?('-')
+        raise MissingElementError.new('Name') unless @name
 
         if check_names
           validate_vendor_name
@@ -267,12 +335,12 @@ module OpenShift
         end
 
         if @manifest.has_key?('Source-Url')
-          raise InvalidElementError.new(nil, 'Source-Url') unless @manifest['Source-Url'] =~ URI::ABS_URI
+          raise InvalidElementError.new('Source-Url') unless @manifest['Source-Url'] =~ URI::ABS_URI
           @source_url = @manifest['Source-Url']
           @source_md5 = @manifest['Source-Md5']
         else
-          raise MissingElementError.new('Source-Url is required in manifest to obtain cartridge via URL',
-                                        'Source-Url') if :url == @manifest_path
+          raise MissingElementError.new('Source-Url', 'is required in manifest to obtain cartridge via URL',
+                                        ) if :url == @manifest_path
         end
 
         @short_name.upcase!
@@ -283,14 +351,13 @@ module OpenShift
           @repository_path     = PathUtils.join(repository_base_path, repository_directory, @cartridge_version)
         end
 
-        @endpoints = Endpoint.parse(@short_name, @manifest)
+        @endpoints = Endpoint.parse(@short_name, @manifest, @categories)
       end
 
       ## obtain all software versions covered in this manifest
-      def raw_versions
-        seed = (@manifest['Versions'] || []).map { |v| v.to_s }
-        seed << @manifest['Version'].to_s
-        seed.uniq
+      def self.raw_versions(manifest)
+        return [] if manifest.nil?
+        ((manifest['Versions'] || []).map(&:to_s) << manifest['Version'].to_s).uniq
       end
 
       # Convenience method which returns an array containing only
@@ -302,6 +369,8 @@ module OpenShift
       def deployable?
         @is_deployable
       end
+
+      alias_method :web_framework?, :deployable?
 
       # For now, these are synonyms
       alias :buildable? :deployable?
@@ -330,15 +399,15 @@ module OpenShift
       def validate_vendor_name(check_reserved_name = false)
         if cartridge_vendor !~ VALID_VENDOR_NAME_PATTERN
           raise InvalidElementError.new(
-            "'#{cartridge_vendor}' does not match pattern #{VALID_VENDOR_NAME_PATTERN.inspect}.",
-            'Cartridge-Vendor'
+            'Cartridge-Vendor',
+            "'#{cartridge_vendor}' does not match pattern #{VALID_VENDOR_NAME_PATTERN.inspect}."
           )
         end
 
         if cartridge_vendor.length > MAX_VENDOR_NAME
           raise InvalidElementError.new(
-            "'#{cartridge_vendor}' must be no longer than #{MAX_VENDOR_NAME} characters.",
-            'Cartridge-Vendor'
+            'Cartridge-Vendor',
+            "'#{cartridge_vendor}' must be no longer than #{MAX_VENDOR_NAME} characters."
           )
         end
       end
@@ -346,25 +415,30 @@ module OpenShift
       def validate_cartridge_name
         if name !~ VALID_CARTRIDGE_NAME_PATTERN
           raise InvalidElementError.new(
-            "'#{name}' does not match pattern #{VALID_CARTRIDGE_NAME_PATTERN.inspect}.",
-            'Name'
+            'Name',
+            "'#{name}' does not match pattern #{VALID_CARTRIDGE_NAME_PATTERN.inspect}."
           )
         end
 
         if name.length > MAX_CARTRIDGE_NAME
-          raise InvalidElementError.new("'#{name}' must be no longer than #{MAX_VENDOR_NAME} characters.", 'Name')
+          raise InvalidElementError.new('Name', "'#{name}' must be no longer than #{MAX_VENDOR_NAME} characters.")
         end
+      end
+
+      def self.valid_cartridge_name?(name)
+        name =~ VALID_CARTRIDGE_NAME_PATTERN
       end
 
       def check_reserved_vendor_name
         if cartridge_vendor =~ RESERVED_VENDOR_NAME_PATTERN
-          raise InvalidElementError.new("'#{cartridge_vendor}' is reserved.", 'Cartridge-Vendor')
+          raise InvalidElementError.new('Cartridge-Vendor', "'#{cartridge_vendor}' is reserved.")
         end
       end
 
       def check_reserved_cartridge_name
+        raise MissingElementError.new('Name') if name.nil? || name.empty?
         if name =~ RESERVED_CARTRIDGE_NAME_PATTERN
-          raise InvalidElementError.new("'#{name}' is reserved.", 'Name')
+          raise InvalidElementError.new('Name', "'#{name}' is reserved.")
         end
       end
 
@@ -372,13 +446,68 @@ module OpenShift
         version =~ /^\A(\d+\.*)+\Z/
       end
 
-      # Sort an array of "string" version numbers
-      def self.sort_versions(array)
-        copy = Marshal.load(Marshal.dump(array))
-        copy.delete_if {|v| v == '_'}
-        copy.collect {|v| Gem::Version.new(v)}.sort
+      def project_version_overrides(version, repository_base_path)
+        self.class.new(manifest_path, version, :file, repository_base_path)
       end
 
+      #
+      # More efficient version extraction.  If returning all the versions of a
+      # cartridge, the "default" version will be in the head position (index 0).
+      #
+      def self.projected_manifests(raw_manifest, version=nil, repository_base_path='')
+        if version
+          return new(Marshal.load(Marshal.dump(raw_manifest)), version, nil, repository_base_path)
+        end
+
+        preferred_version = raw_manifest['Version'].to_s if raw_manifest
+        raw_versions(raw_manifest).map do |v|
+          new(raw_manifest, v, nil, repository_base_path)
+        end.sort_by{ |m| preferred_version == m.version ? 0 : 1 }
+      end
+
+      #
+      # Name-Version or Vendor-Name-Version
+      #
+      def full_identifier
+        if cartridge_vendor.nil? || cartridge_vendor.empty?
+          "#{name}-#{version}"
+        else
+          "#{cartridge_vendor}-#{name}-#{version}"
+        end
+      end
+
+      #
+      # Name-Version or Vendor-Name-Version
+      #
+      def global_identifier
+        if cartridge_vendor.nil? || cartridge_vendor.empty? or cartridge_vendor == "redhat"
+          "#{name}-#{version}"
+        else
+          "#{cartridge_vendor}-#{name}-#{version}"
+        end
+      end
+
+      # Sort an array of "string" version numbers
+      def self.sort_versions(array)
+        results = []
+
+        copy = Marshal.load(Marshal.dump(array))
+        copy.delete_if {|v| v == '_'}
+        copy.collect {|v| Gem::Version.new(v)}.sort.each do |version|
+          results << version.to_s
+        end
+
+        results
+      end
+      protected
+        attr_writer :manifest_path
+        attr_reader :repository_base_path
+
+        def copy_manifest_if_equal(to)
+          if @manifest.equal?(to)
+            @manifest = Marshal.load(Marshal.dump(@manifest)) 
+          end
+        end
     end
   end
 end

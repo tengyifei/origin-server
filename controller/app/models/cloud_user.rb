@@ -2,7 +2,7 @@
 # @!attribute [r] login
 #   @return [String] Login name for the user.
 # @!attribute [r] capabilities
-#   @return [Hash] Hash representing the capabilities of the user. It is updated using the oo-admin-user-ctl scripts or when a plan changes.
+#   @return [Hash] Hash representing the capabilities of the user. It is updated using the oo-admin-ctl-user scripts or when a plan changes.
 # @!attribute [r] parent_user_id
 #   @return [Moped::BSON::ObjectId] ID of the parent user object if this object represents a sub-account.
 # @!attribute [rw] plan_id
@@ -19,13 +19,15 @@
 class CloudUser
   include Mongoid::Document
   include Mongoid::Timestamps
+  include AccessControllable
+  include AccessControlled
 
   alias_method :mongoid_save, :save
 
   DEFAULT_SSH_KEY_NAME = "default"
 
   field :login, type: String
-  field :capabilities, type: Hash, default: ->{ default_capabilities }
+  field :capabilities, as: :_capabilities, type: Hash, default: ->{ default_capabilities }
   field :parent_user_id, type: Moped::BSON::ObjectId
   field :plan_id, type: String
   field :plan_state, type: String
@@ -34,17 +36,23 @@ class CloudUser
   field :plan_history, type: Array, default: []
   field :usage_account_id, type: String
   field :consumed_gears, type: Integer, default: 0
+
   embeds_many :ssh_keys, class_name: UserSshKey.name
-  embeds_many :pending_ops, class_name: PendingUserOps.name
+  embeds_many :pending_ops, class_name: PendingUserOps.name, cascade_callbacks: true
   # embeds_many :identities, class_name: Identity.name, cascade_callbacks: true
-  has_many :domains, class_name: Domain.name, dependent: :restrict, :foreign_key => 'owner_id'
+
+  has_many :domains, class_name: Domain.name, dependent: :restrict, foreign_key: :owner_id
   has_many :authorizations, class_name: Authorization.name, dependent: :restrict
+  has_many :owned_applications, class_name: Application.name, foreign_key: :owner_id, inverse_of: :owner
+
+  member_as :user
 
   validates :login, presence: true
   validates :capabilities, presence: true, capabilities: true
 
   scope :with_plan, any_of({:plan_id.ne => nil}, {:pending_plan_id.ne => nil}) 
   index({:login => 1}, {:unique => true})
+  index({'pending_ops.created_at' => 1})
 
   scope :with_identity_id, lambda{ |id| where(login: id) }
   scope :with_identity, lambda{ |provider, uid| with_identity_id(uid) }
@@ -63,11 +71,18 @@ class CloudUser
   end
 
   # Auth method can either be :login or :broker_auth. :login represents a normal 
-  # authentication with user/pass. :broker_auth is used when the applciation needs 
+  # authentication with user/pass. :broker_auth is used when the application needs 
   # to make a request to the broker on behalf of the user (eg: scale-up)
   #
   # This is a transient attribute and is not persisted
   attr_accessor :auth_method
+
+  # The set of scopes that are currently present on this user.  Scopes limit
+  # the available actions on an account to the union of the actions permitted
+  # by the supplied scope.  All other actions are forbidden.  Type is Scopes
+  #
+  # This is a transient attribute and is not persisted
+  attr_accessor :scopes
 
   # Identity support will add the following:
   #
@@ -77,21 +92,16 @@ class CloudUser
   #  self.current_identity = identities.select{ |i| i.provider == provider && i.uid == uid }.first
   # end
 
-  # Convenience method to get the max_gears capability
-  def max_gears
-    get_capabilities["max_gears"]
-  end
-  def max_gears=(m)
-    user_capabilities = get_capabilities
-    user_capabilities["max_gears"] = m
-    set_capabilities(user_capabilities)
+  def ===(other)
+    super || (!other.is_a?(Mongoid::Document) ? _id === other : false)
   end
 
-  def max_storage
-    user_capabilities = get_capabilities
-    max_untracked_storage = user_capabilities["max_untracked_addtl_storage_per_gear"] || 0
-    max_tracked_storage = user_capabilities["max_tracked_addtl_storage_per_gear"] || 0
-    (max_untracked_storage + max_tracked_storage)
+  def inherit_membership
+    [as_member]
+  end
+
+  def name
+    login
   end
 
   def save(options = {})
@@ -152,7 +162,7 @@ class CloudUser
     begin
       user.with(safe: true).save
       Lock.create_lock(user)
-      OpenShift::UserActionLog.action("CREATE_USER", true, "Creating user", 'USER' => user.id, 'LOGIN' => login, 'PROVIDER' => provider)
+      OpenShift::UserActionLog.action("CREATE_USER", nil, true, "Creating user", 'USER' => user.id, 'LOGIN' => login, 'PROVIDER' => provider)
       user
     rescue Moped::Errors::OperationFailure
       user = find_by_identity(nil, login)
@@ -162,19 +172,30 @@ class CloudUser
     end
   end
 
+  def self.with_ids_or_logins(ids, logins)
+    if ids.present?
+      if logins.present?
+        self.or({:_id.in => ids}, {:login.in => logins})
+      else
+        self.in(_id: ids)
+      end
+    else
+      self.in(login: logins)
+    end
+  end
+
   # Used to add an ssh-key to the user. Use this instead of ssh_keys= so that the key can be propagated to the
   # domains/application that the user has access to.
   def add_ssh_key(key)
-    if self.domains.count > 0
-      pending_op = PendingUserOps.new(op_type: :add_ssh_key, arguments: key.attributes.dup, state: :init, on_domain_ids: self.domains.map{|d|d._id.to_s}, created_at: Time.new)
-      CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.serializable_hash_with_timestamp , ssh_keys: key.serializable_hash }})
-      self.reload
-      self.run_jobs
+    if persisted?
+      pending_op = AddSshKeysUserOp.new(keys_attrs: [key.serializable_hash])
+      CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.as_document , ssh_keys: key.serializable_hash }})
+      reload.run_jobs
     else
-      self.ssh_keys << key
+      ssh_keys << key
     end
   end
-  
+
   # Used to update an ssh-key on the user. Use this instead of ssh_keys= so that the key update can be propagated to the
   # domains/application that the user has access to.
   def update_ssh_key(key)
@@ -185,61 +206,228 @@ class CloudUser
   # Used to remove an ssh-key from the user. Use this instead of ssh_keys= so that the key removal can be propagated to the
   # domains/application that the user has access to.
   def remove_ssh_key(name)
-    key = self.ssh_keys.find_by(name: name)
-    if self.domains.count > 0
-      pending_op = PendingUserOps.new(op_type: :delete_ssh_key, arguments: key.attributes.dup, state: :init, on_domain_ids: self.domains.map{|d|d._id.to_s}, created_at: Time.new)
-      CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.serializable_hash_with_timestamp } , "$pull" => { ssh_keys: key.serializable_hash }})
-      self.reload
-      self.run_jobs      
+    if persisted?
+      key = self.ssh_keys.find_by(name: name)
+      pending_op = RemoveSshKeysUserOp.new(keys_attrs: [key.serializable_hash])
+      CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.as_document } , "$pull" => { ssh_keys: key.serializable_hash }})
+      reload.run_jobs
     else
-      key.delete
+      ssh_keys.delete_if{ |k| k.name == name }
     end
   end
 
   def default_capabilities
     {
+      "ha" => Rails.application.config.openshift[:default_allow_ha],
       "subaccounts" => false,
       "gear_sizes" => Rails.application.config.openshift[:default_gear_capabilities],
-      "max_gears" => Rails.application.config.openshift[:default_max_gears],
+      "max_domains" => Rails.application.config.openshift[:default_max_domains],
+      "max_gears" => Rails.application.config.openshift[:default_max_gears]
     }
   end
 
   def inherited_capabilities
     @inherited_capabilities ||= begin
         if self.parent_user_id
-          caps = CloudUser.find_by(_id: self.parent_user_id).get_capabilities
-          caps.slice(*Array(caps['inherit_on_subaccounts']))
+          caps = CloudUser.find_by(_id: self.parent_user_id).capabilities
+          caps.slice(*Array(caps['inherit_on_subaccounts'])).freeze
         end
       rescue Mongoid::Errors::DocumentNotFound
-      end || {}
+      end || {}.freeze
   end
 
-  def get_capabilities
-    self.capabilities.deep_dup.merge!(inherited_capabilities)
+  class CapabilityProxy < SimpleDelegator
+    def initialize(base, inherited)
+      @inherited = inherited
+      super base
+    end
+    def [](key)
+      @inherited[key] || super
+    end
+    def deep_dup
+      __getobj__.deep_dup.merge!(@inherited.deep_dup)
+    end
+    def to_hash
+      deep_dup
+    end
+    def serializable_hash
+      to_hash
+    end
   end
 
-  def set_capabilities(caps=nil)
-    self.capabilities = caps.presence || default_capabilities
+  #
+  # The capabilities object should always return inherited properties if they are
+  # set (and inheritable from the parent account), otherwise it should return
+  # the stored capabilities.  If the parent user is changed, the underlying
+  # capability should be returned.
+  #
+  # Note: Mongoid handles dirty tracking on hashes whenever the accessor is called,
+  #       therefore each call to capabilities must invoke the underlying object.
+  #
+  alias_method :_capabilities, :capabilities
+  def capabilities
+    self._capabilities = {} unless self._capabilities
+    caps = self._capabilities
+    CapabilityProxy.new(caps, inherited_capabilities)
+  end
+
+  def set_capabilities(caps, clear_existing_caps=false)
+    self._capabilities = {} unless self._capabilities
+    if clear_existing_caps
+      self._capabilities.clear
+      user_caps = capabilities
+      user_caps.each do |k, v|
+        if v.is_a?(Array)
+          self._capabilities[k] = []
+        elsif v.is_a?(Hash)
+          self._capabilities[k] = {}
+        elsif v.is_a?(Boolean)
+          self._capabilities[k] = false
+        elsif v.is_a?(Integer) or v.is_a?(Float)
+          self._capabilities[k] = 0
+        else
+          raise OpenShift::UserException.new("Capability type not found for '#{k} : #{v}'")
+        end
+      end 
+    end
+    self._capabilities.merge!(caps.deep_dup)
+  end
+
+  def ha
+    capabilities["ha"] || false
+  end
+
+  def ha=(m)
+    self._capabilities["ha"] = m if capabilities["ha"] != m
+  end
+
+  def max_gears
+    capabilities["max_gears"]
+  end
+
+  def max_gears=(m)
+    self._capabilities["max_gears"] = m if capabilities["max_gears"] != m
+  end
+
+  def max_domains
+    capabilities["max_domains"] || Rails.application.config.openshift[:default_max_domains]
+  end
+
+  def max_domains=(m)
+    self._capabilities["max_domains"] = m if capabilities["max_domains"] != m
+  end
+
+  def plan_upgrade_enabled
+    capabilities["plan_upgrade_enabled"] || false
+  end
+
+  def plan_upgrade_enabled=(m)
+    self._capabilities["plan_upgrade_enabled"] = m if capabilities["plan_upgrade_enabled"] != m
+  end
+
+  def subaccounts
+    capabilities["subaccounts"] || false
+  end
+
+  def subaccounts=(m)
+    self._capabilities["subaccounts"] = m if capabilities["subaccounts"] != m
+  end
+
+  def inherit_on_subaccounts
+    capabilities["inherit_on_subaccounts"] || []
+  end
+
+  def add_capability_inherit_on_subaccounts(capability)
+    inherit_caps = capabilities["inherit_on_subaccounts"] || []
+    unless inherit_caps.include?(capability)
+      self._capabilities["inherit_on_subaccounts"] = inherit_caps + [capability]
+    end
+  end
+
+  def remove_capability_inherit_on_subaccounts(capability)
+    inherit_caps = capabilities["inherit_on_subaccounts"] || []
+    if inherit_caps.include?(capability)
+      self._capabilities["inherit_on_subaccounts"] = inherit_caps - [capability]
+    end
+  end
+
+  def allowed_gear_sizes
+    capabilities["gear_sizes"]
+  end
+
+  def add_gear_size(gear_size)
+    available_sizes = Rails.configuration.openshift[:gear_sizes]
+    unless available_sizes.include?(gear_size)
+      raise Exception.new("Size #{gear_size} is not defined. Defined sizes are: #{available_sizes.join ', '}.")
+    end
+    unless capabilities['gear_sizes'].include?(gear_size)
+      self._capabilities['gear_sizes'] = capabilities['gear_sizes'] + [gear_size]
+      self.save!
+    end
+    domains.each do |d|
+      if (allowed_gear_sizes - d.allowed_gear_sizes) == [gear_size]
+        d.allowed_gear_sizes = allowed_gear_sizes
+        d.save!
+      end
+    end
+  end
+
+  def remove_gear_size(gear_size)
+    caps = capabilities
+    unless caps["gear_sizes"].include?(gear_size)
+      puts "User #{self.login} does not have gear size #{gear_size} in its capabilities."
+      return
+    end
+    self._capabilities["gear_sizes"] = caps["gear_sizes"] - [gear_size]
+    self.save!
+    domains.each do |d|
+      d.allowed_gear_sizes = (allowed_gear_sizes & d.allowed_gear_sizes)
+      d.save!
+    end
+  end
+
+  def max_storage
+    (max_tracked_additional_storage + max_untracked_additional_storage)
+  end
+
+  def max_untracked_additional_storage
+    capabilities['max_untracked_addtl_storage_per_gear'] || 0
+  end
+
+  def max_untracked_additional_storage=(m)
+    self._capabilities["max_untracked_addtl_storage_per_gear"] = m if capabilities["max_untracked_addtl_storage_per_gear"] != m
+  end
+
+  def max_tracked_additional_storage
+    capabilities['max_tracked_addtl_storage_per_gear'] || 0
+  end
+
+  def max_tracked_additional_storage=(m)
+    self._capabilities["max_tracked_addtl_storage_per_gear"] = m if capabilities["max_tracked_addtl_storage_per_gear"] != m
+  end
+
+  def private_ssl_certificates
+    capabilities["private_ssl_certificates"] || false
+  end
+
+  def private_ssl_certificates=(m)
+    self._capabilities["private_ssl_certificates"] = m if capabilities["private_ssl_certificates"] != m
   end
 
   # Delete user and all its artifacts like domains, applications associated with the user 
   def force_delete
-    # will need to read from the primary to make sure we get the latest data
-    while Domain.where(owner: self).count > 0
-      domain = Domain.where(owner: self).first
-      while Application.where(domain: domain).count > 0
-        app = Application.where(domain: domain).first
+    while domain = Domain.where(owner: self).first
+      while app = Application.where(domain: domain).first
         app.destroy_app
       end
       domain.delete
     end
-    
+
     # will need to reload from primary to ensure that mongoid doesn't validate based on its cache
     # and prevent us from deleting this user because of the :dependent :restrict clause
-    self.reload
-    self.delete
+    self.reload.delete
   end
- 
+
   # Runs all jobs in :init phase and stops at the first failure.
   #
   # == Returns:
@@ -261,27 +449,28 @@ class CloudUser
           next
         end
 
-        case op.op_type
-        when :add_ssh_key
-          op.pending_domains.each { |domain| domain.add_ssh_key(self._id, UserSshKey.new.to_obj(op.arguments), op) }
-        when :delete_ssh_key
-          op.pending_domains.each { |domain| domain.remove_ssh_key(self._id, UserSshKey.new.to_obj(op.arguments), op) }
+        begin
+          op.execute
+        rescue Exception => e
+          Rails.logger.error "Error #{e.message} #{e.backtrace}"
+          raise Exception.new("Exception thrown in execution of job #{op.class} for user #{op.cloud_user.login} error: #{e.message}")
         end
-
         # reloading the op reloads the cloud_user and then incorrectly reloads (potentially)
         # the op based on its position within the pending_ops list
         # hence, reloading the cloud_user, and then fetching the op using the op_id stored earlier
         self.reload
         op = self.pending_ops.find_by(_id: op_id)
-        
+
+        # FIXME: We are assuming that the op is complete at this point.
+        # Need to use on_applications and completed_applications to figure out completion 
         op.close_op
-        op.delete if op.completed?
+        op.delete
       end
       true
     rescue Exception => ex
       Rails.logger.error ex
       Rails.logger.error ex.backtrace
-      false
+      raise ex
     end
   end
 end

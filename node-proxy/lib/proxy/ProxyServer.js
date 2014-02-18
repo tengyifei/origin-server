@@ -66,22 +66,28 @@ function _load_config(f) {
  *  @param  {Integer}              Connection Keep-Alive timeout
  *  @api    private
  */
-function _setProxyResponseHeaders(proxy_res, vhost, keep_alive_timeout) {
+function _setProxyResponseHeaders(proxy_res, res, vhost, keep_alive_timeout) {
+  /* Copy the headers to original res */
+  for (var key in proxy_res.headers) {
+    if (key != 'connection') {
+      res.setHeader(key, proxy_res.headers[key]);
+    }
+  }
+
   var about_me = constants.NODE_PROXY_WEB_PROXY_NAME + '/' +
                  constants.NODE_PROXY_PRODUCT_VER;
   var zroute   = '1.1 ' + vhost + ' (' + about_me + ')';
 
   /*  Set the Via: header to indicate it went via us.  */
-  httputils.addHeader(proxy_res.headers, 'Via', zroute);
+  res.setHeader('Via', zroute);
 
   /*  Set the Keep-Alive timeout if Connection is being kept alive.  */
   var conn_header = proxy_res.headers['Connection']  ||  '';
   if ('keep-alive' === conn_header.toLowerCase() ) {
     var ka = utils.format('timeout=%d, max=%d', keep_alive_timeout,
                           keep_alive_timeout + DEFAULT_KEEP_ALIVE_TIMEOUT);
-    proxy_res.headers['Keep-Alive'] = ka;
+    res.setHeader('Keep-Alive', ka);
   }
-
 }  /*  End of function  _setProxyResponseHeaders.  */
 
 
@@ -112,6 +118,11 @@ function _setProxyRequestHeaders(proxy_req, orig_req) {
   var proto = orig_req.connection.encrypted? 'https' : 'http';
   httputils.addHeader(proxy_req.headers, 'X-Forwarded-Proto', proto);
 
+  /* Set X-Forwarded-Host HTTP extension header. */
+  var hostport = orig_req.headers.host;
+  httputils.addHeader(proxy_req.headers, 'X-Forwarded-Host', hostport.split(':')[0]);
+  httputils.addHeader(proxy_req.headers, 'X-Forwarded-Port', hostport.split(':')[1]);
+
   if (orig_req.httpVersion < 1.1) {
      httputils.addHeader(proxy_req.headers, 'Connection', 'close');
   }
@@ -141,12 +152,6 @@ function _setProxyRequestHeaders(proxy_req, orig_req) {
  *  @api    private
  */
 function _requestHandler(proxy_server, req, res) {
-  var surrogate = new RequestSurrogate(req, res);
-
-  /*  Emit Surrogate Request and start events.  */
-  proxy_server.emit('surrogate.request', surrogate);
-  surrogate.emit('start');
-
   /*  Get the request/socket io timeout.  */
   var io_timeout = DEFAULT_IO_TIMEOUT;   /*  300 seconds.  */
   if (proxy_server.config.timeouts  &&  proxy_server.config.timeouts.io) {
@@ -172,20 +177,46 @@ function _requestHandler(proxy_server, req, res) {
     reqhost = req.headers.host.split(':')[0];
   }
 
-  proxy_server.debug()  &&  Logger.debug('Handling HTTP[S] request to ' +
-                                         reqhost);
+  var idled_container = proxy_server.getIdle(reqhost)
+  if (idled_container && 0 !== idled_container.length) {
+    var command = 'curl -s -k -L -w %{http_code} -o /dev/null http://' + reqhost
+    Logger.debug('Unidle command for http: ' + command);
 
+    child_process.exec(command, function (error, stdout, stderr) {
+      if (null != stderr) {
+        Logger.error('curl stderr: ' + stderr);
+      }
+
+      if (null != error) {
+        Logger.error('curl error: ' + error);
+      }
+
+      if ('200' == stdout) {
+        proxy_server.unIdle(reqhost);
+        finish_request(reqhost, reqport, proxy_server, req, res, io_timeout, keep_alive_timeout);
+      }
+    });
+  }
+  else {
+    finish_request (reqhost, reqport, proxy_server, req, res, io_timeout, keep_alive_timeout);
+  }
+};  /*  End of function  requestHandler.  */
+
+function finish_request (reqhost, reqport, proxy_server, req, res, io_timeout, keep_alive_timeout) {
+  var surrogate = new RequestSurrogate(req, res);
+
+  /*  Emit Surrogate Request and start events.  */
+  proxy_server.emit('surrogate.request', surrogate);
+  surrogate.emit('start');
+
+  proxy_server.debug()  &&  Logger.debug('Handling HTTP[S] request to ' + reqhost);
 
   /*  Get the request URI.  */
   var request_uri = req.url ? req.url : '/';
 
 
   /*  Get the routes to the destination (try with request URI first).  */
-  var routes = proxy_server.getRoute(reqhost + request_uri);
-  if (routes.length < 1) {
-    /*  No specific route, try the more general route.  */
-    routes = proxy_server.getRoute(reqhost);
-  }
+  var routes = proxy_server.getRoute(reqhost, request_uri);
 
   /*  No route, no milk [, no cookies] ... return a temporary redirect.  */
   if (!routes  ||  (routes.length < 1)  ||  (routes[0].length < 1) ) {
@@ -201,16 +232,24 @@ function _requestHandler(proxy_server, req, res) {
 
   /*  Get the endpoint we need to send this request to.  */
   var ep = routes[0].split(':');
+  var matched_path = ep[2];
   var ep_host = ep[0];
-  var ep_port = ep[1] || 8080;
+  var parts = ep[1].split('/');
+  var ep_port = parts[0] || 8080;
+  var req_path = request_uri;
+  var ep_path = undefined;
+  if (parts.length > 1) {
+    ep_path = '/' + parts.slice(1).join('/');
+    req_path = req_path.replace(matched_path, ep_path);
+  }
 
-  proxy_server.debug()  &&  Logger.debug('Sending a proxy request to %s', ep);
+  proxy_server.debug()  &&  Logger.debug('Sending a proxy request to %s %s', ep_host, req_path);
 
   /*  Create a proxy request we need to send & set appropriate headers.  */
   var proxy_req = { host: ep_host, port: ep_port,
-                    method: req.method, path: request_uri,
-                    headers: req.headers
-                  };
+    method: req.method, path: req_path,
+    headers: req.headers
+  };
   _setProxyRequestHeaders(proxy_req, req);
 
   var preq = http.request(proxy_req, function(pres) {
@@ -240,8 +279,8 @@ function _requestHandler(proxy_server, req, res) {
     });
 
     /*  Set the appropriate headers on the reponse & send the headers.  */
-    _setProxyResponseHeaders(pres, reqhost, keep_alive_timeout);
-    res.writeHead(pres.statusCode, pres.headers);
+    _setProxyResponseHeaders(pres, res, reqhost, keep_alive_timeout);
+    res.writeHead(pres.statusCode);
   });
 
   /*  Handle the outgoing request socket event and set a timeout.  */
@@ -281,7 +320,9 @@ function _requestHandler(proxy_server, req, res) {
 
 
   /*  Handle the outgoing request error event.  */
-  preq.addListener('error', function() {
+  preq.addListener('error', function(error) {
+    Logger.error('io_timeout: ' + io_timeout)
+    Logger.error('Error listener on proxied request: ' + error.stack)
 
     /*  Finish the incoming request, return a 503 and emit event.  */
     res.statusCode = statuscodes.HTTP_SERVICE_UNAVAILABLE;
@@ -290,8 +331,11 @@ function _requestHandler(proxy_server, req, res) {
     surrogate.emit('error', 'proxy.request.error');
   });
 
-};  /*  End of function  requestHandler.  */
-
+  res.addListener('close', function() {
+    Logger.debug("Client closed the connection");
+    preq.abort();
+  });
+}
 
 /**
  *  Handler to process websockets traffic we receive and route to the
@@ -315,11 +359,6 @@ function _requestHandler(proxy_server, req, res) {
  *  @api    private
  */
 function _websocketHandler(proxy_server, ws) {
-  var surrogate = new WebSocketSurrogate(ws);
-
-  /*  Emit Surrogate Websocket and start events.  */
-  proxy_server.emit('surrogate.websocket', surrogate);
-  surrogate.emit('start');
 
   /*  Get websockets timeout.  */
   var websockets_timeout = DEFAULT_WEBSOCKETS_TIMEOUT;  /*  3600 secs.  */
@@ -331,6 +370,47 @@ function _websocketHandler(proxy_server, ws) {
   /*  Timeout is set in milliseconds, so convert from seconds.  */
   ws._socket.setTimeout(websockets_timeout * 1000);
 
+  /*  Get the original/upgraded HTTP request.  */
+  var upgrade_req = ws.upgradeReq  ||  { };
+  var upg_reqhost = '';
+
+  /*  Get the host, the original/upgraded HTTP request was sent to.  */
+  if (upgrade_req.headers  &&  upgrade_req.headers.host) {
+    upg_reqhost = upgrade_req.headers.host.split(':')[0];
+  }
+
+  var idled_container = proxy_server.getIdle(upg_reqhost)
+  if (idled_container && 0 !== idled_container.length) {
+    var command = 'curl -s -k -L -w %{http_code} -o /dev/null http://' + upg_reqhost
+    Logger.debug('Unidle command for ws: ' + command);
+
+    child_process.exec(command, function (error, stdout, stderr) {
+      if (null != stderr) {
+        Logger.error('curl stderr: ' + stderr);
+      }
+
+      if (null != error) {
+        Logger.error('curl error: ' + error);
+      }
+
+      if ('200' == stdout) {
+        proxy_server.unIdle(upg_reqhost);
+        finish_websocket (upg_reqhost, proxy_server, ws);
+      }
+    });
+  }
+  else {
+    finish_websocket (upg_reqhost, proxy_server, ws);
+  }
+
+};  /*  End of function  websocketHandler.  */
+
+function finish_websocket(upg_reqhost, proxy_server, ws) {
+  var surrogate = new WebSocketSurrogate(ws);
+
+  /*  Emit Surrogate Websocket and start events.  */
+  proxy_server.emit('surrogate.websocket', surrogate);
+  surrogate.emit('start');
 
   /*  Get the original/upgraded HTTP request.  */
   var upgrade_req = ws.upgradeReq  ||  { };
@@ -345,11 +425,13 @@ function _websocketHandler(proxy_server, ws) {
   var upg_requri = upgrade_req.url ? upgrade_req.url : '/';
 
   /*  Get the routes to the destination (try with request URI first).  */
-  var routes = proxy_server.getRoute(upg_reqhost + upg_requri);
+  var routes = proxy_server.getRoute(upg_reqhost, upg_requri);
+  /*
   if (routes.length < 1) {
-    /*  No specific route, try the more general route.  */
+    /*  No specific route, try the more general route.
     routes = proxy_server.getRoute(upg_reqhost);
   }
+  */
 
   /*  No route, no milk [, no cookies] ... return unexpected condition.  */
   if (!routes  ||  (routes.length < 1)  ||  (routes[0].length < 1) ) {
@@ -364,10 +446,12 @@ function _websocketHandler(proxy_server, ws) {
   }
 
 
-  var ws_endpoint = routes[0];
+  /* Take out the matched endpoint from the result */
+  var ws_endpoint = routes[0].split(":").slice(0, 2).join(":");
+  var req_path = routes[0].split(":")[1];
 
   proxy_server.debug()  &&  Logger.debug('Sending a websocket request to %s',
-                                         ws_endpoint);
+                                         util.inspect(ws_endpoint));
 
   proxy_server.debug()  &&  Logger.debug(JSON.stringify(upgrade_req.headers));
 
@@ -377,8 +461,15 @@ function _websocketHandler(proxy_server, ws) {
     zheaders.headers.Cookie = upgrade_req.headers.cookie;
   }
 
+  if (upgrade_req.headers["sec-websocket-protocol"]) {
+    zheaders.headers["Sec-Websocket-Protocol"] = upgrade_req.headers["sec-websocket-protocol"];
+  }
+  if (upgrade_req.headers["origin"]) {
+    zheaders.headers["Origin"] = upgrade_req.headers["origin"];
+  }
+
   /*  Create a proxy websocket request we need to send.  */
-  var proxy_ws = new WebSocket('ws://' + ws_endpoint + upg_requri, zheaders);
+  var proxy_ws = new WebSocket('ws://' + ws_endpoint, zheaders);
 
   /*  Set surrogate's backend information.  */
   surrogate.setBackendInfo(proxy_ws);
@@ -396,6 +487,14 @@ function _websocketHandler(proxy_server, ws) {
   proxy_ws.on('open', function() {
     /*  Websocket proxy started event.  */
     surrogate.emit('start-proxy-websocket');
+
+    for (var i = 0; i < surrogate.buffer.length; i++) {
+      var data = surrogate.buffer[i].data;
+      var flags = surrogate.buffer[i].flags;
+      Logger.error("Replaying buffer data: " + data);
+        proxy_ws.send(data, flags);
+      }
+    surrogate.buffer = [];
   });
 
   proxy_ws.on('close', function() {
@@ -405,11 +504,20 @@ function _websocketHandler(proxy_server, ws) {
   });
 
   proxy_ws.on('message', function(data, flags) {
-    /*  Emit websocket outbound data event.  */
-    surrogate.emit('outbound.data', data, flags);
+    // do not crash the whole proxy, when the connection is not open
+    // https://bugzilla.redhat.com/show_bug.cgi?id=1042938
+    try {
+      /*  Emit websocket outbound data event.  */
+      surrogate.emit('outbound.data', data, flags);
 
-    /*  Proxy message back to the websocket request originator.  */
-    ws.send(data, flags);
+      /*  Proxy message back to the websocket request originator.  */
+      ws.send(data, flags);
+    }
+    catch(err) {
+      Logger.error("failed to send message: " + err);
+      surrogate.emit('error', 'websocket.error');
+    };
+
   });
 
   /*  Handle the incoming websocket error/close/message events.  */
@@ -431,13 +539,22 @@ function _websocketHandler(proxy_server, ws) {
   ws.on('message', function(data, flags) {
     /*  Emit inbound data event.  */
     surrogate.emit('inbound.data', data, flags);
-
-    /*  Proxy data to outgoing websocket to the backend content server.  */
-    proxy_ws.send(data, flags);
+    if (proxy_ws.readyState == WebSocket.OPEN) {
+      /*  Proxy data to outgoing websocket to the backend content server.  */
+      proxy_ws.send(data, flags);
+    } else {
+      if (surrogate.buffer.length < 5) {
+        surrogate.buffer.push({data: data, flags: flags})
+      }
+    }
   });
 
-};  /*  End of function  websocketHandler.  */
+  /* Clear the buffer */
+  setTimeout(function() {
+      surrogate.buffer = [];
+  }, 3000);
 
+};  /*  End of function  websocketHandler.  */
 
 /**
  *  Asynchronously find the route files and invoke the specify callback to
@@ -556,6 +673,7 @@ RequestSurrogate.prototype.setBackendInfo = function(preq, pres) {
 function WebSocketSurrogate(ws) {
   this.backend = { };
   this.client  = { };
+  this.buffer  = [];
 
   this.client.websocket = ws;
 
@@ -693,9 +811,25 @@ ProxyServer.prototype.debug = function(d) {
  *  @return  {Array}   Associated endpoints/routes.
  *  @api     public
  */
-ProxyServer.prototype.getRoute = function(dest) {
-  return((this.routes)? this.routes.get(dest) : [ ]);
+ProxyServer.prototype.getRoute = function(host, path) {
+  var path_segments = path.split('/');
+  var max_segs = path_segments.length > 3? path_segments.length : 3;
 
+  if (!this.routes)
+    return this.routes;
+
+  for (i = max_segs; i > 0; i--) {
+    candidate_path = path_segments.slice(0, i).join('/');
+    full_path = host + candidate_path;
+    dest = this.routes.get(full_path);
+    if (dest.length > 0) {
+      dret = [];
+      for (idx in dest) { dret.push(dest[idx] + ":" + candidate_path); }
+      return dret;
+    }
+  }
+
+  return [ ];
 };  /*  End of function  getRoute.  */
 
 
@@ -750,6 +884,43 @@ ProxyServer.prototype.loadRoutes = function() {
 
 };  /*  End of function  loadRoutes.  */
 
+/**
+ *  Gets the idle gear UUID associated with the specified 'name' or ""
+ *  (port/virtual host/alias).
+ *
+ *  Examples:
+ *    var cfgfile      = '/etc/openshift/web-proxy.json'
+ *    var proxy_server = new ProxyServer.ProxyServer(cfgfile);
+ *    proxy_server.initServer();
+ *    proxy_server.getIdle('app1-ramr.rhcloud.com');
+ *    proxy_server.getIdle(35753);
+ *
+ *  @param   {String}  External route name/info (virtual host/alias name).
+ *  @return  {String}  Idled gear UUID or "" if not idled
+ *  @api     public
+ */
+ProxyServer.prototype.getIdle = function (dest) {
+  return((this.routes) ? this.routes.getIdle(dest) : "");
+};  /*  End of function  getIdle.  */
+
+
+/**
+ *  Mark gear UUID associated with the specified 'name' as unidled
+ *  (port/virtual host/alias).
+ *
+ *  Examples:
+ *    var cfgfile      = '/etc/openshift/web-proxy.json'
+ *    var proxy_server = new ProxyServer.ProxyServer(cfgfile);
+ *    proxy_server.initServer();
+ *    proxy_server.unIdle('app1-ramr.rhcloud.com');
+ *    proxy_server.unIdle(35753);
+ *
+ *  @param   {String}  External route name/info (virtual host/alias name).
+ *  @api     public
+ */
+ProxyServer.prototype.unIdle = function (dest) {
+  return((this.routes) ? this.routes.unIdle(dest) : "");
+};  /*  End of function  unIdle.  */
 
 /**
  *  Initializes this ProxyServer instance.
@@ -866,17 +1037,18 @@ ProxyServer.prototype.start = function() {
     Logger.info('Starting protocol handler for ' + pname + ' ...');
 
     this.config.servers[pname].ports.forEach(function(port) {
+      var host = self.config.servers[pname].host;
       try {
-        self.proto_servers[pname].listen(port, undefined, function() {
+        self.proto_servers[pname].listen(port, host, function() {
           /*  Listen succeeded - write pid file.  */
-          Logger.info(pname + ' listening on port ' + port);
+          Logger.info(pname + ' listening on ' + host + ':' + port);
           fs.writeFileSync(self.config.pidfile, process.pid);
           lcnt += 1;
           (lcnt == nlisteners)  &&  switchUser();
         });
 
       } catch(err) {
-        Logger.error(pname + ' failed to listen to port ' + port);
+        Logger.error(pname + ' failed to listen on '  + host + ':' + port);
       }
 
     });

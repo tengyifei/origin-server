@@ -12,22 +12,10 @@ if [ ! -d ${SYSTEM_JBOSSEWS_DIR} ]; then
   exit 127
 fi
 
-# If there's a symlinked webapps directory, we're migrating to 0.0.2
-migrate_webapps=false
-if [ -h "${OPENSHIFT_JBOSSEWS_DIR}/webapps" ]; then
-  migrate_webapps=true
-fi
-
-# If migrating, replace the old symlinked 'webapps' with a physical directory
-if $migrate_webapps; then
-  rm -f ${OPENSHIFT_JBOSSEWS_DIR}/webapps
-fi
-
-mkdir -p ${OPENSHIFT_JBOSSEWS_DIR}/{run,tmp,conf,logs,webapps}
-mkdir -p ${OPENSHIFT_HOMEDIR}/.m2
+mkdir -p ${OPENSHIFT_JBOSSEWS_DIR}/{run,tmp,conf,logs}
 
 # Set up the config directory in the user repository template
-cp ${OPENSHIFT_JBOSSEWS_DIR}/versions/{shared,${version}}/configuration/* ${OPENSHIFT_JBOSSEWS_DIR}/template/.openshift/config
+cp ${OPENSHIFT_JBOSSEWS_DIR}/usr/versions/{shared,${version}}/configuration/* ${OPENSHIFT_JBOSSEWS_DIR}/template/.openshift/config
 
 # Link the system Tomcat binaries to the cart Tomcat instance directory
 ln -sf ${SYSTEM_JBOSSEWS_DIR}/bin/bootstrap.jar ${OPENSHIFT_JBOSSEWS_DIR}/bin/bootstrap.jar
@@ -35,7 +23,7 @@ ln -sf ${SYSTEM_JBOSSEWS_DIR}/bin/commons-daemon.jar ${OPENSHIFT_JBOSSEWS_DIR}/b
 ln -sf ${SYSTEM_JBOSSEWS_DIR}/bin/tomcat-juli.jar ${OPENSHIFT_JBOSSEWS_DIR}/bin/tomcat-juli.jar
 
 # Need to remove link: -f gets confused as this is a link to a link
-[ -e ${OPENSHIFT_JBOSSEWS_DIR}/lib ] && rm ${OPENSHIFT_JBOSSEWS_DIR}/lib
+[ -h ${OPENSHIFT_JBOSSEWS_DIR}/lib ] && rm ${OPENSHIFT_JBOSSEWS_DIR}/lib
 ln -sf ${SYSTEM_JBOSSEWS_DIR}/lib ${OPENSHIFT_JBOSSEWS_DIR}/lib
 
 # Link the user-controlled configurations to the Tomcat conf directory
@@ -45,12 +33,3 @@ ln -sf ${OPENSHIFT_REPO_DIR}/.openshift/config/postgresql_module.xml ${OPENSHIFT
 ln -sf ${OPENSHIFT_REPO_DIR}/.openshift/config/catalina.properties ${OPENSHIFT_JBOSSEWS_DIR}/conf
 ln -sf ${OPENSHIFT_REPO_DIR}/.openshift/config/catalina.policy ${OPENSHIFT_JBOSSEWS_DIR}/conf
 ln -sf ${OPENSHIFT_REPO_DIR}/.openshift/config/logging.properties ${OPENSHIFT_JBOSSEWS_DIR}/conf
-
-# If migrating, copy the existing app repo contents to the new webapps directory
-if $migrate_webapps; then
-  if [ -d ${OPENSHIFT_REPO_DIR}/webapps ]; then
-    shopt -s dotglob
-    mv ${OPENSHIFT_REPO_DIR}/webapps/* ${OPENSHIFT_JBOSSEWS_DIR}/webapps/
-    shopt -u dotglob
-  fi
-fi

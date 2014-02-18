@@ -1,7 +1,8 @@
+ENV["TEST_NAME"] = "unit_broker_auth_test"
 require File.expand_path('../../test_helper', __FILE__)
 require 'tmpdir'
 
-class BrokerAuthTest < Test::Unit::TestCase
+class BrokerAuthTest < ActiveSupport::TestCase
   def setup
     test_key_dir = Dir.mktmpdir
     system "/usr/bin/openssl genrsa -out #{test_key_dir}/server_priv.pem 2048"
@@ -16,32 +17,66 @@ class BrokerAuthTest < Test::Unit::TestCase
     @auth_service
   end
 
-  def test_broker_auth
+  def mock_access(carts=cartridge_instances_for(:jenkins).map(&:cartridge))
     app = mock('app')
     user = mock('user')
-    domain = mock('domain')
-    domains = [domain]
     t = Time.new
 
-    user.expects(:domains).returns(domains)
-    user.expects(:login).returns('1')
-
-    domain.expects(:owner).returns(user)
-
-    app.expects(:uuid).at_least_once.returns("1")
-    app.expects(:name).at_least_once.returns("foo")
-    app.expects(:canonical_name).at_least_once.returns("foo")
-    app.expects(:domain).returns(domain)
+    app.stubs(:_id).returns("51ed4adbb8c2e70a72000294")
+    app.stubs(:name).returns("foo")
+    app.stubs(:domain_id).returns("51ed4adbb8c2e70a72000000")
     app.expects(:created_at).at_least_once.returns(t)
+    app.expects(:owner).returns(user)
+    app.expects(:cartridges).returns(carts)
 
+    Application.expects(:find).with(app._id).returns(app)
+
+    [app, user]
+  end
+
+  def test_broker_auth_for_jenkins
+    app, user = mock_access
+    iv,token = svc.generate_broker_key(app)
+    assert auth = svc.validate_broker_key(iv,token)
+    assert_equal user, auth[:user]
+    assert_equal :broker_auth, auth[:auth_method]
+    assert_equal [Scope::Application.new(:id => '51ed4adbb8c2e70a72000294', :app_scope => :scale), Scope::Application.new(:id => '51ed4adbb8c2e70a72000294', :app_scope => :report_deployments), Scope::DomainBuilder.new(app)], auth[:scopes]
+  end
+
+  def test_broker_auth
+    app, user = mock_access([])
+    iv,token = svc.generate_broker_key(app)
+    assert auth = svc.validate_broker_key(iv,token)
+    assert_equal user, auth[:user]
+    assert_equal :broker_auth, auth[:auth_method]
+    assert_equal [Scope::Application.new(:id => '51ed4adbb8c2e70a72000294', :app_scope => :scale), Scope::Application.new(:id => '51ed4adbb8c2e70a72000294', :app_scope => :report_deployments)], auth[:scopes]
+  end
+
+
+  def test_legacy_broker_auth
+    app = mock('app')
+    user = mock('user')
+    t = Time.new
+
+    user.stubs(:login).returns('1')
+
+    app.stubs(:_id).returns("51ed4adbb8c2e70a72000294")
+    app.stubs(:domain_id).returns("51ed4adbb8c2e70a72000000")
+    app.stubs(:name).returns("foo")
+    app.expects(:created_at).at_least_once.returns(t)
+    app.expects(:cartridges).returns(cartridge_instances_for(:jenkins).map(&:cartridge))
+
+    Application.expects(:find_by_user).with(user, "foo").at_least_once.returns(app)
     CloudUser.expects(:find_by_identity).at_least_once.returns(user)
-    domain.expects(:applications).at_least_once.returns([app])
+
+    legacy_json = {:app_name => app.name, :creation_time => app.created_at, svc.send(:token_login_key) => user.login }.to_json
+    Hash.any_instance.expects(:to_json).returns(legacy_json)
 
     iv,token = svc.generate_broker_key(app)
     assert auth = svc.validate_broker_key(iv,token)
     assert_equal user, auth[:user]
     assert_equal :broker_auth, auth[:auth_method]
-    assert_equal [Scope::Application.new(:id => '1', :app_scope => :scale), Scope::Application.new(:id => '1', :app_scope => :build)], auth[:scopes]
+    assert_equal [Scope::Application.new(:id => '51ed4adbb8c2e70a72000294', :app_scope => :scale), Scope::Application.new(:id => '51ed4adbb8c2e70a72000294', :app_scope => :report_deployments), Scope::DomainBuilder.new(app)], auth[:scopes]
   end
 
   def test_authenticate_request_passes_through

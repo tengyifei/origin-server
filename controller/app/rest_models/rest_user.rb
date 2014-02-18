@@ -28,7 +28,7 @@
 # @!attribute [r] consumed_gears
 #   @return [Integer] Number of gears currently being used in applications
 # @!attribute [r] max_gears
-#   @return [Integer] Maximum number of gears avaiable to the user
+#   @return [Integer] Maximum number of gears available to the user
 # @!attribute [r] capabilities
 #   @return [Hash] Map of user capabilities
 # @!attribute [r] plan_id
@@ -38,14 +38,16 @@
 # @!attribute [r] usage_account_id
 #   @return [String] Account ID
 class RestUser < OpenShift::Model
-  attr_accessor :id, :login, :consumed_gears, :capabilities, :plan_id, :plan_state, :usage_account_id, :links, :max_gears, :created_at
+  attr_accessor :id, :login, :consumed_gears, :capabilities, :plan_id, :plan_state, :usage_account_id, :links, :max_gears, :max_domains, :created_at
 
   def initialize(cloud_user, url, nolinks=false)
     [:id, :login, :consumed_gears, :plan_id, :plan_state, :usage_account_id, :created_at].each{ |sym| self.send("#{sym}=", cloud_user.send(sym)) }
 
-    self.capabilities = cloud_user.get_capabilities
-    self.max_gears = capabilities["max_gears"]
+    self.capabilities = cloud_user.capabilities.serializable_hash
+    self.max_gears = cloud_user.max_gears
+    self.max_domains = cloud_user.max_domains
     self.capabilities.delete("max_gears")
+    self.capabilities.delete("max_domains")
 
     if self.capabilities["max_tracked_addtl_storage_per_gear"] or self.capabilities["max_untracked_addtl_storage_per_gear"]
       tracked_storage = (self.capabilities["max_tracked_addtl_storage_per_gear"] || 0)
@@ -57,12 +59,12 @@ class RestUser < OpenShift::Model
 
     unless nolinks
       @links = {
-        "LIST_KEYS" => Link.new("Get SSH keys", "GET", URI::join(url, "user/keys")),
         "ADD_KEY" => Link.new("Add new SSH key", "POST", URI::join(url, "user/keys"), [
           Param.new("name", "string", "Name of the key"),
-          Param.new("type", "string", "Type of Key", SshKey.get_valid_ssh_key_types()),
-          Param.new("content", "string", "The key portion of an rsa key (excluding ssh-rsa and comment)"),
+          Param.new("type", "string", "Type of Key", SshKey.get_valid_ssh_key_types),
+          Param.new("content", "string", "The key portion of an ssh key (excluding key type and comment)"),
         ]),
+        "LIST_KEYS" => Link.new("List SSH keys", "GET", URI::join(url, "user/keys")),
       }
       @links["DELETE_USER"] = Link.new("Delete user. Only applicable for subaccount users.", "DELETE", URI::join(url, "user"), nil, [
         OptionalParam.new("force", "boolean", "Force delete user. i.e. delete any domains and applications under this user", [true, false], false)

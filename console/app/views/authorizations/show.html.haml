@@ -1,5 +1,4 @@
 - content_for :title, "Authorization"
-- breadcrumb_for_settings 'Authorization'
 
 %h1 Authorization Token
 = flashes
@@ -12,7 +11,10 @@
       %pre.larger{:style => 'word-break: break-all;'}= @authorization.token
 
       %p The token will allow clients to perform these operations on your behalf:
-      %table.table
+      %table.table.table-fixed.table-condensed
+        %colgroup
+          %col{:width => '50%'}
+          %col{:width => '50%'}
         %thead
           %tr
             %th.nowrap{:scope => 'col'} Scope
@@ -21,8 +23,11 @@
           - @authorization.scopes.each do |s|
             - if scope = @scope_definitions.find{ |scope| scope[:match] ? s.match(scope[:match]) : scope[:id].to_s == s.to_s }
               %tr
-                %td.nowrap{:scope => 'row'}= scope[:id]
+                %td.nowrap{:scope => 'row', :title => s}= s
                 %td= scope[:description]
+            - else
+              %tr
+                %td{:scope => 'row', :colspan => 2}= s
 
       %p
         = @authorization.note || "<no description>"

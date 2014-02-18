@@ -34,6 +34,7 @@
 class OODiag
 
   require 'rubygems'
+  require 'openshift-origin-common'
   require 'tempfile'
   require 'bundler'
 
@@ -54,9 +55,7 @@ class OODiag
   def run_setup
     initialize
     load_rpm_list
-    detect_is_node_or_broker
-    detect_project_version
-    detect_os_version
+    detect_system_properties
     load_broker_rails_env if @is_broker
   end
 
@@ -174,15 +173,12 @@ class OODiag
     return @rpms
   end
 
-  def detect_is_node_or_broker
+  def detect_system_properties
     @is_broker = %w[openshift-origin-broker rhc-broker].any? {|name| @rpms[name]}
     verbose "OpenShift broker installed." if @is_broker
     @is_node= %w[rubygem-openshift-origin-node rhc-node].any? {|name| @rpms[name]}
     verbose "OpenShift node installed." if @is_node
-    return @is_broker, @is_node
-  end
 
-  def detect_project_version
     # These tests probably need a lot of work to be robust
     #
     @project_is = {}
@@ -192,11 +188,13 @@ class OODiag
     @project_is[:online] = @rpms['rhc-common'] && true
     # It's OpenShift Origin otherwise...
     @project_is[:origin] = !(@project_is[:enterprise] || @project_is[:online])
+    # detect whether the ruby193 SCL is in play.
+    system "scl enable ruby193 echo >& /dev/null"
+    @scl_prefix = $?.success? ? "ruby193-" : "" 
+    # detect whether we use service or systemctl
+    system "command -v systemctl >& /dev/null"
+    @use_systemctl = $?.success?
 
-    return @project_is
-  end
-
-  def detect_os_version
     # looking for RHEL or Fedora version via /etc/redhat-release
     # If something else... I dunno
     release = File.read '/etc/redhat-release'
@@ -213,27 +211,28 @@ class OODiag
       :rhel64 => release.include?('Enterprise Linux Server release 6.4'),
       :rhel7 => release.include?('Enterprise Linux Server release 7'),
     }
-    return @os_is
   end
 
   def load_broker_rails_env
     begin
-      require "/var/www/openshift/broker/config/environment"
+      verbose "Loading the broker rails environment."
+      require "#{ENV['OPENSHIFT_BROKER_DIR'] || '/var/www/openshift/broker'}/config/environment"
       # Disable analytics for admin scripts
       Rails.configuration.analytics[:enabled] = false
       Rails.configuration.msg_broker[:rpc_options][:disctimeout] = @options[:wait]
+    rescue Interrupt
+      raise
     rescue Exception => e
       do_fail <<-"FAIL"
-        Broker application failed to load. This is most likely a gem
-        dependency problem. Update rubygem RPMs and restart openshift-broker
-        to regenerate the broker Gemfile.lock - this may fix the problem.
-        Another possibility is that you are running this script with a
-        different ruby than what is required for the broker app (1.8 vs 1.9).
+        Broker application failed to load. This is often a gem dependency problem.
+        Updating rubygem RPMs and restarting openshift-broker
+        to regenerate the broker Gemfile.lock may fix the problem.
+        The actual error encountered was:
+        #{e.inspect}
         ***
         THIS PROBLEM NEEDS TO BE RESOLVED FOR THE BROKER TO WORK.
         DISABLING BROKER TESTS.
         ***
-        The error was: #{e.inspect}
       FAIL
       @is_broker = false
     end
@@ -246,8 +245,8 @@ class OODiag
     geos-debuginfo geos-devel geos-python geos-ruby haproxy haproxy-debuginfo
     jboss-eap6-index jboss-eap6-modules jenkins jenkins-plugin-openshift js
     js-debuginfo js-devel libev libev-debuginfo libev-devel libev-source
-    libmcrypt libmcrypt-debuginfo libmcrypt-devel libmongodb mcollective
-    mcollective-client mcollective-common mod_bw mod_bw-debuginfo mod_passenger
+    libmcrypt libmcrypt-debuginfo libmcrypt-devel libmongodb ruby193-mcollective
+    ruby193-mcollective-client ruby193-mcollective-common mod_bw mod_bw-debuginfo mod_passenger
     mongodb mongodb-debuginfo mongodb-devel mongodb-server openshift-console
     openshift-origin-console openshift-origin-broker openshift-origin-broker-util
     openshift-origin-cartridge-cron
@@ -394,16 +393,16 @@ class OODiag
     # don't much care if resolution is correct; what we want
     # is to avoid running a bunch more tests when the nameserver
     # is obviously broken.
-    command = "host -W 1 do-not-expect-to-resolve. #{server}"
+    command = "host -W 1 example.com. #{server}"
     # IPSocket.getaddress goes through /etc/hosts;
     # "host" uses DNS which is what we want.
     output = `#{command} 2>&1`
-    unless output =~ /NXDOMAIN/
+    if output =~ /connection timed out/
       do_fail <<-"FAIL"
         #{server} doesn't appear to respond to DNS requests.
         This command:
           #{command}
-        should have returned NXDOMAIN to the request.
+        should have connected to your primary nameserver.
         Instead, it returned:
           #{output}
         Please check the following to resolve this issue:
@@ -411,9 +410,51 @@ class OODiag
         * Is your nameserver running?
         * Is the firewall on your nameserver open (udp:53)?
         * Can you connect to your nameserver?
-        Not much is going to work without DNS resolution.
+        Many OpenShift functions fail without working DNS resolution.
       FAIL
       abort_tests
+    end
+  end
+
+  def prereq_domain_resolves
+    skip_test unless @is_broker or @is_node
+
+    `which host`
+    have_host_command = 0 == $?.to_i
+    unless have_host_command
+      do_warn <<-WARN
+         The host command is not available. This command is not required; however, you
+         may install it, by installing the bind-utils package, to enable further
+         diagnostics checking.
+      WARN
+    end
+    skip_test unless have_host_command
+
+    verbose "checking that we can resolve our application domain"
+
+    domain = @is_broker ? Rails.configuration.openshift[:domain_suffix]
+                        : OpenShift::Config.new.get('CLOUD_DOMAIN')
+    # Test that the nameserver for the domain is known.
+    # IPSocket.getaddress goes through /etc/hosts;
+    # "host" uses DNS which is what we want.
+    command = "host -W 5 -t NS '#{domain}'"
+    output = `#{command} 2>&1`
+    if output !~ /name server/
+      do_fail <<-"FAIL"
+        Application domain does not appear to resolve under
+        current nameserver configuration. This command:
+          #{command}
+        should have returned the nameserver(s) for #{domain}.
+        Instead, it returned:
+          #{output}
+        Please check the following to resolve this issue:
+        * Is CLOUD_DOMAIN=#{domain} in #{@is_broker ? 'broker':'node'}.conf correct?
+        * Does /etc/resolv.conf have the right nameserver(s)?
+        * Is your OpenShift domain nameserver running?
+        * Is the firewall on your nameserver open (udp:53)?
+        * Does your nameserver respond to queries via dig/host?
+        Many OpenShift functions may fail without application DNS.
+      FAIL
     end
   end
 
@@ -495,7 +536,7 @@ class OODiag
   def test_node_profiles_districts_from_broker
     skip_test unless @is_broker
 
-    conf = "/etc/openshift/broker.conf"
+    conf = "/etc/openshift/broker#{Rails.env.development? ? '-dev': ''}.conf"
     conf_profiles = Rails.configuration.openshift[:gear_sizes]
     default_profile = Rails.configuration.openshift[:default_gear_size]
     default_allowed = Rails.configuration.openshift[:default_gear_capabilities]
@@ -545,7 +586,7 @@ class OODiag
       if a_profile_for.empty?
         do_fail <<-NONE
           No node hosts found. Please install some,
-          or ensure the existing ones respond to 'mco ping'.
+          or ensure the existing ones respond to 'oo-mco ping'.
           OpenShift cannot host gears without at least one node host responding.
         NONE
         skip_test
@@ -590,10 +631,10 @@ class OODiag
       profile = district.attributes.has_key?('node_profile') ? district.node_profile : district.gear_size
                             # model refactor renamed :node_profile => :gear_size
       verbose "district '#{district.name}' has profile '#{profile}'"
-      if district.server_identities.empty?
+      if district.servers.empty?
         do_warn "There are no node hosts in district '#{district.name}'"
       end
-      district.server_identities.each do |node|
+      district.servers.each do |node|
         d_profile_for[node["name"]] = profile
         d_district_for[node["name"]] = district.name
         d_profile_active[profile] = true if node["active"]
@@ -717,13 +758,17 @@ class OODiag
     #
     # info about mcollective client log error
     out = `grep 'Could not start logger: Errno::EACCES' #{tmpfile}`
-    do_warn <<-FIXLOG unless out.empty?
-      broker error_log: this problem indicates mcollective client logging is failing:
-        #{out}
-      Please fix this issue with the following commands:
-        # chown apache:root /var/log/mcollective-client.log
-        # service openshift-broker restart
-    FIXLOG
+    if ! out.empty?
+      logfile = "/var/log/mcollective-client.log"
+      out.match /Errno::EACCES[^\/]+(\/\S+.log)/ and logfile = $1
+      do_warn <<-FIXLOG
+        broker error_log: this problem indicates mcollective client logging is failing:
+          #{out}
+        Please fix this issue with the following commands:
+          # chown apache:root #{logfile}
+          # service openshift-broker restart
+      FIXLOG
+    end
     #
     # done with the tmp file
     system "rm #{tmpfile}"
@@ -817,14 +862,40 @@ class OODiag
     system "rm #{tmpfile}"
   end
 
+  def test_node_containerization_plugin
+    skip_test unless @is_node
+
+    config = OpenShift::Config.new
+
+    plugins = config.get('OPENSHIFT_NODE_PLUGINS')
+
+    observer = (plugins.split(',').include? 'openshift-origin-node/plugins/unix_user_observer' rescue false)
+
+    # In OpenShift Origin, containerization is provided by the
+    # CONTAINERIZATION_PLUGIN plug-in, or by the
+    # openshift-origin-container-selinux plug-in if none is specified,
+    # and the node runtime will verify that it can load the
+    # containerization plug-in, so we do not need to check
+    # CONTAINERIZATION_PLUGIN here.  However, we do need to ensure
+    # that the unix_user_observer node plug-in is not loaded.
+    do_fail <<-"PLUGIN" if observer
+      The OPENSHIFT_NODE_PLUGINS setting in the node configuration file must NOT
+      include the openshift-origin-node/plugins/unix_user_observer plug-in,
+      which is superseded by the containerization plug-in, specified by the
+      CONTAINERIZATION_PLUGIN setting.
+    PLUGIN
+  end
+
   def test_node_mco_log
     skip_test unless @is_node
     #
     # create a tmp file with all of the unique log statements after most recent mcollective start
+    logfile = "#{@scl_prefix}mcollective.log"
+    logfile = [ "/var/log/openshift/node/#{logfile}", "/var/log/#{logfile}" ].find {|f| File.exist? f}
     tmpfile = Tempfile.new("oodiag-mco-#{$$}").path
-    system %Q! sed -n 'H; /INFO.*The Marionette Collective.*started logging/h; ${g;p;}' /var/log/mcollective.log | sed 's|^\w, \[[^]]*\]||' | sort -u > #{tmpfile} !
+    system %Q! sed -n 'H; /INFO.*The Marionette Collective.*started logging/h; ${g;p;}' #{logfile} | sed 's|^\w, \[[^]]*\]||' | sort -u > #{tmpfile} !
     # if no restart seen, just use the whole thing
-    system %Q! sort -u /var/log/mcollective.log > #{tmpfile} ! unless File.exists? tmpfile
+    system %Q! sort -u /var/log/#{@scl_prefix}mcollective.log > #{tmpfile} ! unless File.exists? tmpfile
     return unless File.exists? tmpfile
     #
     # Look for the mco timeout warning
@@ -860,18 +931,18 @@ class OODiag
   end
 
   def service_enabled?(svc)
-    if @os_is[:rhel6]
-      system "chkconfig #{svc} >& /dev/null"
-    else #systemd
+    if @use_systemctl
       system "systemctl is-enabled #{svc}.service >& /dev/null"
+    else #sysv
+      system "chkconfig #{svc} >& /dev/null"
     end
     return $?.exitstatus == 0
   end
   def service_started?(svc)
-    if @os_is[:rhel6]
-      system "service #{svc} status >& /dev/null"
-    else #systemd
+    if @use_systemctl
       system "systemctl status #{svc}.service >& /dev/null"
+    else #sysv
+      system "service #{svc} status >& /dev/null"
     end
     return $?.exitstatus == 0
   end
@@ -879,13 +950,15 @@ class OODiag
     fail_without = []
     warn_without = []
     if @is_broker
-      fail_without += %w{httpd network sshd}
+      fail_without += %w{httpd sshd}
       fail_without += @project_is[:online] ? %w{rhc-broker rhc-site} : %w{openshift-broker}
       warn_without += %w{ntpd}
     end
     if @is_node
-      fail_without += %w{httpd network sshd openshift-port-proxy openshift-gears mcollective
+      fail_without += %w{httpd sshd openshift-iptables-port-proxy openshift-gears
                         cgconfig cgred crond openshift-node-web-proxy}
+      scl_prefix = @project_is[:enterprise] ? "ruby193-" : ""
+      fail_without << @scl_prefix + "mcollective"
 
       warn_without += %w{ntpd oddjobd messagebus}
     end
@@ -893,6 +966,9 @@ class OODiag
        #
     verbose "checking that required services are running now"
     missing = fail_without.uniq.select {|svc| !service_started? svc}
+    # "network" had to be special; always check it with "service" not "systemctl"
+    system "service network status >& /dev/null"
+    missing += "network" if ! $?.success?
     do_fail <<-REQ unless missing.empty?
       The following service(s) are not currently started:
         #{missing.join ", "}
@@ -921,6 +997,39 @@ class OODiag
         #{missing.join ", "}
       Unless you know they are not needed, please ensure that they start at boot.
     WANT
+  end
+
+  def test_missing_iptables_config
+    skip_test unless @is_node
+    iptables_conf = '/etc/sysconfig/iptables'
+    return if File.exists? iptables_conf
+
+    do_fail <<-BUG
+      #{iptables_conf} is missing.  Rebooting this system will likely lead to a
+      broken firewall.  Ensure that the openshift-iptables-port-proxy service
+      is running and all critical services are currently allowed by the running
+      firewall then run 'service iptables save'.
+    BUG
+  end
+
+  def test_system_config_firewall
+    skip_test unless @is_node
+    conf_file = '/etc/sysconfig/system-config-firewall'
+
+    `grep enabled #{conf_file}`
+     have_system_config_firewall = 0 == $?.to_i
+     if have_system_config_firewall
+       do_warn <<-WARN
+         Using system-config-firewall and lokkit with OpenShift is not recommended.
+         To continue using lokkit please ensure the following custom rules are 
+         installed in #{conf_file}:
+
+         --custom-rules=ipv4:filter:/etc/openshift/system-config-firewall-compat
+         --custom-rules=ipv4:filter:/etc/openshift/iptables.filter.rules
+         --custom-rules=ipv4:nat:/etc/openshift/iptables.nat.rules
+       WARN
+     end
+
   end
 
   def test_node_quota_bug
@@ -970,28 +1079,29 @@ class OODiag
           sed -i '/VirtualHost/,/VirtualHost/ d' /etc/httpd/conf.d/ssl.conf
       REMOVE
     end
-    bname = name_for_file['000000_openshift_origin_broker_proxy']
+    bname = name_for_file['000002_openshift_origin_broker_proxy']
     nname = name_for_file['000001_openshift_origin_node']
     if bname && nname && bname != nname
       # broker and node both installed, node may be stealing traffic
       do_warn <<-CONFLICT
-        /etc/httpd/conf.d/000001_openshift_origin_node.conf defines a *:443 VirtualHost
-        with ServerName #{nname} which may intercept requests by that name
-        intended for the broker. Please reconfigure this vhost with the same ServerName
-        as the one in /etc/httpd/conf.d/000000_openshift_origin_broker_proxy.conf
+        /etc/httpd/conf.d/000001_openshift_origin_node_servername.conf defines a 
+        ServerName #{nname} which may cause the node intercept requests by that name
+        intended for the broker. Please reconfigure with the same ServerName as the 
+        one in /etc/httpd/conf.d/000002_openshift_origin_broker_servername.conf
       CONFLICT
     end
   end
 
   def test_altered_package_owned_configs
-     mlocate = `rpm -q mlocate`
-     if mlocate.empty?
+     `rpm -q mlocate`
+     have_mlocate_pkg = 0 == $?.to_i
+     unless have_mlocate_pkg
        do_warn <<-WARN
           The mlocate package is not installed. mlocate is not a required runtime package; however,
           you may install mlocate to enable further diagnostics checking.
        WARN
      end
-     unless mlocate.empty?
+     if have_mlocate_pkg
         `updatedb`
         out = `locate --regex \\.rpmsave\$ \\.rpmnew\$`
 
@@ -1037,7 +1147,8 @@ class OODiag
     # One bug would express when commands were run through oo-spawn/shellExec.
     # Under certain circumstances they would not have the dominating MCS label
     # (s0-s0:c0.c1023) and not be able to affect gears.
-    context = `ps -o label= $(pgrep -f ruby[[:space:]]/usr/sbin/mcollectived)`.chomp.split ":"
+    scl_root = @scl_prefix.empty? ? "" : "/opt/rh/ruby193/root"
+    context = `ps -o label= $(pgrep -f "ruby[^[:space:]]*[[:space:]]#{scl_root}/usr/sbin/mcollectived([[:space:]]|$)")`.chomp.split ":"
     context.shift
     context = context.join ":"
     expected = "system_r:openshift_initrc_t:s0-s0:c0.c1023"
@@ -1045,7 +1156,7 @@ class OODiag
       do_fail <<-CONTEXT
       Mcollectived is not running in the expected SELinux context, which
       may result in node execution failures. Please check that the correct
-      context is set on /usr/sbin/mcollectived and that the correct SELinux
+      context is set on #{scl_root}/usr/sbin/mcollectived and that the correct SELinux
       policies are loaded.
         Expected: #{expected}
         Found: #{context}
@@ -1057,7 +1168,7 @@ class OODiag
   def test_mcollective_bad_facts
     skip_test unless @is_broker
     #Grep for a NaN of max active gears from mcollective
-    max_active_gears = `mco facts max_active_gears | grep -i NaN`
+    max_active_gears = `oo-mco facts max_active_gears | grep -i NaN`
     #If not empty, then there is a problem
     if(!max_active_gears.empty?)
       do_fail <<-NAN
@@ -1076,14 +1187,14 @@ class OODiag
     do_match_check = true
 
     if File.exists? '/var/www/openshift/console'
-      console = `ls /var/www/openshift/console/httpd/conf.d/*auth*.conf | grep -v -- '-dev.conf$'`
+      console = `ls /var/www/openshift/console/httpd/conf.d/*auth*.conf 2> /dev/null | grep -v -- '-dev.conf$'`.split
       #Make sure there is only 1 conf file for the console
-      if(console.split.size > 1)
+      if(console.size > 1)
         do_match_check = false
         do_warn <<-CONSOLE
           There is more than one authentication configuration file for the
           console in /var/www/openshift/console/httpd/conf.d
-          Authentication configration files:
+          Authentication configuration files:
           #{console.join "\n\t"}
         CONSOLE
       elsif console.empty?
@@ -1093,26 +1204,26 @@ class OODiag
       do_match_check = false
     end
 
-    broker = `ls /etc/openshift/plugins.d/*auth*.conf | grep -v -- '-dev.conf$'`
+    broker = `ls /var/www/openshift/broker/httpd/conf.d/*auth*.conf 2> /dev/null | grep -v -- '-dev.conf$'`.split
     #Make sure there is only 1 conf file for the broker
-    if(broker.split.size > 1)
+    if(broker.size > 1)
       do_match_check = false
       do_warn <<-BROKER
         There is more than one authentication configuration file for the
-        broker in /etc/openshift/plugins.d
-        Authentication configration files:
+        broker in /var/www/openshift/console/httpd/conf.d
+        Authentication configuration files:
         #{broker.join "\n\t"}
       BROKER
     end
 
     #If conf files don't match, then it is possible they are using two different auth types.
-    if(do_match_check && console.split("/")[-1] != broker.split("/")[-1])
+    if(do_match_check && console.first.split("/")[-1] != broker.first.split("/")[-1])
       do_warn <<-MISMATCH
         The two authentication configuration file names set up for the console and broker do not match;
         please ensure that they are using the same authentication mechanism.
-        Authentication configration files:
-        Broker: #{broker}
-        Console: #{console}
+        Authentication configuration files:
+        Broker: #{broker.first}
+        Console: #{console.first}
       MISMATCH
     end
 
@@ -1120,37 +1231,39 @@ class OODiag
 
   def test_broker_certificate
     skip_test unless @is_broker
-
-    require 'net/http'
-    require 'net/https'
-    require 'uri'
-    require 'openssl'
     require 'socket'
-    require 'tempfile'
-
-    url = URI.parse "https://#{Socket.gethostname}/"
-    http = Net::HTTP.new(url.host, url.port)
-    http.use_ssl = true
 
     # Retrieve the SSL cert from Apache
-    certfile = Tempfile.new('oodiag')
-    certfile.write `echo "" | openssl s_client -connect #{url.host}:#{url.port} -prexit 2>/dev/null | sed -n -e '/BEGIN\ CERTIFICATE/,/END\ CERTIFICATE/ p'`
-    certfile.flush
+    response = `curl -k -s -v https://localhost/ -o /dev/null 2>&1`
+    issuer = response.slice(/^\*\s*issuer: .*$/).gsub(/^\*\s*issuer: /,"")
+    subject = response.slice(/^\*\s*subject: .*$/).gsub(/^\*\s*subject: /,"")
+    commonname = response.slice(/^\*\s*common name: .*$/).gsub(/^\*\s*common name: /,"")
+    if subject == issuer
+      do_warn "Using a self-signed certificate for the broker"
+    end
 
-    # Use the server certificate retrieved above to verify the peer certificate
-    # This allows us to verify self-signed certs as well as CA issued certs without 
-    # having to verify the certificate chain
-    http.ca_file = certfile.path
+    apacheconfig = `httpd -S 2> /dev/null`.slice(  / ^\*:443.*  (\n^\s.*)*  \n(\S|\z) /x  )
+    servername = apacheconfig.scan(/(?:(?:default server )|(?:port 443 namevhost ))(\S+) \((?:[^:]+)/)
+    badnames = []
+    servername.each do |sn|
+      # does the certificate common name match ServerName
+      if commonname != sn[0] and commonname != sn[0].gsub(/^[^.]*/,"*")
+        badnames << sn[0]
+      end
+    end
 
-    # Force verification of the server SSL certificate
-    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    begin
-      request = Net::HTTP::Get.new(url.path)
-      response = http.request(request)
-    rescue OpenSSL::SSL::SSLError => e
-      do_warn "There was an error verifying the Broker SSL cert: #{e.message}"
-    ensure
-      certfile.close!
+    if badnames.size > 0
+      badnames.uniq.each do |badname|
+        config_files = `grep -l -e "^[[:blank:]]*ServerName[[:blank:]]*#{badname}" /etc/httpd/conf.d/*.conf`
+        config_files.each_line do |config_file|
+          do_warn <<-CONFLICT
+            #{config_file.chomp} 
+            defines ServerName as #{badname}.  This does not match the certificate common name of 
+            #{commonname}.  
+            This can cause errors when client tools try to connect to the broker.
+          CONFLICT
+        end
+      end
     end
   end
 
@@ -1167,6 +1280,51 @@ class OODiag
       ROGUES
     end
   end
+
+  def test_node_frontend_clash
+    skip_test unless @is_node
+    conflicts = %w[ rubygem-openshift-origin-frontend-apache-mod-rewrite
+                    rubygem-openshift-origin-frontend-apache-vhost ]
+    if conflicts.all? {|rpm| @rpms[rpm]}
+      # these both provide a conf file in /etc/httpd/conf.d which conflict if both are installed.
+      config = OpenShift::Config.new
+      plugins = config.get('OPENSHIFT_FRONTEND_HTTP_PLUGINS').split(',').map {|it| "rubygem-" + it}
+      remove = conflicts - plugins
+      do_fail <<-CONFLICT
+        Conflicting RPMs are installed:
+          rubygem-openshift-origin-frontend-apache-mod-rewrite
+          rubygem-openshift-origin-frontend-apache-vhost
+        When both are present, apps are likely to be unreachable.
+        Please remove the one not used in node.conf:
+          yum remove #{remove.join " "}
+        Then, restart the httpd service.
+      CONFLICT
+    end
+  end
+
+  def test_yum_configuration
+    if system "command -v oo-admin-yum-validator >& /dev/null"
+      output = `oo-admin-yum-validator --report-all 2>&1`
+      $?.success? or do_warn <<-YUM 
+        oo-admin-yum-validator reported some possible problems
+        with your package source configuration:
+--------------------------------------------------------------
+      #{output}
+--------------------------------------------------------------
+        Incorrect package source configuration could lead to
+        failure to install the correct RPMs.
+      YUM
+    elsif @project_is[:enterprise]
+      do_warn <<-YUM
+        oo-admin-yum-validator is not installed. Please install with:
+          yum install openshift-enterprise-release
+        This tool helps validate and fix your package source
+        configuration. Incorrect configuration could lead to
+        failure to install the correct RPMs.
+      YUM
+    end
+  end
+
 end #class OODiag
 
 
@@ -1214,21 +1372,26 @@ if __FILE__ == $0
   end
   options[:tests] = ARGV
 
-  #
-  # execute
-  #
-  o = OODiag.new(options)
-  o.run_setup
-  warns, errors = o.run_tests
+  begin
+    #
+    # execute
+    #
+    o = OODiag.new(options)
+    o.run_setup
+    warns, errors = o.run_tests
 
-  #
-  # summarize
-  #
-  o.wputs "#{warns} WARNINGS" if warns > 0
-  if errors > 0
-    o.eputs "#{errors} ERRORS"
-  else
-    puts "NO ERRORS"
+    #
+    # summarize
+    #
+    o.wputs "#{warns} WARNINGS" if warns > 0
+    if errors > 0
+      o.eputs "#{errors} ERRORS"
+    else
+      puts "NO ERRORS"
+    end
+    exit errors
+  rescue Interrupt
+    puts "\nExiting due to user interrupt (^C)."
+    exit 1
   end
-  exit errors
 end

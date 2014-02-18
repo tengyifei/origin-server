@@ -1,0 +1,22 @@
+<head>
+<!-- link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.no-icons.min.css" rel="stylesheet" -->
+<link href="https://github.com/assets/github.css" media="all" rel="stylesheet" type="text/css" />
+<link href="https://github.com/assets/github2.css" media="all" rel="stylesheet" type="text/css" />
+<style type="text/css">
+
+pre.terminal {
+   color: #000;
+   border-radius: 0;
+   border: none;
+   background-image: none;
+   background-color: #C7CCC7;
+   border-left: 3px solid #444;
+   padding: 10px;
+}
+
+body {
+  margin: 50px;
+}
+
+</style>
+</head>

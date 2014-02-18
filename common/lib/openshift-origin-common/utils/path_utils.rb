@@ -17,9 +17,11 @@
 require 'fileutils'
 require 'etc'
 require 'pathname'
+require 'fcntl'
+require 'openshift-origin-common/utils/etc_utils'
 
 module PathUtils
-  def self.private_module_function(name)   #:nodoc:
+  def self.private_module_function(name) #:nodoc:
     module_function name
     private_class_method name
   end
@@ -52,6 +54,17 @@ module PathUtils
 
   module_function :oo_chown_R
 
+  ##
+  # Created to mimic oo_chown, but symbolic links are *NOT* dereferenced.
+  def oo_lchown(user, group, *list)
+    user  = pu_get_uid(user)
+    group = pu_get_gid(group)
+
+    File.lchown(user, group, *list)
+  end
+
+  module_function :oo_lchown
+
   # PathUtils.join(string, ...)  ->  path
   #
   # Returns a new string formed by joining the strings using
@@ -66,16 +79,31 @@ module PathUtils
 
   module_function :join
 
+  # PathUtils.flock(lock_file) { block } -> nil
+  #
+  # Create a file lock for the duration of the provided block
+  # @param lock_file [String] path including file to use for locking
+  # @param unlink_file [true, false] should lock file be removed when lock released?
+  def flock(lock_file, unlink_file = true)
+    File.open(lock_file, File::RDWR|File::CREAT|File::TRUNC, 0600) do |lock|
+      lock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+      lock.flock(File::LOCK_EX)
+
+      begin
+        yield(lock)
+      ensure
+        FileUtils.rm_f(lock_file) if unlink_file
+        lock.flock(File::LOCK_UN)
+      end
+    end
+  end
+
+  module_function :flock
+
   def pu_get_uid(user)
     return nil unless user
-    case user
-      when Integer
-        user < 4294967296 ? user : Etc.getpwnam(user.to_s).uid
-      when /\A\d{1,10}\z/
-        user.to_i
-      else
-        Etc.getpwnam(user).uid
-    end
+
+    EtcUtils.uid(user)
   end
 
   private_module_function :pu_get_uid
@@ -83,15 +111,9 @@ module PathUtils
   def pu_get_gid(group)
     return nil unless group
 
-    case group
-      when Integer
-        group < 4294967296 ? group : Etc.getgrnam(group.to_s).gid
-      when /\A\d{1,10}\z/
-        group.to_i
-      else
-        Etc.getgrnam(group).gid
-    end
+    EtcUtils.gid(group)
   end
 
   private_module_function :pu_get_gid
 end
+

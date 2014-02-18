@@ -27,7 +27,7 @@ legend {
   line-height: $baseLineHeight * 2;
   color: $grayDark;
   border: 0;
-  border-bottom: 1px solid $grayLighter;
+  border-bottom: 1px solid #ddd;
 
   // Small
   small {
@@ -44,12 +44,14 @@ select,
 textarea {
   @include font-shorthand(); // Set size, weight, line-height here
 }
+
 input,
 button,
 select,
 textarea {
-  @include font-family-sans-serif(); // And only set font-family here for those that need it (note the missing label element)
+  font-family: $inputFontFamily;
 }
+
 
 // Identify controls by their labels
 label {
@@ -72,9 +74,8 @@ input,
   margin-bottom: 9px;
   font-size: floor($baseFontSize);
   line-height: $baseLineHeight;
-  min-height: $baseLineHeight;
   color: $grayDark;
-  @include border-radius(3px);
+  @include border-radius(1px);
 }
 
 // Reset appearance properties for textual inputs and textarea
@@ -84,18 +85,32 @@ textarea,
 .uneditable-input {
   width: 206px; // plus 12px padding and 2px border
 }
-// Reset height since textareas have rows
-textarea {
-  height: auto;
-}
+
 // Everything else
 select,
 textarea,
-input,
+input[type="text"],
+input[type="password"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="date"],
+input[type="month"],
+input[type="time"],
+input[type="week"],
+input[type="number"],
+input[type="email"],
+input[type="url"],
+input[type="search"],
+input[type="tel"],
+input[type="color"],
+input[type="file"],
+input[type="image"],
 .uneditable-input {
   background-color: $inputBackground;
   border: 1px solid $inputBorder;
   @include box-shadow(inset 0 1px 1px rgba(0,0,0,.075));
+  min-height: $baseLineHeight; /* IE needs min-height */
+  line-height: $baseLineHeight; /* IE needs an explicit line-height */
   $transition: border linear .2s, box-shadow linear .2s;
   @include transition($transition);
 
@@ -110,6 +125,11 @@ input,
   //box-shadow: none;
 
   }
+}
+
+// Reset height since textareas have rows
+textarea {
+  height: auto;
 }
 
 // Position radios and checkboxes better
@@ -251,7 +271,6 @@ textarea {
   border-color: transparent; // IE10 will set borders and backgrounds on checkboxes, override the defaults for input
   background-color: transparent;
   margin-left: -18px;
-  margin-top: 0;
 }
 
 // Move the options list down to align with labels
@@ -336,15 +355,23 @@ textarea[class*="span"],
 // DISABLED STATE
 // --------------
 
-// Disabled and read-only inputs
+// Disabled inputs
 input[disabled],
 select[disabled],
-textarea[disabled],
+textarea[disabled] {
+  cursor: not-allowed;
+  background-color: $inputDisabledBackground;
+  border: 1px solid $inputDisabledBorder;
+  color: #666 !important;
+}
+// Read-only inputs
 input[readonly],
 select[readonly],
 textarea[readonly] {
-  cursor: not-allowed;
   background-color: $inputDisabledBackground;
+  border: 1px dotted $inputDisabledBorder;
+  color: #666 !important;
+  cursor: inherit;
 }
 // Explicitly reset the colors here
 input[type="radio"][disabled],
@@ -353,7 +380,6 @@ input[type="radio"][readonly],
 input[type="checkbox"][readonly] {
   background-color: transparent;
 }
-
 
 
 
@@ -438,8 +464,11 @@ textarea:focus:required:valid {
   display: inline-block;
   @include ie7-inline-block();
   vertical-align: middle;
-  padding-left: 5px;
   margin-bottom: 9px;
+
+  + .help-inline {
+    padding-left: 5px;
+  }
 }
 
 
@@ -462,7 +491,6 @@ textarea:focus:required:valid {
     *margin-left: 0;
     font-size: $baseFontSize;
     vertical-align: top;
-    border-left: 0;
     @include border-radius(0 $inputBorderRadius $inputBorderRadius 0);
     // Make input on top when focused so blue border and shadow always show
     &:focus {
@@ -472,17 +500,15 @@ textarea:focus:required:valid {
   .add-on {
     display: inline-block;
     width: auto;
-    height: $baseLineHeight;
+    height: $baseLineHeight; /* IE needs an explicit height */
     min-width: 16px;
     padding: 4px 5px;
     font-size: $baseFontSize;
     font-weight: normal;
-    line-height: $baseLineHeight;
+    line-height: $baseLineHeight; /* IE needs an explicit line-height */
     text-align: center;
-    //text-shadow: 0 1px 0 $white;
-    background-color: $inputDisabledBackground;
-    border: 1px solid $inputDisabledBorder;
-    color: $grayLight;
+    background-color: $inputAddOnBackground;
+    border: 1px solid $inputBorder;
   }
   .add-on,
   .btn {
@@ -502,6 +528,9 @@ textarea:focus:required:valid {
   .add-on:first-child,
   .btn:first-child {
     @include border-radius($inputBorderRadius 0 0 $inputBorderRadius);
+  }
+  select {
+    height: 30px;
   }
 }
 .input-append {
@@ -525,7 +554,6 @@ textarea:focus:required:valid {
   select,
   .uneditable-input {
     @include border-radius(0);
-    border-right: 0;
   }
   .add-on:first-child,
   .btn:first-child {
@@ -553,7 +581,7 @@ textarea:focus:required:valid {
 
 // Overide assigned error state styles from bootstrap
 .control-group.error .input-prepend .add-on, .control-group.error .input-append .add-on {
-  color: inherit !important;
+  color: #fff !important;
 }
 
 
@@ -691,6 +719,9 @@ legend + .control-group {
     &:first-child {
       *padding-left: $horizontalComponentOffset;
     }
+    .inline:first-child {
+      padding-top: 5px;
+    }
   }
   // Remove bottom margin on block level help text since that's accounted for on .control-group
   .help-block {
@@ -727,57 +758,43 @@ legend + .control-group {
     padding-right: 0;
   }
   select {
-    height: 36px;
+    height: auto;
   }
 }
 
-input[readonly],
-select[readonly],
-textarea[readonly] {
-  cursor: inherit;
-  color: #BABBBC !important;
-  background-color: inherit !important;
-  border: 1px dotted #444444 !important;
-  border-radius: 0 0 0 0 !important;
-}
-.input-copyable {
-  -moz-box-sizing: border-box;
-  background-color: inherit;
-  border: 1px dotted #444444;
-  border-radius: 0 0 0 0;
-  color: #BABBBC;
-  cursor: inherit;
-  height: 28px;
-  width: 100%;
-}
 
 // FORM-IMPORTANT
 // ---------------------------
 .form-important {
   .control-group { margin-bottom: 14px; }
-  .controls { margin-left: 140px; }
 
   input.expand { width: auto; max-width: -moz-available; }
   input.narrow { width: 140px; }
 
   .controls > h3 { 
-    margin-top: 5px; margin-bottom: 0; color: $consoleHeaderColor; 
+    margin-top: 5px; margin-bottom: 0;
 
     > small { margin-left: 10px; vertical-align: middle; display: inline-block; }
     > select { margin-top: -5px; }
   }
 
-  .control-label { margin-left: 15px; width: 120px; text-align: left; color: #949494; }
+  .control-label { margin-left: 15px; text-align: left; color: #666; }
   .error > .control-label { color: $errorBackground; }
 
-  .help-block { color: #949494; max-width: 500px; -moz-transition: 0.2s; overflow: hidden; text-overflow: ellipsis; }
-  .alert { max-width: 500px; }
+  .help-block, .help-inline { max-width: 500px; -moz-transition: 0.2s; overflow: hidden; text-overflow: ellipsis; font-size: $tinyFontSize;}
 
-  .form-actions { padding-left: 140px; }
-
-  h3 .font-icon {margin-left: 25px}
+  h3 .font-icon {margin-left: 10px}
 }
-
+@media (max-width:979px) {
+  .form-important {
+    .controls {
+      margin-left: $horizontalComponentOffset - 40;
+    }
+    .control-label {
+      width: $horizontalComponentOffset - 60; // .controls - 20
+    }
+  }
+}
 @media (max-width: 767px) {
   .form-important {
     .control-label { margin-left: 0; }
@@ -785,7 +802,14 @@ textarea[readonly] {
     .help-block { max-width: inherit; white-space: normal; }
     .alert { max-width: inherit; }
     .controls > h3 { display: inline-block; margin-top: 0; }
-    .form-actions { padding-left: 10px; }
+    .form-actions { padding-left: 0; }
+  }
+  .control-group-important {
+    .input-large, .input-xlarge, .input-xxlarge,
+    input[class*="span"], select[class*="span"], textarea[class*="span"], 
+    .uneditable-input {
+      min-height: 38px; // increase heights
+    }
   }
 }
 
@@ -793,4 +817,9 @@ textarea[readonly] {
   .form-important {
     h3 .font-icon {margin-left: 10px}
   }
+}
+
+// Add space between field label and the required indicator
+form label abbr[title="required"] {
+  padding-left: 3px;
 }

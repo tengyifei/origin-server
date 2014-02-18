@@ -1,6 +1,7 @@
 class Authorization
   include Mongoid::Document
   include Mongoid::Timestamps
+  include AccessControlled
 
   belongs_to :user, class_name: CloudUser.name
   field :identity_id, :type => String
@@ -25,6 +26,8 @@ class Authorization
   index({ token: 1 }, { unique: true })
   index({ user_id: 1 })
 
+  create_indexes
+
   attr_accessible :note, :expires_in
 
   validates :token, :uniqueness => true
@@ -44,7 +47,7 @@ class Authorization
   scope :not_expired, lambda{ where(:expires_at.gt => DateTime.now, :revoked_at => nil) }
 
   def self.authenticate(token)
-    with(consistency: :eventual).where(token: token).first
+    with(consistency: :eventual).where(token: token).find_by
   rescue Mongoid::Errors::DocumentNotFound
     where(token: token).first
   end

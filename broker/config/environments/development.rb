@@ -1,15 +1,13 @@
 Broker::Application.configure do
   # Settings specified here will take precedence over those in config/application.rb
 
-  # The test environment is used exclusively to run your application's
-  # test suite.  You never need to work with it otherwise.  Remember that
-  # your test database is "scratch space" for the test suite and is wiped
-  # and recreated between test runs.  Don't rely on the data there!
   config.cache_classes = ENV['BROKER_SOURCE'] ? false : true
   config.reload_plugins = ENV['BROKER_SOURCE'] ? true : false
 
   # Log error messages when you accidentally call methods on nil.
   config.whiny_nils = true
+
+  config.log_level = :debug
 
   # Show full error reports and enable caching
   config.consider_all_requests_local       = true
@@ -18,7 +16,7 @@ Broker::Application.configure do
   # Raise exceptions instead of rendering exception templates
   config.action_dispatch.show_exceptions = true
 
-  # Disable request forgery protection in test environment
+  # Disable request forgery protection
   config.action_controller.allow_forgery_protection    = false
 
   # Tell Action Mailer not to deliver emails to the real world.
@@ -34,6 +32,14 @@ Broker::Application.configure do
   # Print deprecation notices to the stderr
   config.active_support.deprecation = :stderr
 
+  # Do not compress assets
+  config.assets.compress = false
+
+  # Expands the lines which load the assets
+  config.assets.debug = true
+  config.assets.logger = false
+
+
   ############################################
   # OpenShift Configuration Below this point #
   ############################################
@@ -47,7 +53,8 @@ Broker::Application.configure do
     :user => conf.get("MONGO_USER", "openshift"),
     :password => conf.get("MONGO_PASSWORD", "mooo"),
     :db => conf.get("MONGO_DB", "openshift_broker_dev"),
-    :ssl => conf.get_bool("MONGO_SSL", "false")
+    :ssl => conf.get_bool("MONGO_SSL", "false"),
+    :write_replicas => conf.get("MONGO_WRITE_REPLICAS", 1).to_i
   }
 
   config.usage_tracking = {
@@ -72,23 +79,37 @@ Broker::Application.configure do
 
   config.openshift = {
     :domain_suffix => conf.get("CLOUD_DOMAIN", "example.com"),
+    :allow_alias_in_domain => conf.get_bool("ALLOW_ALIAS_IN_DOMAIN", "false"),
+    :default_max_domains => (conf.get("DEFAULT_MAX_DOMAINS", "10")).to_i,
     :default_max_gears => (conf.get("DEFAULT_MAX_GEARS", "100")).to_i,
     :default_gear_size => conf.get("DEFAULT_GEAR_SIZE", "small"),
     :gear_sizes => conf.get("VALID_GEAR_SIZES", "small").split(","),
     :default_gear_capabilities => conf.get("DEFAULT_GEAR_CAPABILITIES", "small").split(","),
+    :default_allow_ha => conf.get('DEFAULT_ALLOW_HA', "false"),
     :community_quickstarts_url => conf.get('COMMUNITY_QUICKSTARTS_URL'),
-    :scopes => ['Scope::Session', 'Scope::Read', 'Scope::Application', 'Scope::Userinfo'],
+    :scopes => ['Scope::Session', 'Scope::Read', 'Scope::Domain', 'Scope::Application', 'Scope::Userinfo'],
     :default_scope => 'userinfo',
     :scope_expirations => OpenShift::Controller::Configuration.parse_expiration(conf.get('AUTH_SCOPE_TIMEOUTS'), 1.day),
     :download_cartridges_enabled => conf.get_bool("DOWNLOAD_CARTRIDGES_ENABLED", "true"),
     :ssl_endpoint => conf.get("SSL_ENDPOINT", "allow"),
+    :max_members_per_resource => conf.get('MAX_MEMBERS_PER_RESOURCE', '100').to_i,
+    :allow_ha_applications => conf.get_bool('ALLOW_HA_APPLICATIONS', "false"),
+    :default_ha_multiplier => (conf.get("DEFAULT_HA_MULTIPLIER", "0")).to_i,
+    :router_hostname => conf.get('ROUTER_HOSTNAME', "www.example.com"),
+    :ha_dns_prefix => conf.get('HA_DNS_PREFIX', "ha-"),
+    :ha_dns_suffix => conf.get('HA_DNS_SUFFIX', ""),
+    :valid_ssh_key_types => OpenShift::Controller::Configuration.parse_list(conf.get('VALID_SSH_KEY_TYPES', nil)),
+    :allow_obsolete_cartridges => conf.get_bool('ALLOW_OBSOLETE_CARTRIDGES', "false"),
+    :allow_multiple_haproxy_on_node => conf.get_bool('ALLOW_MULTIPLE_HAPROXY_ON_NODE', "true"),
+    :syslog_enabled => conf.get_bool('SYSLOG_ENABLED', 'false'),
+    :app_template_for => OpenShift::Controller::Configuration.parse_url_hash(conf.get('DEFAULT_APP_TEMPLATES', nil)),
   }
 
   config.auth = {
     :salt => conf.get("AUTH_SALT", ""),
-    :privkeyfile => conf.get("AUTH_PRIVKEYFILE", "/var/www/openshift/broker/config/server_priv.pem"),
-    :privkeypass => conf.get("AUTH_PRIVKEYPASS", ""),
-    :pubkeyfile  => conf.get("AUTH_PUBKEYFILE", "/var/www/openshift/broker/config/server_pub.pem"),
+    :privkeyfile => conf.get("AUTH_PRIV_KEY_FILE", "/var/www/openshift/broker/config/server_priv.pem"),
+    :privkeypass => conf.get("AUTH_PRIV_KEY_PASS", ""),
+    :pubkeyfile  => conf.get("AUTH_PUB_KEY_FILE", "/var/www/openshift/broker/config/server_pub.pem"),
     :rsync_keyfile => conf.get("AUTH_RSYNC_KEY_FILE", "/etc/openshift/rsync_id_rsa")
   }
 
@@ -96,20 +117,10 @@ Broker::Application.configure do
     :max_downloaded_carts_per_app => conf.get("MAX_DOWNLOADED_CARTS_PER_APP", "5").to_i,
     :max_download_redirects => conf.get("MAX_DOWNLOAD_REDIRECTS", "2").to_i,
     :max_cart_size => conf.get("MAX_CART_SIZE", "20480").to_i,
-    :max_download_time => conf.get("MAX_DOWNLOAD_TIME", "10").to_i
+    :max_download_time => conf.get("MAX_DOWNLOAD_TIME", "10").to_i,
+    :connection_timeout => conf.get("CART_DOWNLOAD_CONN_TIMEOUT", "2").to_i,
+    :http_proxy => conf.get('HTTP_PROXY', '')
   }
 
-  # Enable the asset pipeline
-  config.assets.enabled = true
-
-  # Version of your assets, change this if you want to expire all your assets
-  config.assets.version = '1.0'
-
-  # Do not compress assets
-  config.assets.compress = false
-
-  # Expands the lines which load the assets
-  config.assets.debug = true
-  config.assets.logger = false
-
+  config.logger = OpenShift::Syslog.logger_for('openshift-broker', 'app') if config.openshift[:syslog_enabled]
 end

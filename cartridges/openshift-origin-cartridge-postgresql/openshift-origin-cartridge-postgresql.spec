@@ -9,7 +9,7 @@
 
 Summary:       Provides embedded PostgreSQL support
 Name:          openshift-origin-cartridge-postgresql
-Version: 0.5.1
+Version: 1.21.0
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -32,10 +32,13 @@ Requires:      %{?scl:%scl_prefix}postgresql-contrib
 Requires:      %{?scl:%scl_prefix}postgresql-plperl
 Requires:      %{?scl:%scl_prefix}postgresql-plpython
 Requires:      %{?scl:%scl_prefix}postgresql-pltcl
+Requires:      %{?scl:%scl_prefix}postgis
+Requires:      %{?scl:%scl_prefix}pgRouting
 %endif
 %if 0%{?fedora} >= 19
 Requires:      postgresql >= 9.2
 Requires:      postgresql < 9.3
+Requires:      postgis >= 2
 %endif
 Requires:      postgresql-server
 Requires:      postgresql-libs
@@ -56,9 +59,10 @@ Requires:      python-psycopg2
 Requires:      %{?scl_ruby:%scl_prefix_ruby}rubygem-pg
 Requires:      rhdb-utils
 Requires:      uuid-pgsql
+Requires:      proj-nad
+Provides:      openshift-origin-cartridge-postgresql-8.4 = 2.0.0
+Obsoletes:     openshift-origin-cartridge-postgresql-8.4 <= 1.99.9
 BuildArch:     noarch
-
-Obsoletes: openshift-origin-cartridge-postgresql-8.4
 
 %description
 Provides PostgreSQL cartridge support to OpenShift. (Cartridge Format V2)
@@ -88,9 +92,6 @@ Provides PostgreSQL cartridge support to OpenShift. (Cartridge Format V2)
 %endif
 %__rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
-%posttrans
-%{_sbindir}/oo-admin-cartridge --action install --source %{cartridgedir}
-
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
@@ -101,156 +102,37 @@ Provides PostgreSQL cartridge support to OpenShift. (Cartridge Format V2)
 %doc %{cartridgedir}/LICENSE
 
 %changelog
-* Fri Jul 12 2013 Adam Miller <admiller@redhat.com> 0.5.1-1
-- bump_minor_versions for sprint 31 (admiller@redhat.com)
-
-* Fri Jul 12 2013 Adam Miller <admiller@redhat.com> 0.4.7-1
-- Bug 983190 (asari.ruby@gmail.com)
-- Merge pull request #3052 from
-  BanzaiMan/dev/hasari/f19_postgres_cart_version_sync
+* Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 1.20.4-1
+- Merge pull request #4744 from mfojtik/latest_versions
   (dmcphers+openshiftbot@redhat.com)
-- Sync F19 cart version with that of RHEL (asari.ruby@gmail.com)
+- Card origin_cartridge_111 - Updated cartridge versions for stage cut
+  (mfojtik@redhat.com)
+- Fix obsoletes and provides (tdawson@redhat.com)
 
-* Wed Jul 10 2013 Adam Miller <admiller@redhat.com> 0.4.6-1
-- Merge pull request #3042 from BanzaiMan/dev/hasari/bz981528
+* Tue Feb 11 2014 Adam Miller <admiller@redhat.com> 1.20.3-1
+- Merge pull request #4559 from fabianofranz/dev/441
   (dmcphers+openshiftbot@redhat.com)
-- Bug 981528 (asari.ruby@gmail.com)
-- Bug 979740 - Fix Postgres cartridge using $HOME (fotios@redhat.com)
-- Bug 981528 (asari.ruby@gmail.com)
+- Removed references to OpenShift forums in several places
+  (contact@fabianofranz.com)
 
-* Tue Jul 09 2013 Adam Miller <admiller@redhat.com> 0.4.5-1
-- Revert "No need for Ruby SCL here." (asari.ruby@gmail.com)
-- Bug 982377 (asari.ruby@gmail.com)
+* Mon Feb 10 2014 Adam Miller <admiller@redhat.com> 1.20.2-1
+- Cleaning specs (dmcphers@redhat.com)
 
-* Mon Jul 08 2013 Adam Miller <admiller@redhat.com> 0.4.4-1
-- Document $OPENSHIFT_POSTGRESQL_VERSION (asari.ruby@gmail.com)
-- Get postgres running again (dmcphers@redhat.com)
-- Bug 981528 (asari.ruby@gmail.com)
+* Thu Jan 30 2014 Adam Miller <admiller@redhat.com> 1.20.1-1
+- bump_minor_versions for sprint 40 (admiller@redhat.com)
 
-* Wed Jul 03 2013 Adam Miller <admiller@redhat.com> 0.4.3-1
-- Make more SDK calls (asari.ruby@gmail.com)
+* Thu Jan 23 2014 Adam Miller <admiller@redhat.com> 1.19.5-1
+- Bump up cartridge versions (bparees@redhat.com)
 
-* Tue Jul 02 2013 Adam Miller <admiller@redhat.com> 0.4.2-1
-- Bug 976921: Move cart installation to %%posttrans (ironcladlou@gmail.com)
-- Conflicts: is obsolete. (asari.ruby@gmail.com)
-- There is no Group-Overrides needed (asari.ruby@gmail.com)
-- Match up "Provides" with what's overridden (asari.ruby@gmail.com)
-- No need for Ruby SCL here. (asari.ruby@gmail.com)
-- Update $OPENSHIFT_POSTGRES_VERSION for existing cartridges
-  (asari.ruby@gmail.com)
-- Card online_runtime_157 (asari.ruby@gmail.com)
-- remove v2 folder from cart install (dmcphers@redhat.com)
-
-* Tue Jun 25 2013 Adam Miller <admiller@redhat.com> 0.4.1-1
-- bump_minor_versions for sprint 30 (admiller@redhat.com)
-
-* Mon Jun 17 2013 Adam Miller <admiller@redhat.com> 0.3.2-1
-- First pass at removing v1 cartridges (dmcphers@redhat.com)
-- Update postgresql cartridge for F19 version (kraman@gmail.com)
-
-* Thu May 30 2013 Adam Miller <admiller@redhat.com> 0.3.1-1
-- bump_minor_versions for sprint 29 (admiller@redhat.com)
-
-* Tue May 28 2013 Adam Miller <admiller@redhat.com> 0.2.7-1
-- Bug 962657: Return db info to client during postgres install
-  (ironcladlou@gmail.com)
-- Bug 967118 - Remove redundant entries from managed_files.yml
-  (jhonce@redhat.com)
-
-* Fri May 24 2013 Adam Miller <admiller@redhat.com> 0.2.6-1
-- Bug 967017: Use underscores for v2 cart script names (ironcladlou@gmail.com)
-- remove install build required for non buildable carts (dmcphers@redhat.com)
-
-* Thu May 23 2013 Adam Miller <admiller@redhat.com> 0.2.5-1
-- Merge pull request #2596 from fotioslindiakos/Bug960707
+* Mon Jan 20 2014 Adam Miller <admiller@redhat.com> 1.19.4-1
+- Merge pull request #4494 from mfojtik/bugzilla/1053113
   (dmcphers+openshiftbot@redhat.com)
-- Fix test case in extended postgres tests (fotios@redhat.com)
+- Bug 1053113 - Make sure postgresql is running vacuum (mfojtik@redhat.com)
 
-* Wed May 22 2013 Adam Miller <admiller@redhat.com> 0.2.4-1
-- Bug 962662 (dmcphers@redhat.com)
-- Merge pull request #2569 from fotioslindiakos/Bug965105
-  (dmcphers+openshiftbot@redhat.com)
-- Merge pull request #2562 from fotioslindiakos/Bug964116
-  (dmcphers+openshiftbot@redhat.com)
-- Bug 965105: Cannot delete application (fotios@redhat.com)
-- Bug 964116: Postgres failed to restore snapshot (fotios@redhat.com)
-- Fix bug 964348 (pmorie@gmail.com)
+* Thu Jan 16 2014 Adam Miller <admiller@redhat.com> 1.19.3-1
+- Merge pull request #4483 from jhadvig/gis (dmcphers+openshiftbot@redhat.com)
+- Bug 1040948 - Executing PostGIS functions in PostGres9.2 (jhadvig@redhat.com)
 
-* Mon May 20 2013 Dan McPherson <dmcphers@redhat.com> 0.2.3-1
-- Merge pull request #2515 from fotioslindiakos/postgres_v2
-  (dmcphers+openshiftbot@redhat.com)
-- spec file cleanup (tdawson@redhat.com)
-- Make scaled postgres connection info use hostname instead of IP
-  (fotios@redhat.com)
-
-* Thu May 16 2013 Adam Miller <admiller@redhat.com> 0.2.2-1
-- Bug 959123: Unable to restore Postgres snapshot to new application
-  (fotios@redhat.com)
-- Bug 959123: Suppress output from psql command during start/stop
-  (fotios@redhat.com)
-- locking fixes and adjustments (dmcphers@redhat.com)
-- Add erb processing to managed_files.yml Also fixed and added some test cases
-  (fotios@redhat.com)
-- WIP Cartridge Refactor -- Cleanup spec files (jhonce@redhat.com)
-- Switching v2 to be the default (dmcphers@redhat.com)
-- Properly restore Postgres database to new application (fotios@redhat.com)
-
-* Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.2.1-1
-- bump_minor_versions for sprint 28 (admiller@redhat.com)
-
-* Wed May 08 2013 Adam Miller <admiller@redhat.com> 0.1.5-1
-- Bug 959123: Fix Postgresql snapshot restore (fotios@redhat.com)
-
-* Fri May 03 2013 Adam Miller <admiller@redhat.com> 0.1.4-1
-- Special file processing (fotios@redhat.com)
-- Validate cartridge and vendor names under certain conditions
-  (asari.ruby@gmail.com)
-
-* Thu May 02 2013 Adam Miller <admiller@redhat.com> 0.1.3-1
-- <postgres> add %%post to put in cartridge registry on installation
-  (lmeyer@redhat.com)
-
-* Tue Apr 30 2013 Adam Miller <admiller@redhat.com> 0.1.2-1
-- Env var WIP. (mrunalp@gmail.com)
-
-* Thu Apr 25 2013 Adam Miller <admiller@redhat.com> 0.1.1-1
-- Bug 955973 (dmcphers@redhat.com)
-- Postgres V2 fixes (fotios@redhat.com)
-- Split v2 configure into configure/post-configure (ironcladlou@gmail.com)
-- more install/post-install scripts (dmcphers@redhat.com)
-- Update outdated links in 'cartridges' directory. (asari.ruby@gmail.com)
-- WIP Cartridge Refactor - Change environment variable files to contain just
-  value (jhonce@redhat.com)
-- Adding V2 Format to all v2 cartridges (calfonso@redhat.com)
-- Bug 928675 (asari.ruby@gmail.com)
-- V2 documentation refactoring (ironcladlou@gmail.com)
-- V2 cartridge documentation updates (ironcladlou@gmail.com)
-- bump_minor_versions for sprint 2.0.26 (tdawson@redhat.com)
-
-* Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 0.0.8-1
-- Postgres V2 snapshot/restore (fotios@redhat.com)
-
-* Fri Apr 12 2013 Dan McPherson <dmcphers@redhat.com> 0.0.7-1
-- 
-
-* Fri Apr 12 2013 Dan McPherson <dmcphers@redhat.com> 0.0.6-1
-- new package built with tito
-
-* Fri Apr 12 2013 Fotios Lindiakos <fotios@redhat.com> 0.0.5-1
-- Automatic commit of package [openshift-origin-cartridge-postgresql] release
-  [0.0.4-1]. (fotios@redhat.com)
-- Automatic commit of package [openshift-origin-cartridge-postgresql] release
-  [0.0.2-1]. (fotios@redhat.com)
-- Initial commit (fotios@redhat.com)
-
-* Fri Apr 12 2013 Fotios Lindiakos <fotios@redhat.com> 0.0.4-1
-- Fixed license and vendor (fotios@redhat.com)
-
-* Fri Apr 12 2013 Fotios Lindiakos <fotios@redhat.com>
-- Fixed license and vendor (fotios@redhat.com)
-
-* Fri Apr 12 2013 Fotios Lindiakos <fotios@redhat.com> 0.0.2-1
-- Initial v2 commit 
-
-* Wed Apr 03 2013 Fotios Lindiakos <fotios@redhat.com> 0.0.1-1
-- Initial V2 Package
+* Mon Jan 13 2014 Adam Miller <admiller@redhat.com> 1.19.2-1
+- Fixing double-slash in python and posgresql cartridge code
+  (jhadvig@redhat.com)

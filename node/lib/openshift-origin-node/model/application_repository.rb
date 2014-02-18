@@ -38,9 +38,16 @@ module OpenShift
       # Creates a new application Git repository from a template
       #
       # +container+ is of type +ApplicationContainer+
-      def initialize(container)
+      def initialize(container, path = nil)
         @container = container
-        @path = PathUtils.join(@container.container_dir, 'git', "#{@container.application_name}.git")
+        @path = path || PathUtils.join(@container.container_dir, 'git', "#{@container.application_name}.git")
+      end
+
+      ##
+      # Returns +true+ if the given +filename+ exists in the tree for the git ref +ref+
+      # of the repository, otherwise +false+.
+      def file_exists?(filename, ref)
+        return (not `cd #{@path}; git ls-tree #{ref} -- #{filename}`.chomp.strip.empty?)
       end
 
       def empty?
@@ -105,8 +112,15 @@ module OpenShift
       def populate_from_url(cartridge_name, url)
         return nil if exists?
 
-        repo_spec, commit = ::OpenShift::Git.safe_clone_spec(url, ::OpenShift::Git::ALLOWED_NODE_SCHEMES) rescue raise ::OpenShift::Runtime::Utils::ShellExecutionException.new("CLIENT_ERROR: The provided source code repository URL is not valid (#{$!.message})", 130)
-        raise ::OpenShift::Runtime::Utils::ShellExecutionException.new("CLIENT_ERROR: Source code repository URL protocol must be one of: #{::OpenShift::Git::ALLOWED_NODE_SCHEMES.join(', ')}", 130) unless repo_spec
+        repo_spec, commit = ::OpenShift::Git.safe_clone_spec(url, ::OpenShift::Git::ALLOWED_NODE_SCHEMES) rescue \
+          raise ::OpenShift::Runtime::Utils::ShellExecutionException.new(
+            "CLIENT_ERROR: The provided source code repository URL is not valid (#{$!.message})",
+            130)
+        unless repo_spec
+          raise ::OpenShift::Runtime::Utils::ShellExecutionException.new(
+            "CLIENT_ERROR: Source code repository URL protocol must be one of: #{::OpenShift::Git::ALLOWED_NODE_SCHEMES.join(', ')}",
+            130)
+        end
 
         git_path = PathUtils.join(@container.container_dir, 'git')
         FileUtils.mkpath(git_path)
@@ -123,10 +137,12 @@ module OpenShift
               chdir:               git_path,
               expected_exitstatus: 0)
         rescue ::OpenShift::Runtime::Utils::ShellExecutionException => e
-          raise ::OpenShift::Runtime::Utils::ShellExecutionException.new(
-                    "CLIENT_ERROR: Source Code repository could not be cloned: '#{url}'.  Please verify the repository is correct and contact support.",
-                    131
-                )
+          if ssh_like? url
+            msg = "CLIENT_ERROR: Source code repository could not be cloned: '#{url}'. Please verify the repository is correct and try a non-SSH URL such as HTTP."
+          else
+            msg = "CLIENT_ERROR: Source code repository could not be cloned: '#{url}'. Please verify the repository is correct and contact support."
+          end
+          raise ::OpenShift::Runtime::Utils::ShellExecutionException.new(msg, 131)
         end
 
         configure
@@ -161,15 +177,17 @@ module OpenShift
         configure
       end
 
-      def archive
+      def archive(destination, ref)
         return unless exist?
 
         # expose variables for ERB processing
         @application_name = @container.application_name
-        @target_dir       = PathUtils.join(@container.container_dir, 'app-root', 'runtime', 'repo')
+        @target_dir       = destination
 
         FileUtils.rm_rf Dir.glob(PathUtils.join(@target_dir, '*'))
         FileUtils.rm_rf Dir.glob(PathUtils.join(@target_dir, '.[^\.]*'))
+
+        @deployment_ref = ref
 
         @container.run_in_container_context(ERB.new(GIT_ARCHIVE).result(binding),
             chdir:               @path,
@@ -189,6 +207,20 @@ module OpenShift
             expected_exitstatus: 0)
 
         @container.run_in_container_context("/bin/rm -rf #{cache} &")
+      end
+
+      def get_sha1(ref)
+        @deployment_ref = ref
+
+        out, _, rc = @container.run_in_container_context(ERB.new(GIT_GET_SHA1).result(binding),
+                                                        chdir: @path)
+
+        if 0 == rc
+          out.chomp
+        else
+          # if the repo is empty (no commits) or the ref is invalid, the rc will be nonzero
+          ''
+        end
       end
 
       def destroy
@@ -245,6 +277,12 @@ module OpenShift
       end
 
       private
+      def ssh_like?(url)
+        # HTTP,SSH, and FTP URLs may contain '@' to delimit "user:password" before the host name
+        url_s = url.to_s.downcase
+        (url_s.include?('@') && ! url_s.include?('//')) || (url_s.start_with? 'ssh:')
+      end
+
       #-- ERB Templates -----------------------------------------------------------
 
       COUNT_GIT_OBJECTS = 'find objects -type f 2>/dev/null | wc -l'
@@ -274,10 +312,12 @@ GIT_DIR=./<%= @application_name %>.git git repack;
 
       GIT_URL_CLONE = %q{\
 set -xe;
-git clone --bare --no-hardlinks <%= @url %> <%= @application_name %>.git;
+git clone --bare --no-hardlinks '<%= OpenShift::Runtime::Utils.sanitize_url_argument(@url) %>' <%= @application_name %>.git;
 GIT_DIR=./<%= @application_name %>.git git config core.logAllRefUpdates true;
 <% if @commit && !@commit.empty? %>
-GIT_DIR=./<%= @application_name %>.git git reset --soft '<%= @commit %>';
+GIT_DIR=./<%= @application_name %>.git git reset --soft '<%= OpenShift::Runtime::Utils.sanitize_argument(@commit) %>';
+# || true to ensure we don't error out if the branch already exists
+GIT_DIR=./<%= @application_name %>.git git branch master || true;
 <% end %>
 GIT_DIR=./<%= @application_name %>.git git repack;
 }
@@ -288,7 +328,7 @@ shopt -s dotglob;
 if [ "$(#{COUNT_GIT_OBJECTS})" -eq "0" ]; then
   exit 0;
 fi
-git archive --format=tar HEAD | (cd <%= @target_dir %> && tar --warning=no-timestamp -xf -);
+git archive --format=tar <%= @deployment_ref %> | (cd <%= @target_dir %> && tar --warning=no-timestamp -xf -);
 }
 
       GIT_DESCRIPTION = %q{
@@ -300,6 +340,11 @@ git archive --format=tar HEAD | (cd <%= @target_dir %> && tar --warning=no-times
   name = OpenShift System User
 [gc]
   auto = 100
+}
+
+      GIT_GET_SHA1 = %Q{
+set -xe;
+git rev-parse --short <%= @deployment_ref %>
 }
 
       PRE_RECEIVE = %q{

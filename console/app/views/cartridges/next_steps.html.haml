@@ -1,4 +1,3 @@
-- breadcrumb_for_application @application, 'Add a Cartridge'
 - content_for :page_title, 'Next Steps'
 
 - if @wizard
@@ -6,6 +5,8 @@
   %h1.invisible Next Steps
 - else
   %h1 Next Steps
+
+%p.larger Your cartridge has been added. #{link_to "Return to the application overview page", application_path(@application)}.
 
 = flashes
 

@@ -1,0 +1,30 @@
+- content_for :page_style, 'highlight'
+- content_for :page_title, 'Welcome to OpenShift'
+- content_for :footer do
+  = render :partial => 'applications/footer'
+
+- content_for :top do
+  .grid-wrapper.section-header
+    %nav.span12.span-flush-right
+      %h1 Welcome to OpenShift
+
+%section
+  %p.lead OpenShift helps you build and deploy web applications, mobile backends, service oriented architectures, and host your favorite services.
+
+%section.tile
+  %ol.important-list
+    %li
+      %p Choose a web framework or codebase to start from
+      %p.smaller Try JBoss, PHP, Python, Ruby, Node.js, or create a new Drupal or Wordpress site instantly.
+
+    %li
+      %p Add cartridges like MySQL or MongoDB to your application
+      %p.smaller OpenShift lets you add services and tools to your application through <strong>cartridges</strong> - including databases, cache servers, management tools, and continuous integration servers.
+    %li
+      %p Upload your code to OpenShift via Git
+      %p.smaller Your source code is stored with your application in a Git version control repository.
+
+  %p.lead= link_to "Create your first application now", application_types_path, :class => 'action-more'
+%section
+  %p.light
+    For more about OpenShift, see the #{link_to "How it Works page", product_architecture_url}.

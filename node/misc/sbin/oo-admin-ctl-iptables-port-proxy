@@ -1,0 +1,107 @@
+#!/bin/bash
+# openshift-iptables-port-proxy
+#
+### BEGIN INIT INFO
+# Short-Description:  Script to apply the openshift port proxy iptables rules.
+# Description: Script to apply the openshift port proxy iptables rules.
+### END INIT INFO
+
+RULES_FILE="/etc/openshift/iptables.filter.rules"
+NAT_FILE="/etc/openshift/iptables.nat.rules"
+
+start() {
+    check_firewall true
+
+    ROUTE_LOCALNET=`sysctl -n net.ipv4.conf.all.route_localnet`
+    if [ $ROUTE_LOCALNET -eq "0" ]; then
+        echo "WARNING: net.ipv4.conf.all.route_localnet must be enabled." 1>&2
+        sysctl -w net.ipv4.conf.all.route_localnet=1
+        echo "WARNING: It has been temporarily enabled.  Please ensure this setting is persisted in /etc/sysctl.conf."
+    fi
+
+    if [ -f $RULES_FILE ]; then
+      { echo -e "*filter\n-F rhc-app-comm"; cat $RULES_FILE; echo "COMMIT"; } | iptables-restore -n
+    fi
+
+    if [ -f $NAT_FILE ]; then
+      { echo "*nat"; cat $NAT_FILE; echo "COMMIT"; } | iptables-restore --table=nat
+    fi
+}
+
+stop() {
+    # Droping the reference from the input chain would needlessly complicate
+    # this logic.  For that reason we can't actually drop the chain.  This will
+    # allow admins to flush the chain if needed.
+    iptables -F rhc-app-comm
+    iptables -t nat -F
+}
+
+check_firewall() {
+    FALLBACK=$1
+
+    iptables -L | grep 'rhc-app-comm  all' >/dev/null 2>&1
+    RETVAL=$?
+    if [ ! $RETVAL -eq 0 ]; then
+        echo "ERROR: rhc-app-comm INPUT rule not found.  Check /etc/sysconfig/iptables." 1>&2
+        if [ $FALLBACK ]; then
+            iptables -N rhc-app-comm
+            iptables -I INPUT 1 -j rhc-app-comm
+            echo "WARNING: The INPUT rule has been temporarily added."
+        else
+            exit 1
+        fi
+    fi
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        check_firewall
+
+        if [ ! -f $RULES_FILE ]; then
+            echo "ERROR: $RULES_FILE does not exist." 1>&2
+            exit 1
+        fi
+
+        if [ ! -f $NAT_FILE ]; then
+            echo "ERROR: $NAT_FILE does not exist." 1>&2
+            exit 1
+        fi
+
+        RULES_ASSERTED=`grep ACCEPT $RULES_FILE | wc -l`
+        RULES=`iptables -L rhc-app-comm | grep ACCEPT | wc -l`
+        if [ ! $RULES_ASSERTED -eq $RULES ]; then
+            echo "ERROR: A difference has been detected between state of $RULES_FILE and the rhc-app-comm iptables chain." 1>&2
+            exit 1
+        fi
+
+        NAT_ASSERTED=`grep DNAT $NAT_FILE | wc -l`
+        NAT=`iptables -t nat -L | grep DNAT | wc -l`
+        # Bug 1040824 - We can't assume the openshift nat rules are the only ones
+        # running.  For that reason we only alert if there are more OpenShift NAT
+        # rules than what we see actually running.
+        if [ $NAT_ASSERTED -gt $NAT ]; then
+            echo "ERROR: A difference has been detected between state of $NAT_FILE and the NAT table." 1>&2
+            exit 1
+        fi
+
+        echo "The OpenShift iptables port proxy is enabled."
+        exit 0
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    reload)
+	# Calling stop could cause an outage.  It's best to simply call start.
+        start
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|reload}"
+        exit 2
+esac

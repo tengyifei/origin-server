@@ -37,13 +37,6 @@ class FrontendProxyTest < OpenShift::NodeTestCase
     @config.stubs(:get).with("UID_BEGIN").returns(@uid_begin.to_s)
   end
 
-  # Ensure that the wrapped UID is calculated properly
-  def test_wrap_uid
-    proxy = OpenShift::Runtime::FrontendProxyServer.new
-
-    assert_equal @wrap_uid, proxy.wrap_uid
-  end
-
   # Simple test to validate the port range computation given
   # a certain UID.
   def test_port_range
@@ -236,13 +229,13 @@ class FrontendProxyTest < OpenShift::NodeTestCase
   def test_system_proxy_delete
     proxy = OpenShift::Runtime::FrontendProxyServer.new
 
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with(equals("openshift-port-proxy-cfg setproxy 1 delete")).once
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with(equals("oo-iptables-port-proxy removeproxy 1")).once
     proxy.system_proxy_delete(1)
 
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with(equals("openshift-port-proxy-cfg setproxy 1 delete 2 delete 3 delete")).once
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with(equals("oo-iptables-port-proxy removeproxy 1 2 3")).once
     proxy.system_proxy_delete(1, 2, 3)
 
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^openshift-port-proxy-cfg/)).never
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^oo-iptables-port-proxy/)).never
     assert_equal [0,nil,nil], proxy.system_proxy_delete()
   end
 
@@ -251,11 +244,11 @@ class FrontendProxyTest < OpenShift::NodeTestCase
   def test_system_proxy_add
     proxy = OpenShift::Runtime::FrontendProxyServer.new
 
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with(equals('openshift-port-proxy-cfg setproxy 3000 "127.0.0.1:1000"')).once
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with(equals('oo-iptables-port-proxy addproxy 3000 "127.0.0.1:1000"')).once
     proxy.system_proxy_set({:proxy_port => 3000, :addr => '127.0.0.1:1000'})
 
     OpenShift::Runtime::Utils.expects(:oo_spawn)
-      .with(equals('openshift-port-proxy-cfg setproxy 3000 "127.0.0.1:1000" 3001 "127.0.0.1:1001" 3002 "127.0.0.1:1002"'))
+      .with(equals('oo-iptables-port-proxy addproxy 3000 "127.0.0.1:1000" 3001 "127.0.0.1:1001" 3002 "127.0.0.1:1002"'))
       .once
 
     proxy.system_proxy_set(
@@ -264,7 +257,7 @@ class FrontendProxyTest < OpenShift::NodeTestCase
       {:proxy_port => 3002, :addr => '127.0.0.1:1002'}
       )
 
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^openshift-port-proxy-cfg/)).never
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^oo-iptables-port-proxy/)).never
     assert_equal [0,nil,nil], proxy.system_proxy_set()
   end
 
@@ -273,13 +266,13 @@ class FrontendProxyTest < OpenShift::NodeTestCase
   def test_system_proxy_show
     proxy = OpenShift::Runtime::FrontendProxyServer.new
 
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^openshift-port-proxy-cfg showproxy 3000 /)).once.returns("127.0.0.1:1234")
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^oo-iptables-port-proxy showproxy 3000 /)).once.returns("127.0.0.1:1234")
     assert_equal "127.0.0.1:1234", proxy.system_proxy_show(3000)
 
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^openshift-port-proxy-cfg showproxy 3000 /)).once.returns("")
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^oo-iptables-port-proxy showproxy 3000 /)).once.returns("")
     assert_nil proxy.system_proxy_show(3000)
 
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^openshift-port-proxy-cfg showproxy/)).never
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with(regexp_matches(/^oo-iptables-port-proxy showproxy/)).never
 
     err = assert_raises RuntimeError do
       proxy.system_proxy_show(nil)

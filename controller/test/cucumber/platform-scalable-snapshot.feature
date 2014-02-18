@@ -1,5 +1,6 @@
-@runtime_extended1
-Feature: V2 SDK scalable snapshot and restore
+@gear_extended
+@gear_extended2
+Feature: Scalable snapshot and restore
   Scenario: Create, snapshot, and restore scalable application with plugin with client tools
     And the libra client tools
     And a new client created scalable mock-0.1 application
@@ -16,5 +17,5 @@ Feature: V2 SDK scalable snapshot and restore
 
     When I restore the application
     And the mock control_post_restore marker will exist in the gear
-    And the new file will not be present in the gear app-root repo    
+    And the new file will not be present in the gear app-root repo
     And the mock-plugin control_post_restore marker will exist in the plugin gear

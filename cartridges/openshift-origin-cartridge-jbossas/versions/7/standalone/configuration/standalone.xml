@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 
-<server xmlns="urn:jboss:domain:1.1">
-
+<server xmlns="urn:jboss:domain:1.2">
     <extensions>
         <extension module="org.jboss.as.clustering.infinispan"/>
         <extension module="org.jboss.as.clustering.jgroups"/>
@@ -57,15 +56,17 @@
                     <pattern-formatter pattern="%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
                 </formatter>
             </console-handler-->
-            <periodic-rotating-file-handler name="FILE">
+            <size-rotating-file-handler name="FILE">
                 <formatter>
-                    <pattern-formatter pattern="%d{yyyy/MM/dd HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                    <pattern-formatter
+                        pattern="%d{yyyy/MM/dd HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n" />
                 </formatter>
-                <file relative-to="jboss.server.log.dir" path="server.log"/>
-                <suffix value=".yyyy-MM-dd"/>
-                <append value="true"/>
-            </periodic-rotating-file-handler>
-            <logger category="com.arjuna">
+                <file relative-to="jboss.server.log.dir" path="server.log" />
+                <append value="true" />
+                <rotate-size value="10m" />
+                <max-backup-index value="10" />             
+            </size-rotating-file-handler>
+                <logger category="com.arjuna">
                 <level name="WARN"/>
             </logger>
             <logger category="org.apache.tomcat.util.modeler">
@@ -100,7 +101,7 @@
                         <password>sa</password>
                     </security>
                 </datasource>
-                <datasource jndi-name="java:jboss/datasources/MysqlDS" enabled="${mysql.enabled}" use-java-context="true" pool-name="MysqlDS" use-ccm="true">
+                <datasource jndi-name="java:jboss/datasources/MySQLDS" enabled="${mysql.enabled}" use-java-context="true" pool-name="MySQLDS" use-ccm="true">
                     <connection-url>jdbc:mysql://${env.OPENSHIFT_MYSQL_DB_HOST}:${env.OPENSHIFT_MYSQL_DB_PORT}/${env.OPENSHIFT_APP_NAME}</connection-url>
                     <driver>mysql</driver>
                     <security>
@@ -108,10 +109,12 @@
                       <password>${env.OPENSHIFT_MYSQL_DB_PASSWORD}</password>
                     </security>
                     <validation>
-                    	<check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
-                    	<background-validation>true</background-validation>
-                	</validation>
-                	<pool>
+                        <check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
+                        <background-validation>true</background-validation>
+                        <background-validation-millis>60000</background-validation-millis>
+                        <!--<validate-on-match>true</validate-on-match>-->
+                    </validation>
+                    <pool>
 						<flush-strategy>IdleConnections</flush-strategy>
 					</pool>
                 </datasource>
@@ -123,10 +126,12 @@
                       <password>${env.OPENSHIFT_POSTGRESQL_DB_PASSWORD}</password>
                     </security>
                     <validation>
-                    	<check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
-                    	<background-validation>true</background-validation>
-                	</validation>
-                	<pool>
+                        <check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
+                        <background-validation>true</background-validation>
+                        <background-validation-millis>60000</background-validation-millis>
+                        <!--<validate-on-match>true</validate-on-match>-->
+                    </validation>
+                    <pool>
 						<flush-strategy>IdleConnections</flush-strategy>
 					</pool>
                 </datasource>
@@ -187,7 +192,7 @@
             </thread-pools>
             <!--iiop enable-by-default="false" use-qualified-name="false"/-->
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:infinispan:1.1" default-cache-container="cluster">
+        <subsystem xmlns="urn:jboss:domain:infinispan:1.2" default-cache-container="cluster">
             <cache-container name="cluster" aliases="ha-partition" default-cache="default">
                 <transport lock-timeout="60000"/>
                 <replicated-cache name="default" mode="SYNC" batching="true">
@@ -243,7 +248,7 @@
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:jaxr:1.0">
             <connection-factory jndi-name="java:jboss/jaxr/ConnectionFactory"/>
-            <juddi-server publish-url="http://${env.OPENSHIFT_JBOSSAS_IP}:8080/juddi/publish" query-url="http://${env.OPENSHIFT_JBOSSAS_IP}:8080/juddi/query"/>
+            <juddi-server publish-url="http://${env.OPENSHIFT_JBOSSAS_IP}:${env.OPENSHIFT_JBOSSAS_HTTP_PORT}/juddi/publish" query-url="http://${env.OPENSHIFT_JBOSSAS_IP}:${env.OPENSHIFT_JBOSSAS_HTTP_PORT}/juddi/query"/>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
         <subsystem xmlns="urn:jboss:domain:jca:1.1">
@@ -270,7 +275,7 @@
                 <transport type="TCP" socket-binding="jgroups-tcp"> 
                 	<property name="external_addr">${env.OPENSHIFT_GEAR_DNS}</property>
                     <property name="external_port">${env.OPENSHIFT_JBOSSAS_CLUSTER_PROXY_PORT}</property>
-                    <property name="bind_port">7600</property>
+                    <property name="bind_port">${env.OPENSHIFT_JBOSSAS_CLUSTER_PORT}</property>
                     <property name="bind_addr">${env.OPENSHIFT_JBOSSAS_IP}</property>
                     <property name="defer_client_bind_addr">true</property>
                 </transport>
@@ -290,7 +295,7 @@
                 <protocol type="AUTH">
                         <property name="auth_class">org.jgroups.auth.MD5Token</property>
                         <property name="token_hash">SHA</property>
-                        <property name="auth_value">${env.OPENSHIFT_APP_UUID}</property>
+                        <property name="auth_value">${env.OPENSHIFT_SECRET_TOKEN}</property>
                 </protocol>
                 <protocol type="pbcast.GMS"/>
                 <protocol type="UFC"/>
@@ -526,16 +531,16 @@
     </interfaces>
 
     <socket-binding-group name="standard-sockets" default-interface="public" port-offset="0">
-        <socket-binding name="http" port="8080"/>
+        <socket-binding name="http" port="${env.OPENSHIFT_JBOSSAS_HTTP_PORT}"/>
         <socket-binding name="jacorb" interface="unsecure" port="3528"/>
         <socket-binding name="jacorb-ssl" interface="unsecure" port="3529"/>
-        <socket-binding name="jgroups-tcp" port="7600"/>
-        <socket-binding name="management-native" interface="management" port="9999"/>
-        <socket-binding name="management-http" interface="management" port="9990"/>
-        <socket-binding name="messaging" port="5445"/>
-        <socket-binding name="messaging-throughput" port="5455"/>
+        <socket-binding name="jgroups-tcp" port="${env.OPENSHIFT_JBOSSAS_CLUSTER_PORT}"/>
+        <socket-binding name="management-native" interface="management" port="${env.OPENSHIFT_JBOSSAS_MANAGEMENT_NATIVE_PORT}"/>
+        <socket-binding name="management-http" interface="management" port="${env.OPENSHIFT_JBOSSAS_MANAGEMENT_HTTP_PORT}"/>
+        <socket-binding name="messaging" port="${env.OPENSHIFT_JBOSSAS_MESSAGING_PORT}"/>
+        <socket-binding name="messaging-throughput" port="${env.OPENSHIFT_JBOSSAS_MESSAGING_THROUGHPUT_PORT}"/>
         <socket-binding name="osgi-http" interface="management" port="8090"/>
-        <socket-binding name="remoting" port="4447"/>
+        <socket-binding name="remoting" port="${env.OPENSHIFT_JBOSSAS_REMOTING_PORT}"/>
         <socket-binding name="txn-recovery-environment" port="4712"/>
         <socket-binding name="txn-status-manager" port="4713"/>
         <outbound-socket-binding name="mail-smtp">

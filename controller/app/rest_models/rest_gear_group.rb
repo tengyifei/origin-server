@@ -59,45 +59,50 @@
 #   @return [Integer] Maximum number of gears within this gear group
 # @!attribute [r] base_gear_storage
 # @!attribute [r] base_gear_storage
-#   @return [Integer] Number of GB of disk space assoicated with gear profile
+#   @return [Integer] Number of GB of disk space associated with gear profile
 # @!attribute [r] additional_gear_storage
 #   @return [Integer] Additional number of GB of disk space (beyond the base provided by the gear profile)
 # @!attribute [r] ssh_url
 #   @return [String] username and FQDN that can be used to ssh into the this gear
 class RestGearGroup < OpenShift::Model
-  attr_accessor :uuid, :name, :gear_profile, :cartridges, :gears, :scales_from, :scales_to, :base_gear_storage, :additional_gear_storage
+  attr_accessor :id, :name, :gear_profile, :cartridges, :gears, :scales_from, :scales_to, :base_gear_storage, :additional_gear_storage
 
-  def initialize(group_instance, gear_states = {}, app, domain, url, nolinks)
-    self.uuid         = group_instance._id.to_s
-    self.name         = self.uuid
+  def initialize(override, gear_states = {}, app, url, nolinks, include_endpoints)
+    group_instance = override.instance
+    self.id         = group_instance._id.to_s
+    self.name         = self.id
     self.gear_profile = group_instance.gear_size
-    self.gears        = group_instance.gears.map{ |gear| 
-      { :id => gear.uuid, 
-        :state => gear_states[gear.uuid] || 'unknown', 
-        :ssh_url => "ssh://#{app.ssh_uri(domain, gear.app_dns ? nil: gear.uuid)}"
-      } 
+    self.gears        = group_instance.gears.map{ |gear|
+      ghash = { :id => gear.uuid,
+        :state => gear_states[gear.uuid] || 'unknown',
+        :ssh_url => "ssh://#{app.ssh_uri(gear.app_dns ? nil: gear.uuid)}",
+      }
+      if include_endpoints
+        ghash[:endpoints] = gear.port_interfaces.map { |pi| pi.to_hash }
+      end
+      ghash
     }
-    
-    self.cartridges   = group_instance.all_component_instances.map { |component_instance| 
-      cart = CartridgeCache.find_cartridge(component_instance.cartridge_name, app)
-      
+
+    self.cartridges = group_instance.all_component_instances.map do |component_instance|
+      cart = component_instance.cartridge
+
       # Handling the case when component_properties is an empty array
       # This can happen if the mongo document is copied and pasted back and saved using a UI tool
       if component_instance.component_properties.nil? or component_instance.component_properties.is_a? Array
         component_instance.component_properties = {}
       end
-       
+
       component_instance.component_properties.merge({
-        :name => cart.name, 
+        :name => cart.name,
         :display_name => cart.display_name,
         :tags => cart.categories
-      }) 
-    }
-    
-    self.scales_from    = group_instance.min
-    self.scales_to    = group_instance.max
+      })
+    end
+
+    self.scales_from    = override.min_gears
+    self.scales_to    = override.max_gears
     self.base_gear_storage = Gear.base_filesystem_gb(self.gear_profile)
-    self.additional_gear_storage = group_instance.addtl_fs_gb
+    self.additional_gear_storage = override.additional_filesystem_gb
   end
 
   def to_xml(options={})

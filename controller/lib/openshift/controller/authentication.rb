@@ -65,21 +65,22 @@ module OpenShift
           raise "Service did not set the user login attribute" unless user.login.present?
 
           user.auth_method = info[:auth_method] || :login
-          @current_user_scopes = scopes
+          user.scopes = @current_user_scopes = scopes
           @cloud_user = user
           log_actions_as(user)
 
           headers['X-OpenShift-Identity'] = user.login
+          headers['X-OpenShift-Identity-Id'] = user._id.to_s
           headers['X-OAuth-Scopes'] = scopes
 
-          log_action("AUTHENTICATE", true, "Authenticated", 'IP' => request.remote_ip, 'SCOPES' => scopes)
+          log_action("AUTHENTICATE", nil, true, "Authenticated", 'IP' => request.remote_ip, 'SCOPES' => scopes)
 
           return unless check_controller_scopes
 
           user
 
         rescue OpenShift::AccessDeniedException => e
-          render_error(:unauthorized, e.message, 1, "AUTHENTICATE")
+          render_error(:unauthorized, e.message, 1)
         end
 
         #
@@ -94,7 +95,7 @@ module OpenShift
           info =
             if auth_service.respond_to?(:authenticate) && auth_service.method(:authenticate).arity == 2
               auth_service.authenticate(username, password).tap do |info|
-                log_action("CREDENTIAL_AUTHENTICATE", true, "Access denied by auth service", {'IP' => request.remote_ip, 'LOGIN' => username}) unless info
+                log_action("CREDENTIAL_AUTHENTICATE", nil, true, "Access denied by auth service", {'IP' => request.remote_ip, 'LOGIN' => username}) unless info
               end
             end || nil
 
@@ -102,12 +103,12 @@ module OpenShift
             raise "Authentication service must return a username with its response" if info[:username].nil?
 
             user = CloudUser.find_or_create_by_identity(info[:provider], info[:username])
-            log_action("CREDENTIAL_AUTHENTICATE", true, "Authenticated via credentials", {'LOGIN' => username, 'IP' => request.remote_ip})
+            log_action("CREDENTIAL_AUTHENTICATE", nil, true, "Authenticated via credentials", {'LOGIN' => username, 'IP' => request.remote_ip})
             user
           end
         rescue OpenShift::AccessDeniedException => e
           logger.debug "Service rejected credentials #{e.message} (#{e.class})\n  #{e.backtrace.join("\n  ")}"
-          log_action("CREDENTIAL_AUTHENTICATE", true, "Access denied by auth service", {'LOGIN' => username, 'IP' => request.remote_ip, 'ERROR' => e.message})
+          log_action("CREDENTIAL_AUTHENTICATE", nil, true, "Access denied by auth service", {'LOGIN' => username, 'IP' => request.remote_ip, 'ERROR' => e.message})
           nil
         end
 
@@ -126,10 +127,10 @@ module OpenShift
 
         def check_controller_scopes
           if current_user_scopes.empty?
-            render_error(:forbidden, "You are not authorized to perform any operations.", 1, "AUTHORIZE")
+            render_error(:forbidden, "You are not authorized to perform any operations.", 1)
             false
           elsif !current_user_scopes.any?{ |s| s.allows_action?(self) }
-            render_error(:forbidden, "This action is not allowed with your current authorization.", 1, "AUTHORIZE")
+            render_error(:forbidden, "This action is not allowed with your current authorization.", 1)
             false
           else
             true
@@ -157,7 +158,7 @@ module OpenShift
         def authenticate_broker_key
           broker_key_auth.authenticate_request(self)
         rescue OpenShift::AccessDeniedException => e
-          log_action("AUTHENTICATE", false, "Access denied by broker key", {'IP' => request.remote_ip, 'ERROR' => e.message})
+          log_action("AUTHENTICATE", nil, false, "Access denied by broker key", {'IP' => request.remote_ip, 'ERROR' => e.message})
           false
         end
 
@@ -174,12 +175,12 @@ module OpenShift
                 {:user => user, :auth_method => :authorization_token, :scopes => auth.scopes_list}
               else
                 request_http_bearer_token_authentication(:invalid_token, 'The access token expired')
-                log_action("AUTHENTICATE", true, "Access denied by bearer token", {'TOKEN' => auth.token, 'IP' => request.remote_ip, 'FORBID' => 'expired'})
+                log_action("AUTHENTICATE", nil, true, "Access denied by bearer token", {'TOKEN' => auth.token, 'IP' => request.remote_ip, 'FORBID' => 'expired'})
                 false
               end
             else
               request_http_bearer_token_authentication(:invalid_token, 'The access token is not recognized')
-              log_action("AUTHENTICATE", true, "Access denied by bearer token", {'TOKEN' => token, 'IP' => request.remote_ip, 'FORBID' => 'does_not_exist'})
+              log_action("AUTHENTICATE", nil, true, "Access denied by bearer token", {'TOKEN' => token, 'IP' => request.remote_ip, 'FORBID' => 'does_not_exist'})
               false
             end
           end
@@ -194,13 +195,13 @@ module OpenShift
 
           auth_service.authenticate_request(self).tap do |info|
             if info == false || response_body
-              log_action("AUTHENTICATE", true, "Access denied by authenticate_request", {'IP' => request.remote_ip})
+              log_action("AUTHENTICATE", nil, true, "Access denied by authenticate_request", {'IP' => request.remote_ip})
               return false
             end
           end
         rescue OpenShift::AccessDeniedException => e
           logger.debug "Service rejected request #{e.message} (#{e.class})\n  #{e.backtrace.join("\n  ")}"
-          log_action("AUTHENTICATE", true, "Access denied by authenticate_request", {'IP' => request.remote_ip, 'ERROR' => e.message})
+          log_action("AUTHENTICATE", nil, true, "Access denied by authenticate_request", {'IP' => request.remote_ip, 'ERROR' => e.message})
           false
         end
 
@@ -223,12 +224,12 @@ module OpenShift
             end
           end.tap do |info|
             if info == false
-              log_action(username, nil, "AUTHENTICATE", true, "Access denied by authenticate", {'IP' => request.remote_ip})
+              log_action_for(username, nil, "AUTHENTICATE", nil, true, "Access denied by authenticate", {'IP' => request.remote_ip})
             end
           end
         rescue OpenShift::AccessDeniedException => e
           logger.debug "Service rejected credentials #{e.message} (#{e.class})\n  #{e.backtrace.join("\n  ")}"
-          log_action_for(username, nil, "AUTHENTICATE", true, "Access denied by authenticate", {'IP' => request.remote_ip, 'ERROR' => e.message})
+          log_action_for(username, nil, "AUTHENTICATE", nil, true, "Access denied by authenticate", {'IP' => request.remote_ip, 'ERROR' => e.message})
           false
         end
 
@@ -239,18 +240,18 @@ module OpenShift
           other = request.headers["X-Impersonate-User"]
           return user unless other.present?
 
-          unless user.get_capabilities && user.get_capabilities['subaccounts'] == true
-            log_action_for(user.login, user.id, "IMPERSONATE", true, "Failed to impersonate", {'SUBJECT' => other, 'IP' => request.remote_ip, 'FORBID' => 'no_subaccount_capability'})
+          unless user.capabilities['subaccounts'] == true
+            log_action_for(user.login, user.id, "IMPERSONATE", nil, true, "Failed to impersonate", {'SUBJECT' => other, 'IP' => request.remote_ip, 'FORBID' => 'no_subaccount_capability'})
             raise OpenShift::AccessDeniedException, "Insufficient privileges to access user #{other}"
           end
 
           CloudUser.find_or_create_by_identity("impersonation/#{user.id}", other, parent_user_id: user.id) do |existing_user, existing_identity|
             if existing_user.parent_user_id != user.id
-              log_action_for(user.login, user.id, "IMPERSONATE", true, "Failed to impersonate", {'SUBJECT' => other, 'IP' => request.remote_ip, 'FORBID' => 'not_child_account'})
+              log_action_for(user.login, user.id, "IMPERSONATE", nil, true, "Failed to impersonate", {'SUBJECT' => other, 'IP' => request.remote_ip, 'FORBID' => 'not_child_account'})
               raise OpenShift::AccessDeniedException, "Account is not associated with impersonate account #{other}"
             end
           end.tap do |other_user|
-            log_action_for(user.login, user.id, "IMPERSONATE", true, "Impersonation successful", {'SUBJECT_ID' => other_user.id})
+            log_action_for(user.login, user.id, "IMPERSONATE", nil, true, "Impersonation successful", {'SUBJECT_ID' => other_user.id})
           end
         end
     end

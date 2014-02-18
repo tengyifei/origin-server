@@ -22,19 +22,21 @@ module Console::LayoutHelper
     content_tag(:ul, content, :class => 'nav')
   end
 
-  def navigation_tab(name, options={})
+  def navigation_tab(name, options={}, &block)
     action = options[:action]
+    classes = options[:classes] || []
     active = active_tab == name || (name.to_s == controller_name) && (action.nil? || action.to_s == controller.action_name)
+    classes << 'active' if active
     content_tag(
       :li,
       link_to(
-        options[:name] || ActiveSupport::Inflector.humanize(name),
+        options[:name] || (!block.nil? ? capture(&block) : nil) || ActiveSupport::Inflector.humanize(name),
         url_for({
           :action => action || :index,
           :controller => name
         })
       ),
-      active ? {:class => 'active'} : nil)
+      {:class => classes.compact.join(' ')})
   end
 
   #
@@ -69,7 +71,7 @@ module Console::LayoutHelper
     classes << 'control-group-important' if opts[:important]
     data = if opts[:errors] || args.first == true
         classes << 'error'
-        {:server_error => true}    
+        {:server_error => true}
       end
     content_tag(:div, capture_haml{ yield }.html_safe, :class => classes.join(' '), :data => data)
   end
@@ -85,7 +87,7 @@ module Console::LayoutHelper
     when :info
       'alert alert-info'
     when :info_pre
-      'cli'
+      'alert alert-success alert-cli'
     else
       Rails.logger.debug "Handling alert key #{key.inspect}"
       'alert'
@@ -110,7 +112,7 @@ module Console::LayoutHelper
 
   def breadcrumb_divider
     content_tag(:span, '/', :class => 'divider')
-  end
+  end 
 
   AppWizardStepsCreate = [
     {
@@ -118,7 +120,7 @@ module Console::LayoutHelper
       :link => 'application_types_path'
     },
     {
-      :name => 'Configure and deploy the application'
+      :name => 'Configure the application'
     },
     {
       :name => 'Next steps'
@@ -135,7 +137,7 @@ module Console::LayoutHelper
       :link => 'application_cartridge_types_path'
     },
     {
-      :name => 'Configure and deploy the cartridge'
+      :name => 'Configure the cartridge'
     },
     {
       :name => 'Next steps'
@@ -198,6 +200,13 @@ module Console::LayoutHelper
     breadcrumbs_for_each [
       link_to('My Applications', :applications, :action => :index),
       link_to(application.name, application),
+    ] + args
+  end
+
+  def breadcrumb_for_domain(domain, *args)
+    breadcrumbs_for_each [
+      link_to('Domains', :domains, :action => :index),
+      link_to(domain.name, domain),
     ] + args
   end
 
@@ -317,5 +326,22 @@ module Console::LayoutHelper
   #
   def asset(path)
     Rails.application.assets.find_asset(path)
+  end
+
+  def logo_data_icon_for(item)
+    {
+      :class => "font-icon",
+      :title => item.cartridge?  || item.class.name == "CartridgeType" ? "Cartridge" : "Quickstart",
+      :data_icon => item.cartridge? || item.class.name == "CartridgeType" ? "\ue021" : "\ue029"
+    }
+  end
+
+  def logo_for(item)
+    opts = logo_data_icon_for item
+    content_tag :span, "", :class => opts[:class], "data-icon" => opts[:data_icon].html_safe, :title => opts[:title], "aria-hidden" => "true"
+  end
+
+  def show_small_app_type_icon?()
+    false
   end
 end

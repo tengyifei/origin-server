@@ -1,0 +1,164 @@
+#!/usr/bin/env oo-ruby
+#--
+# Copyright 2013 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#++
+
+require 'rubygems'
+require 'etc'
+require 'optparse'
+require 'ostruct'
+require 'openshift-origin-common'
+require 'openshift-origin-node/utils/shell_exec'
+require 'openshift-origin-node/model/cartridge_repository'
+
+module OpenShift
+  module Runtime
+    class AdminCartridgeCartridgeRepository
+      def apply(options)
+        repository = OpenShift::Runtime::CartridgeRepository.instance
+        case options.action
+          when :install
+            dirs = if options.recursive
+                     Dir[File.join(options.source, '/*')].select { |d| File.directory?(d) }
+                   else
+                     [options.source]
+                   end
+
+            success = true
+
+            dirs.each do |dir|
+              begin
+                repository.install(dir)
+              rescue OpenShift::Runtime::Utils::ShellExecutionException => e
+                success = false
+                $stderr.puts "install failed for #{dir}: #{e.message}\nstdout: #{e.stdout}\nstderr: #{e.stderr}"
+                $stderr.puts e.backtrace.join("\n") if options.verbose
+              rescue => e
+                success = false
+                $stderr.puts "install failed for #{dir}: #{e.message}"
+                $stderr.puts e.backtrace.join("\n") if options.verbose
+              end
+            end
+
+            return success ? 'succeeded' : 'installation failed'
+          when :list
+            return options.verbose ? repository.inspect : repository.to_s
+          when :erase
+            begin
+              repository.erase(options.name, options.version, options.cartridge_version)
+            rescue KeyError => e
+              abort "requested cartridge does not exist: (#{e.message})"
+            rescue => e
+              abort "Couldn't erase cartridge: (#{e.message})"
+            else
+              return 'succeeded'
+            end
+        end
+      end
+    end
+
+    class AdminCartridgeMcollective
+      def apply(options)
+        buffer = ''
+        case options.action
+          when :install
+            dirs = if options.recursive
+                     Dir[File.join(options.source, '/*')].select { |d| File.directory?(d) }
+                   else
+                     [options.source]
+                   end
+
+            dirs.each do |dir|
+              out, _, _ = ::OpenShift::Runtime::Utils.oo_spawn("oo-mco rpc -q openshift cartridge_repository action=install path=#{dir}")
+              buffer << out
+            end
+          when :list
+            buffer, _, _ = ::OpenShift::Runtime::Utils.oo_spawn('oo-mco rpc -q openshift cartridge_repository action=list',
+                                                                 expected_exitstatus: 0)
+          when :erase
+            command      = %Q(oo-mco rpc openshift cartridge_repository action=erase \
+                       name="#{options.name}" version="#{options.version}" cartridge_version="#{options.cartridge_version}")
+            buffer, _, _ = ::OpenShift::Runtime::Utils.oo_spawn(command,
+                                                                 expected_exitstatus: 0)
+        end
+
+        buffer.squeeze!("\n")
+      end
+    end
+  end
+end
+
+options = OpenStruct.new(verbose: false, recursive: false)
+parser  = OptionParser.new do |opts|
+  opts.banner = 'Usage: --action ACTION [--recursive] [--mco] [--source directory] [--name NAME --version VERSION --cartridge_version VERSION]'
+  opts.separator ''
+  opts.separator 'Options:'
+
+  opts.on('-a', '--action ACTION', 'one of <install|list|erase>') { |o| options.action = o.to_sym }
+  opts.on('-s', '--source path', 'Directory of the cartridge to install') { |o| options.source = File.expand_path(o) }
+  opts.on('--mco', 'Issue action via mcollective agent') { |o| options.mco = o }
+
+  opts.on('-R', '--recursive', 'Source is assumed to point to a directory containing cartridge directories') do |o|
+    options.recursive = true
+  end
+
+  opts.on('-l', '--list', 'List cartridges in repository') { options.action ||= :list }
+  opts.on('-n', '--name NAME', 'Name of cartridge to erase') { |o| options.name = o }
+  opts.on('-v', '--version VERSION', 'Version of packaged software to erase') { |o| options.version = o }
+  opts.on('-c', '--cartridge_version VERSION', 'Version of cartridge to erase') { |o| options.cartridge_version = o }
+
+  opts.on_tail('-d', '--debug', 'enable additional output') { options.verbose = true }
+  opts.on('--offline', 'ignored') {}
+  # -h, --help implicate
+end
+
+parser.parse!
+
+unless options.action
+  $stderr.puts "--action required argument:\n" + parser.help
+  exit 1
+end
+
+mandatory = {
+    install: [:source],
+    list:    [],
+    erase:   [:name, :version, :cartridge_version]
+}
+
+missing = mandatory[options.action].select { |o| not options.respond_to? o }
+unless missing.empty?
+  $stderr.puts "Missing arguments: #{missing}\n" + parser.help
+  exit 1
+end
+
+begin
+  if options.mco
+    puts OpenShift::Runtime::AdminCartridgeMcollective.new.apply(options)
+  else
+    puts OpenShift::Runtime::AdminCartridgeCartridgeRepository.new.apply(options)
+  end
+  if [:install, :erase].include?(options.action)
+    if File.exist?("/etc/fedora-release")
+      OpenShift::Runtime::Utils.oo_spawn('service mcollective restart')
+      sleep(5) #wait for mcollective to be stable again
+    else
+      OpenShift::Runtime::Utils.oo_spawn('pkill -USR1 -f /usr/sbin/mcollectived')
+    end
+  end
+rescue OpenShift::Runtime::Utils::ShellExecutionException => e
+  $stderr.puts "\nOperation failed: #{e.stdout}\n#{e.stderr}\n"
+  $stderr.puts e.backtrace.join("\n") if options.verbose
+  exit e.rc
+end

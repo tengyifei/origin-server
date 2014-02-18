@@ -1,0 +1,78 @@
+:css
+  span.pull-right > span {margin: 0 10px; font-size: 18px; font-weight: normal; text-transform: uppercase; opacity: .75;}
+
+  .leave { margin-top: 20px; }
+  .leave .popover.bottom {margin-left: 75px;}
+  .leave .popover.bottom .arrow {margin-left: -70px;}
+  .leave .popover.bottom .arrow:before {border: 7px solid transparent; border-bottom-color: rgba(0,0,0,.2); content:''; height: 0; left: -7px; position: absolute; top: -7px; width: 0; z-index: -1;}
+
+  .leave .popover { width: 260px; }
+  .leave .popover-inner, .leave .popover-content { width: auto; }
+
+  .js .hidden-scripted { display: none; }
+
+- content_for :page_style, 'highlight'
+- content_for :page_title, "Domain " + @domain.name
+- content_for :top do
+  .grid-wrapper.section-header.span12
+    %nav.domain.tile
+      %h1.flow
+        = "Domain #{@domain.name}"
+        - if @domain.can_rename?
+          = link_to 'change', edit_domain_path(@domain), :class => 'url-alter'
+
+        - count = @domain.gear_counts.values.sum
+        .flow-block.right{:title => "This domain is using #{pluralize(count, 'gear')} and can use up to #{@domain.available_gears} more"}
+          %span.count #{count}
+          %span.gear-icon{'aria-hidden'=>"true", 'data-icon' => "\ue014"}
+
+%section
+  %section
+
+  .row
+    .span8#app-list
+      %h2 Applications
+      - @domain.applications.each do |application|
+        = render :partial => 'applications/application2', :locals => {:application => application}
+
+    .span4.sidebar
+      %h2 Settings
+      - if @domain.owner?
+        - field = 'domain[allowed_gear_sizes][]'
+        = semantic_form_for @domain do |f|
+          -# Ensure we send an empty value if all checkboxes are unchecked
+          = hidden_field_tag(field, '')
+          - @capabilities.gear_sizes.each do |size|
+            %label.checkbox{:for => "#{field}_#{size}"}
+              = check_box_tag field, size, @domain.allowed_gear_sizes.include?(size), :id => "#{field}_#{size}"
+              = "Allow #{size.to_s.humanize.downcase} gears"
+          = f.buttons :class => 'hidden-scripted' do
+            = f.commit_button :label => 'Save', :button_html => {:class => 'btn btn-small btn-primary'}
+            = f.loading
+
+          - content_for :javascripts do
+            :javascript
+              $(function() {
+                $('##{f.options[:html][:id]} [type=checkbox]').change(function() {
+                  $('.hidden-scripted', $(this).closest('form')).removeClass('hidden-scripted');
+                })
+              })
+
+      - else
+        - if @domain.allowed_gear_sizes.present?
+          %p Allows #{@domain.allowed_gear_sizes.map{ |s| s.to_s.humanize }.to_sentence.downcase} gears
+        - else
+          %p The owner has disabled creation - no gear sizes allowed
+
+      %h2 Members
+      = render :partial => 'members/members_form', :locals => {:domain => @domain, :members => @domain.members, :new_members => @new_members, :editable => @domain.admin?, :editing => @new_members.present?}
+
+      - unless @domain.owner?
+        %div.leave.confirm-container
+          = link_to "Leave Domain", domain_leave_path(@domain), { :class => 'btn btn-small confirm-link', :title => 'Leave Domain', 'data-placement' => 'bottom'}
+          .confirm-popover.hide
+            = render :partial => 'members/leave_domain_form', :locals => {:domain => @domain}
+
+      - if @domain.owner?
+        .btn-toolbar
+          = link_to "Delete this domain\u2026", delete_domain_path(@domain), :class => 'btn btn-small'

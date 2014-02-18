@@ -38,6 +38,7 @@ module Console
     config_accessor :community_url
     config_accessor :cache_store
     config_accessor :prohibited_email_domains
+    config_accessor :syslog_enabled
 
     #
     # A class that represents the capabilities object
@@ -66,7 +67,7 @@ module Console
           source = config
           Builtin[config]
         when config == :external
-          source = '~/.openshift/console.conf'
+          source = ENV['CONSOLE_CONFIG_FILE'].presence || '~/.openshift/console.conf'
           api_config_from(Console::ConfigFile.new(source))
         when config.respond_to?(:[])
           source = 'object in config'
@@ -146,8 +147,25 @@ module Console
 
         self.prohibited_email_domains = config[:PROHIBITED_EMAIL_DOMAINS].split(',').map { |email| email.strip } rescue []
 
+        if self.syslog_enabled = config[:SYSLOG_ENABLED]
+          require 'syslog-logger'
+          Rails.configuration.logger = Logger::Syslog.new('openshift-console')
+        end
+
         if cache_store = config[:CACHE_STORE]
           Rails.configuration.send(:cache_store=, eval("[#{cache_store}]"))
+        end
+
+        if default_host = config[:DEFAULT_URL_OPTIONS_HOST]
+          (Rails.configuration.action_controller.default_url_options ||= {})[:host]  = default_host
+        end
+
+        if default_port = config[:DEFAULT_URL_OPTIONS_PORT]
+          (Rails.configuration.action_controller.default_url_options ||= {})[:port] = default_port.empty? ? nil : default_port
+        end
+
+        if asset_host = config[:ASSET_HOST]
+          Rails.configuration.action_controller.asset_host = asset_host
         end
 
         case config[:CONSOLE_SECURITY]

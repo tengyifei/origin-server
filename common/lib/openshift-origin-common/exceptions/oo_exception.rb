@@ -10,6 +10,7 @@ module OpenShift
   end
 
   class NodeException < OpenShift::OOException; end
+  class NodeUnavailableException < NodeException; end
   class InvalidNodeException < NodeException
     attr_accessor :server_identity
 
@@ -29,21 +30,22 @@ module OpenShift
   end
 
   class UserException < OpenShift::OOException
-    attr_accessor :field
-    def initialize(msg=nil, code=nil, field=nil, resultIO=nil)
-      super(msg)
-      @code = code
-      @resultIO = resultIO
+    attr_accessor :field, :response_code, :data
+    def initialize(msg, code=nil, field=nil, resultIO=nil, response_code=nil, data=nil)
+      super(msg, code, resultIO)
       @field = field
+      @response_code = response_code
+      @data = data
     end
   end
-  class UserKeyException < OpenShift::OOException; end
+  #Not used removing class UserKeyException < OpenShift::OOException; end
   class AuthServiceException < OpenShift::OOException; end
   class UserValidationException < OpenShift::OOException; end
   class AccessDeniedException < UserValidationException; end
   class DNSException < OpenShift::OOException; end
   class DNSAlreadyExistsException < DNSException; end
   class DNSNotFoundException < DNSException; end
-  class EstimatesException < OpenShift::OOException; end
+  class DNSLoginException < DNSException; end
+  # not used removing class EstimatesException < OpenShift::OOException; end
   class LockUnavailableException < OpenShift::OOException; end
 end

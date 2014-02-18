@@ -1,5 +1,5 @@
-@runtime_extended
-@runtime_extended3
+@cartridge_extended
+@cartridge_extended3
 Feature: Cartridge Lifecycle Perl Verification Tests
   Scenario Outline: Application Creation
   #Given a new <cart_name> application, verify its availability
@@ -45,12 +45,6 @@ Feature: Cartridge Lifecycle Perl Verification Tests
     Then the application should not be accessible
     Then the application should not be accessible via node-web-proxy
 
-    @rhel-only
     Scenarios: RHEL scenarios
       | cart_name |
       | perl-5.10 |
-
-    @fedora-19-only
-    Scenarios: RHEL scenarios
-      | cart_name |
-      | perl-5.16 |

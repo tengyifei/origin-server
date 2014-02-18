@@ -9,10 +9,10 @@ require 'dnsruby'
 
 # Controller cartridge command paths
 $cartridge_root = '/usr/libexec/openshift/cartridges'
-$controller_config_path = "oo-app-create"
+$controller_config_path = "oo-devel-node app-create"
 $controller_config_format = "#{$controller_config_path} -c '%s' -a '%s' --with-namespace '%s' --with-app-name '%s'"
-$controller_deconfig_path = "oo-app-destroy"
-$controller_deconfig_format = "#{$controller_deconfig_path} -c '%s' -a '%s' --with-namespace '%s' --with-app-name '%s'"
+$controller_deconfig_path = "oo-devel-node app-destroy"
+$controller_deconfig_format = "#{$controller_deconfig_path} -c '%s'"
 $home_root = "/var/lib/openshift"
 
 # --------------------------------------------------------------------------
@@ -59,7 +59,8 @@ Given /^a new gear with namespace "([^\"]*)" and app name "([^\"]*)"$/ do |names
   }
 
   command = $controller_config_format % [acctname, acctname, namespace, name]
-  runcon(command, $selinux_user, $selinux_role, $selinux_type)
+  rc = runcon(command, $selinux_user, $selinux_role, $selinux_type)
+  assert_equal(0, rc, "#{command} failed with #{rc}")
 
   # get and store the account UID's by name
   @account['uid'] = Etc.getpwnam(acctname).uid
@@ -113,10 +114,7 @@ end
 When /^I delete the guest account$/ do
   # call /usr/libexec/openshift/cartridges  @table.hashes.each do |row|
   
-  command = $controller_deconfig_format % [@account['accountname'],
-                                           @account['accountname'],
-                                           @account['namespace'],
-                                           @account['appnames'][0]]
+  command = $controller_deconfig_format % [@account['accountname']]
   runcon(command, $selinux_user, $selinux_role, $selinux_type)
 
 end
@@ -186,17 +184,12 @@ end
 
 Then /^an account password entry should( not)? exist$/ do |negate|
   # use @app['uuid'] for account name
-  
-  begin
-    @pwent = Etc.getpwnam @account['accountname']
-  rescue
-    nil
-  end
 
+  @pwent = `grep ':#{@account['uid']}:' /etc/passwd`
   if negate
-    @pwent.should be_nil      
+    assert_empty @pwent
   else
-    @pwent.should_not be_nil
+    refute_empty @pwent
   end
 end
 
@@ -255,3 +248,92 @@ And /^I delete the supplementary group setting from \/etc\/openshift\/node.conf$
   end
 end
 
+# 
+# 
+# Steps that can be used to check applications installed on a server (node)
+#
+
+$home_root = "/var/lib/openshift"
+
+# Convert a unix UID to a hex string suitable for use as a tc(1m) class value
+def netclass uid
+  "%04x" % uid
+end
+
+
+Then /^an account PAM limits file should( not)? exist$/ do |negate|
+  limits_dir = '/etc/security/limits.d'
+  pamfile = "#{limits_dir}/84-#{@account['accountname']}.conf"
+
+  if negate
+    refute_file_exist pamfile
+  else
+    assert_file_exist pamfile
+  end
+end
+
+Then /^the account should( not)? be subscribed to cgroup subsystems$/ do |negate|
+
+  user_cgroup="/openshift/#{@account['accountname']}"
+  test_subsystems = ['cpu', 'cpuacct', 'memory', 'freezer', 'net_cls'].sort
+
+  # Create the list of cgroups to query
+  cmd =  "lscgroup " + test_subsystems.map {|s| "#{s}:#{user_cgroup}"}.join(' ')
+  reply = %x[#{cmd}]
+
+  # This is a horrible bit of cleverness
+  # each group is on one line.  split the lines to an array
+  # extract the subsystem list (before the colon) for each group
+  # split the subsystems on commas (in case there are joined subsystems)
+  # then flatten the list sort and remove duplicates
+  actual = reply.split.map {|s| s[/([^:]+)/,1] }.map {|g| g.split(',')}.flatten.uniq.sort
+
+  if negate then
+    assert_equal 0, actual.length
+  else
+    assert_equal actual, test_subsystems
+  end
+
+end
+
+Then /^selinux labels on the account home directory should be correct$/ do
+  homedir = "#{$home_root}/#{@account['accountname']}"
+  result = `restorecon -v -n #{homedir}`
+  result.should be == "" 
+end
+
+Then /^disk quotas on the account home directory should be correct$/ do
+
+  # EXAMPLE
+  #
+  # no such user
+  # quota: user 00112233445566778899aabbccdde001 does not exist.
+  #
+  # no quotas on user
+  # Disk quotas for user root (uid 0): none
+
+  # Disk quotas for user 00112233445566778899aabbccdde000 (uid 501): 
+  #    Filesystem  blocks   quota   limit   grace   files   quota   limit   grace
+  #     /dev/xvde      24       0  131072               7       0   10000        
+  #    
+
+  result = `quota -u #{@account['accountname']}`
+    
+  result.should_not match /does not exist./
+  result.should_not match /: none\s*\n?/
+  result.should match /Filesystem  blocks   quota   limit   grace   files   quota   limit   grace/
+end
+
+Then /^a traffic control entry should( not)? exist$/ do |negate|
+  acctname = @account['accountname']
+  netdev = `source /etc/openshift/node.conf; echo $EXTERNAL_ETH_DEV 2>/dev/null`.chomp
+  netdev = "eth0" if netdev.empty?
+  tc_format = 'tc -s class show dev %s classid 1:%s'
+  tc_command = tc_format % [netdev, (netclass @account['uid'])]
+  result = `#{tc_command}`
+  if negate
+    result.should be == ""
+  else
+    result.should_not be == ""
+  end
+end

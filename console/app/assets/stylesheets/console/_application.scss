@@ -1,178 +1,244 @@
 /***********************************************************
-* Application standard layouts 
+* Application standard layouts
 */
 
-.application-info {
-	position: relative;
-	
-  &.warning {
-  	border-left: 2px dashed #bb161c;
-	}
-	
-  .name {
-    text-transform: capitalize;
-    display: inline-block;
-    margin-bottom: 5px;
-    vertical-align: middle;
-    margin-right: 5px;
-  }
-
-  > .url {
-    display: inline-block;
-    vertical-align: text-bottom;
-    white-space: nowrap;
-    vertical-align: middle;
-    font-size: $smallFontSize;
-  }
-
-	.gear-numbers {
-		color: #bcbdbc;
-	}
-  .emblem {
-  	vertical-align: middle;
-  	padding: 2px 0;
-
-    margin-right: 15px;
-    margin-top: 6px;
-    img {
-  		margin-right: 7px;
-		  vertical-align: middle;
-  	}
-  }
+h1.applications .flow-block.right .gear-icon {
+  color: #aaa;
+  font-size: $h1FontSize - 3; 
 }
 
-.section-header > .application-info {
-
-  > .url {
-    line-height: 36px; // chosen to match h1
-    font-size: $largeFontSize;
-  }
-
-  // move these under .application-info
-	.emblem {	
-    img {
-      vertical-align: middle;
-      margin-right: 13px;
-      margin-bottom: 3px;
+.application {
+	position: relative;
+  &.warning {
+  	border-left: 2px solid #bb161c;
+	}
+  > h1 {
+    .name {
+      display: inline-block;
+    }
+    .url-default .name {
+      display: inline;
+    }
+    .url-alias {
+      margin-left: 10px;
     }
   }
-	.total-cost {	
-		font-size: 32px; //FIXME
-		font-weight: 200;
-		margin-top: 10px;
-		padding-right: 30px;
-    text-align: right;
-	}
-}
-
-.tile-dark .application-info {
-  left: -5px;
-  margin-right: -10px;
-  padding-top: 15px;
-  padding-bottom: 15px;
-
-  > .url {
-    // line-height: 34px; chosen to match h2
+  .cartridges {
+    font-size: $tinyFontSize;
+  }
+  .flow-block {
+    #app-list & {
+      .count {
+        font-weight: 300;
+        position: relative;
+        margin-right: 10px;
+        .gear-icon {
+          font-size: 16px;
+        }
+      }
+    }
   }
 }
 
-.application_type.tile {
-  margin-bottom: 10px;
+.application, #app-cartridges {
+  .flow-block {
+    .font-icon-link {
+      &:visited, &:link {
+        color: $grayLight;
+      }
+      &:hover, &:active {
+        color: $openshiftBrightRed;
+        text-decoration: none;
+      }
+    }
+    .url-icon {
+      font-size: 16px;
+      margin-left: 15px;
+      position: relative;
+      vertical-align: middle;
+    }
+  }
+}
+
+.application, .domain {
+    .url-alter {
+      font-size: $tinyFontSize;
+      margin-left: 10px;
+    }
+}
+
+.section-body {
+  #app-list,
+  #app-cartridges {
+    > h2 {
+      font-size: $h4FontSize;
+      line-height: $h4LineHeight;
+      margin-bottom: $h4MarginBottom;
+      .flow-block.right {
+        color: #666;
+        font-weight: 300;
+        font-size: $smallFontSize;
+        padding-right: 5px;
+        .gear-icon {
+          font-size: 12px;
+          color: #aaa;
+        }
+      }
+    }
+    .span4 > h3, .span5 > h3 {
+      font-size: $h5FontSize;
+      line-height: $h5LineHeight;
+      margin-bottom: $h5MarginBottom;
+    }
+    .tile h3 {
+      font-size: $h2FontSize;
+      line-height: 2;
+    }
+    + .sidebar {
+      font-size: $tinyFontSize;
+      > h2 {
+        font-size: $h6FontSize;
+        font-weight: 400;
+        line-height: $h6LineHeight;
+        margin-bottom: 5px;
+      }
+      label, p {
+        font-size: $tinyFontSize;
+      }
+      span[data-icon] {
+        color: #bbb; 
+      }
+    }
+  }
+}
+
+#app-cartridges {
+  .cartridge-block {
+    position: relative;
+    &.cartridge-embedded {
+      border-top: 1px dashed $consolePanelBorderColor;
+    }
+    .cartridge-inset {
+      padding: 15px 20px;
+    }
+    .flow-block {
+      line-height: 1.4;
+    }
+    .flow-block.right {
+      font-size: $tinyFontSize;
+      strong {
+        margin-right: 8px;
+        &:last-child {
+          margin-right: 0;
+        }
+      }
+    }
+    h3, h4 {
+      line-height: 1;
+      margin-bottom: 0;
+    }
+    h3 {
+      .font-icon {
+        font-size: $tileHeadingIconFontSize;
+        opacity: .38;
+        text-align: center;
+        vertical-align: middle;
+        width: 25px;
+        @include iconfont-adjust($margin-right: 15px,$size-offset: 11);
+        &[title="Quickstart"],
+        &[title="Cartridge"] {
+          @include iconfont-adjust($margin-right: 13px,$size-offset: 16)
+        }
+      }
+    }
+    h4 {
+      font-size: $h6FontSize;
+      font-weight: 300;
+      margin-bottom: 3px;
+    }
+    input {
+      border: 1px dotted #444;
+      @include border-radius(0);
+      color: #BABBBC;
+      background-color: inherit;
+      cursor: inherit;
+      @include box-sizing(border-box);
+      width: 100%;
+      height: 28px; 
+    }
+    p {
+      margin-bottom: 0;
+      text-align: right;
+      &.created {
+        font-size: $tinyFontSize;
+        text-align: left;
+      }
+      span {
+        font-weight: 300;
+        font-size: $smallFontSize;
+      }
+    }
+    ul.inline > li {
+      margin-bottom: 0;
+      padding-left: 15px;
+      padding-right: 0;
+    }
+    .warning {
+      color: #EB0011;
+    }
+  }
+  .gear-group { /* mimic tile */
+    background: $consolePanelColor;
+    @include panel_default_boxshadow();
+    color: $consoleTextColorDefault;
+    margin-bottom: 20px;
+    .cartridge-block.cartridge-error .cartridge-border:before {
+      position: absolute;
+      border-left: 6px solid $openshiftBrightRed;
+      height: 100%;
+      top: 0;
+      left: 0;
+      content: "";
+    }
+  }
 }
 
 #aliases li > a {
   @include truncate();
   max-width: 65%;
-  display: inline-block;
+  //display: inline-block; // makes empty array unbalanced
 }
 
-@media (max-width: 480px) {
-  .application-info {
-    > .url,
-    > .name {
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
-      width: 70%;
+.domain {
+  .flow .flow-block.right {
+    font-weight: 300;
+  }
+  &.tile-click {
+    .flow .flow-block.right {
+      font-size: $baseFontSize;
+      font-weight: 300;
+      span {
+        margin-left: 20px;
+      }
     }
   }
 }
 
-
-@media (min-width: 480px) and (max-width: 767px) {
-  .section-header > .application-info {
-    margin-right: 0;
-    left: 0;
-  }
-  .application-info {
-    > .url,
-    > .name {
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
-      max-width: 70%;
-    }
-    .emblem {
-      margin-right: 7px;
+@media (max-width: 320px) {
+  .domain {
+    &.tile-click {
+      .flow .flow-block.right {
+        span {
+          margin-left: 15px;
+        }
+        span:first-child {
+          margin-left: 0px;
+        }
+      }
     }
   }
 }
 
-@media (min-width: 768px) and (max-width: 979px) {
-  .application-info {
-    > .url,
-    > .name {
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
-      max-width: 375px;
-    }
-  }
-}
-
-@media (min-width: 980px) and (max-width: 1199px) {
-  .console.index .application-info {
-    > .url,
-    > .name {
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
-      max-width: 475px;
-    }
-  }
-}
-
-
-@media (min-width: 1200px) {
-  .console.index .application-info {
-    > .url,
-    > .name {
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
-      max-width: 565px;
-    }
-  }
-}
-
-#new_application {
-  .application_type {
-    margin-bottom: 0;
-  }
-  ol.spaced-items > li {
-    line-height: 28px; // match SELECT
-    margin-bottom: 3px;
-  }
-  .tile-align {
-    margin-bottom: 5px;
-  }
-  select {
-    vertical-align: baseline;
-    margin-bottom: auto;
-    width: auto;
-    max-width: -moz-available;
-  } // refactor me to a marker class
-}
 
 .form-search {
   .btn:first-child {
@@ -192,8 +258,59 @@
   }
 }
 
-@media (max-width: 479px) {
+.gauge-vertical {
+  line-height: 5px;
+  position: absolute;
+  top: -6px;
+  right: -5px;
+  font-size: 36px;
+  width: 1px;
+  white-space: normal;
+  > .empty { 
+    opacity: 0.3;
+  }
+  > .fill  { 
+    opacity: 1.0;
+  }
+}
 
+.indicator-gear-increase {
+  display: inline-block;
+  font-weight: 600;
+  padding: 3px 6px;
+  cursor: default;
+  [data-icon] {
+    font-size: 12px;
+    color: #999;
+  }
+}
+
+#new_application {
+  .application_type {
+    margin-bottom: 0;
+  }
+  .controls {
+    select.domain_name {
+      height: 38px;
+      vertical-align: middle;
+    }
+  }
+  ol.spaced-items > li {
+    line-height: 28px; // match SELECT
+    margin-bottom: 3px;
+  }
+  .tile-align {
+    margin-bottom: 5px;
+  }
+  select {
+    vertical-align: baseline;
+    margin-bottom: auto;
+    width: auto;
+    max-width: -moz-available;
+  } // refactor me to a marker class
+}
+
+@media (max-width: 640px) {
   #new_application .controls {
     .add-on, .add-on {
       clear: left;
@@ -206,10 +323,12 @@
     .input-prepend input, .input-append input,
     .input-prepend input, .input-append input {
       display: block;
+      margin: 0 -1px;
+      padding-left: 0;
+      padding-right: 0;
       text-align: center;
-      width: 100%;
       vertical-align: bottom;
+      width: 100%;
     }
-  }  
+  }
 }
-

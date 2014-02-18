@@ -1,0 +1,158 @@
+// Definition Lists
+dd {
+    margin-bottom: 10px;
+    margin-top: 2px;
+}
+
+// HEADINGS
+// --------
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-family: $headerFontFamily;
+  font-weight: normal;
+  color: #333;
+  text-rendering: optimizelegibility; // Fix the character spacing for headings
+  small {
+    font-weight: normal;
+    color: $grayLight;
+  }
+}
+h3 + h4, h3 + h5, h4 + h5 {
+  padding-top: $baseLineHeight / 3;
+}
+
+h1 {
+  font-size: $h1FontSize;
+  line-height: $baseLineHeight * 2;
+  margin-bottom: $baseLineHeight - 8;
+}
+h2 {
+  font-size: $h2FontSize;
+  line-height: $baseLineHeight * 1.75;
+  margin-bottom: $baseLineHeight / 3.5;
+}
+h3 {
+  font-size: $h3FontSize;
+  line-height: $baseLineHeight * 1.5;
+  margin-bottom: $baseLineHeight / 3.5;
+  small {
+    font-size: $baseFontSize;
+  }
+}
+h4 {
+  font-size: $h4FontSize;
+  line-height: $baseLineHeight;
+  margin-bottom: $baseLineHeight / 3;
+  small {
+    font-size: $baseFontSize * .88;
+  }
+}
+h5 {
+  font-size: $h5FontSize;
+  line-height: $baseLineHeight;
+  margin-bottom: $baseLineHeight / 3;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+h6 {
+  font-size: $h6FontSize;
+  line-height: $baseLineHeight;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+@media (max-width:480px) {
+  h1 {font-size: 24px;line-height: $baseLineHeight * 1.5;}
+  h2 {font-size: 19.5px;line-height: $baseLineHeight * 1.25;}
+  h3 {font-size: 16.5px;}
+  h4 {font-size: 14px;}
+  h5 {font-size: 13px;}
+
+  h4.no-shrink {
+    font-size: $h4FontSize;
+  }
+}
+
+// Links
+a {
+  color: $blueLink;
+
+  &:hover {
+    color: $blueLinkHover;
+  }
+}
+
+// Tables
+.table.table-nohover tbody {
+  tr {
+    &:hover {
+      th, td {
+        background: white;
+      }
+    }
+  }
+}
+
+.table.table-box {
+  td {
+    border: 1px solid #DDD;
+    vertical-align: middle;
+    padding: 20px;
+  }
+
+  th {
+    text-transform: uppercase;
+  }
+}
+
+.table-horizontal {
+  td, th {
+    padding: 0 30px 0 0;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    white-space: nowrap;
+  }
+
+  td {
+    width: 100%
+  }
+}
+
+td > ul.unstyled {
+  margin-bottom: 0;
+}
+
+
+// Utility classes
+// Bootstrap 2.3.0
+.muted { color: $grayLight; }
+a.muted:hover,
+a.muted:focus { color: darken($grayLight, 10%); }
+
+.text-warning { color: $warningText; }
+a.text-warning:hover,
+a.text-warning:focus { color: darken($warningText, 10%); }
+
+.text-error { color: $errorText; }
+a.text-error:hover,
+a.text-error:focus { color: darken($errorText, 10%); }
+
+.text-info { color: $infoText; }
+a.text-info:hover,
+a.text-info:focus { color: darken($infoText, 10%); }
+
+.text-success { color: $successText; }
+a.text-success:hover,
+a.text-success:focus { color: darken($successText, 10%); }
+
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+
+// Small
+small {
+  font-size: $smallFontSize;
+}

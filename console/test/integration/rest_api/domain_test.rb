@@ -42,6 +42,17 @@ class RestApiDomainTest < ActiveSupport::TestCase
     assert_equal "#{uuid}", domains[0].name
   end
 
+  def test_domains_get_by_owner
+    assert RestApi.info.link('LIST_DOMAINS_BY_OWNER')
+    setup_domain
+    domains = Domain.find :all, :as => @user
+    owned_domains = Domain.find :all, :params => {:owner => '@self'}, :as => @user
+    assert_equal 1, domains.length
+    assert_equal domains, owned_domains
+
+    assert_raises(ActiveResource::BadRequest, "Other filters are now supported"){ Domain.find :all, :params => {:owner => 'other'}, :as => @user }
+  end
+
   def test_domains_first
     setup_domain
     domain = Domain.find :one, :as => @user
@@ -53,9 +64,9 @@ class RestApiDomainTest < ActiveSupport::TestCase
     domain = Domain.find :one, :as => @user
     domain2 = Domain.new :name => domain.name, :as => @user
     assert !domain2.save
-    assert domain2.errors[:name].is_a?(Array), domain2.errors.inspect
-    assert domain2.errors[:name][0].is_a?(String), domain2.errors.inspect
-    assert domain2.errors[:name][0].include?('Name'), domain2.errors[:name][0]
+    assert domain2.errors[:base].is_a?(Array), domain2.errors.inspect
+    assert domain2.errors[:base][0].is_a?(String), domain2.errors.inspect
+    assert domain2.errors[:base][0].include?('You may not have more than 1 domain'), domain2.errors.to_hash.inspect
   end
 
   def test_domains_update

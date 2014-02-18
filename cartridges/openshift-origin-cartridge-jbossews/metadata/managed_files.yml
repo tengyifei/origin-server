@@ -4,11 +4,16 @@ locked_files:
 - bin/*
 - metadata/
 - metadata/*
+- hooks/
+- hooks/*
 - env/
 - env/OPENSHIFT_JBOSSEWS_DIR
 - env/OPENSHIFT_JBOSSEWS_LOG_DIR
 - env/OPENSHIFT_JBOSSEWS_JDK*
 - env/M2_HOME
 processed_templates:
-- 'metadata/jenkins_shell_command.erb'
 - 'metadata/jenkins_artifacts_glob.erb'
+dependency_dirs:
+- webapps
+build_dependency_dirs:
+- ~/.m2

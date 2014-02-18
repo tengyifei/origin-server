@@ -19,6 +19,15 @@ OPTIONS
   -n|--namespace name_space  
     Namespace for application(s), alphanumeric, 16 chars max. Required.
 
+  --new_namespace name_space  
+    The new namespace value when renaming a domain, alphanumeric, 16 
+    chars max. Optional for --command update.
+
+  --allowed_gear_sizes sizes  
+    The new gear sizes allowed for the domain.  A comma delimited list
+    of sizes.  Pass empty string to make sizes empty. Optional for 
+    --command update.
+
   -c|--command cmd  
     Command to enact upon the domain. Available commands are: create,
     update, delete, info.

@@ -1,4 +1,4 @@
-source "http://rubygems.org"
+source "https://rubygems.org"
 
 # Declare your gem's dependencies in admin_console.gemspec.
 # Bundler will treat runtime dependencies like base dependencies, and
@@ -7,6 +7,14 @@ gemspec
 
 # jquery-rails is used by the dummy application
 gem "jquery-rails"
+
+group :test, :development do
+  gem 'sass-twitter-bootstrap', '2.0.1'
+end
+
+group :assets do
+  gem 'sass-twitter-bootstrap', '2.0.1'
+end
 
 # Declare any dependencies that are still in development here instead of in
 # your gemspec. These might include edge Rails or gems from your path or

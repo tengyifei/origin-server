@@ -10,6 +10,8 @@ require 'openshift-origin-node/utils/application_state'
 require 'openshift-origin-node/utils/shell_exec'
 require 'pty'
 require 'digest/md5'
+require 'openssl'
+require 'httpclient'
 
 # These are provided to reduce duplication of code in feature files.
 #   Scenario Outlines are not used as they interfer with the devenv retry logic (whole feature is retried no example line)
@@ -188,9 +190,9 @@ Then /^the application git repo will( not)? exist$/ do | negate |
 
   $logger.info("Checking for #{negate} git repo at #{git_repo}")
   if negate
-    assert_directory_not_exists git_repo
+    refute_directory_exist git_repo
   else
-    assert_directory_exists git_repo
+    assert_directory_exist git_repo
   end
 end
 
@@ -205,9 +207,9 @@ Then /^the application source tree will( not)? exist$/ do | negate |
 
   $logger.info("Checking for app root at #{app_root}")
   if negate
-    assert_directory_not_exists app_root
+    refute_directory_exist app_root
   else
-    assert_directory_exists app_root
+    assert_directory_exist app_root
   end
 end
 
@@ -242,9 +244,9 @@ Then /^the embedded ([^ ]+) cartridge directory will( not)? exist$/ do | cart_na
 
   $logger.info("Checking for #{negate} cartridge root dir at #{user_root}")
   if negate
-    assert_directory_not_exists user_root
+    refute_directory_exist user_root
   else
-    assert_directory_exists user_root
+    assert_directory_exist user_root
   end
 end
 
@@ -257,9 +259,9 @@ Then /^the embedded ([^ ]+) cartridge log files will( not)? exist$/ do | cart_na
 
   $logger.info("Checking for #{negate} cartridge log dir at #{log_dir_path}")
   if negate
-    assert_directory_not_exists log_dir_path
+    refute_directory_exist log_dir_path
   else
-    assert_directory_exists log_dir_path
+    assert_directory_exist log_dir_path
   end
 end
 
@@ -271,9 +273,9 @@ Then /^the embedded ([^ ]+) cartridge subdirectory named ([^ ]+) will( not)? exi
 
   $logger.info("Checking for #{negate} cartridge subdirectory at #{dir_path}")
   if negate
-    assert_directory_not_exists dir_path
+    refute_directory_exist dir_path
   else
-    assert_directory_exists dir_path
+    assert_directory_exist dir_path
   end
 end
 
@@ -290,9 +292,9 @@ Then /^the embedded ([^ ]+)\-([\d\.]+) cartridge control script will( not)? exis
 
   $logger.info("Checking for #{negate} cartridge control script at #{startup_file}")
   if negate
-    assert_file_not_exists startup_file
+    refute_file_exist startup_file
   else
-    assert_file_exists startup_file
+    assert_file_exist startup_file
   end
 end
 
@@ -434,13 +436,21 @@ end
 When /^the application is made publicly accessible$/ do
   ssh_key = IO.read($test_pub_key).chomp.split[1]
   run "echo \"127.0.0.1 #{@app.name}-#{@account.domain}.#{$cloud_domain} # Added by cucumber\" >> /etc/hosts"
-  run "oo-authorized-ssh-key-add -a #{@gear.uuid} -c #{@gear.uuid} -s #{ssh_key} -t ssh-rsa -m default"
+  run "oo-devel-node authorized-ssh-key-add -c #{@gear.uuid} -k #{ssh_key} -T ssh-rsa -m default"
   run "echo -e \"Host #{@app.name}-#{@account.domain}.#{$cloud_domain}\n\tStrictHostKeyChecking no\n\" >> ~/.ssh/config"
 end
 
 When /^the application is prepared for git pushes$/ do
   @app.git_repo = "#{$temp}/#{@account.name}-#{@app.name}-clone"
   run "git clone ssh://#{@gear.uuid}@#{@app.name}-#{@account.domain}.#{$cloud_domain}/~/git/#{@app.name}.git #{@app.git_repo}"
+
+  Dir.chdir(@app.git_repo) do
+    if `git --version`.match("git version 1.8")
+      run "git config --global push.default simple"
+    end
+    run "git config --global user.name 'Cucumber'"
+    run "git config --global user.email 'cucumber@example.com'"
+  end
 end
 
 
@@ -487,11 +497,44 @@ end
 When /^a simple update is pushed to the application repo$/ do
   record_measure("Runtime Benchmark: Pushing random change to app repo at #{@app.git_repo}") do
     Dir.chdir(@app.git_repo) do
-      # Make a change to the app repo
-      ENV['X_SCLS'] = nil
-      run "echo $RANDOM >> cucumber_update_test"
-      run "git add ."
-      run "git commit -m 'Test change'"
+      commit_simple_change
+      push_output = `git push`
+      $logger.info("Push output:\n#{push_output}")
+    end
+  end
+end
+
+When /^a simple update is committed to the application repo$/ do
+  record_measure("Runtime Benchmark: Committing random change to app repo at #{@app.git_repo}") do
+    commit_simple_change
+  end
+end
+
+When /^the hot_deploy marker is (added to|removed from) the application repo$/ do |op|
+  Dir.chdir(@app.git_repo) do
+    marker_file = File.join(@app.git_repo, '.openshift', 'markers', 'hot_deploy')
+    marker_dir = File.dirname(marker_file)
+    FileUtils.mkdir_p(marker_dir) if not Dir.exists?(marker_dir)
+    ENV['X_SCLS'] = nil
+    
+    if op == "added to"
+      if !File.exists?(marker_file)
+        run "touch #{marker_file}"
+        run "git add ."
+        run "git commit -m 'Add hot_deploy marker'"
+      end
+    else
+      if File.exists?(marker_file)
+        run "git rm -f #{marker_file}"
+        run "git commit -m 'Remove hot_deploy marker'"
+      end
+    end
+  end
+end
+
+When /^the application git repository is pushed$/ do
+  record_measure("Runtime Benchmark: Pushing app repo at #{@app.git_repo}") do
+    Dir.chdir(@app.git_repo) do
       push_output = `git push`
       $logger.info("Push output:\n#{push_output}")
     end
@@ -516,7 +559,7 @@ end
 
 # Asserts the 'cucumber_update_test' file exists after an update
 Then /^the application repo has been updated$/ do
-  assert_file_exists File.join($home_root,
+  assert_file_exist File.join($home_root,
                               @gear.uuid,
                               'app-root',
                               'runtime',
@@ -592,24 +635,24 @@ def ssh_command(command)
   "ssh 2>/dev/null -o BatchMode=yes -o StrictHostKeyChecking=no -tt #{@gear.uuid}@#{@app.name}-#{@account.domain}.#{$cloud_domain} " + command
 end
 
-def app_env_var_will_exist(var_name, prefix = true)
+def assert_app_env_var(var_name, prefix = true)
   if prefix
     var_name = "OPENSHIFT_#{var_name}"
   end
 
   var_file_path = File.join($home_root, @gear.uuid, '.env', var_name)
 
-  assert_file_exists var_file_path
+  assert_file_exist var_file_path
 end
 
-def app_env_var_will_not_exist(var_name, prefix = true)
+def refute_app_env_var(var_name, prefix = true)
   if prefix
     var_name = "OPENSHIFT_#{var_name}"
   end
 
   var_file_path = File.join($home_root, @gear.uuid, '.env', var_name)
 
-  assert_file_not_exists var_file_path
+  refute_file_exist var_file_path
 end
 
 def get_app_from_hash_with_given_namespace(namespace_key)
@@ -658,9 +701,9 @@ end
 
 def check_var_name(var_file_path, expected = nil, negate = false)
   if negate
-    assert_file_not_exists var_file_path
+    refute_file_exist var_file_path
   else
-    assert_file_exists var_file_path
+    assert_file_exist var_file_path
     assert((File.stat(var_file_path).size > 0), "#{var_file_path} is empty")
     if expected
       file_content = File.read(var_file_path).chomp
@@ -668,6 +711,18 @@ def check_var_name(var_file_path, expected = nil, negate = false)
     end
   end
 
+end
+
+def commit_simple_change
+  record_measure("Runtime Benchmark: Committing random change to app repo at #{@app.git_repo}") do
+    Dir.chdir(@app.git_repo) do
+      # Make a change to the app repo
+      ENV['X_SCLS'] = nil
+      run "echo $RANDOM >> cucumber_update_test"
+      run "git add ."
+      run "git commit -m 'Test change'"
+    end
+  end
 end
 
 # Used to control the runtime state of the current application.
@@ -684,9 +739,9 @@ Then /^the "(.*)" content does( not)? exist(s)? for ([^ ]+)$/ do |path, negate, 
   entry = File.join($home_root, @gear.uuid, path)
 
   if negate
-    assert_file_not_exists entry
+    refute_file_exist entry
   else
-    assert_file_exists entry
+    assert_file_exist entry
   end
 end
 
@@ -700,9 +755,9 @@ Then /^the ([^ ]+) cartridge instance directory will( not)? exist$/ do |cartridg
   cartridge_dir = File.join($home_root, @gear.uuid, cartridge.directory)
 
   if negate
-    assert_directory_not_exists cartridge_dir
+    refute_directory_exist cartridge_dir
   else
-    assert_directory_exists cartridge_dir
+    assert_directory_exist cartridge_dir
   end
 end
 
@@ -715,17 +770,17 @@ Then /^the ([^ ]+) ([^ ]+) env entry will equal '([^\']+)'$/ do |cartridge_name,
 end
 
 Then /^the platform-created default environment variables will exist$/ do
-  app_env_var_will_exist('APP_DNS')
-  app_env_var_will_exist('APP_NAME')
-  app_env_var_will_exist('APP_UUID')
-  app_env_var_will_exist('DATA_DIR')
-  app_env_var_will_exist('REPO_DIR')
-  app_env_var_will_exist('GEAR_DNS')
-  app_env_var_will_exist('GEAR_NAME')
-  app_env_var_will_exist('GEAR_UUID')
-  app_env_var_will_exist('TMP_DIR')
-  app_env_var_will_exist('HOMEDIR')
-  app_env_var_will_exist('HISTFILE', false)
+  assert_app_env_var('APP_DNS')
+  assert_app_env_var('APP_NAME')
+  assert_app_env_var('APP_UUID')
+  assert_app_env_var('DATA_DIR')
+  assert_app_env_var('REPO_DIR')
+  assert_app_env_var('GEAR_DNS')
+  assert_app_env_var('GEAR_NAME')
+  assert_app_env_var('GEAR_UUID')
+  assert_app_env_var('TMP_DIR')
+  assert_app_env_var('HOMEDIR')
+  assert_app_env_var('HISTFILE', false)
 end
 
 
@@ -802,11 +857,11 @@ Then /^the ([^ ]+) cartridge private endpoints will be (exposed|concealed)$/ do 
                  "for cartridge #{cart_name}")
     case action
     when 'exposed'
-      app_env_var_will_exist(endpoint.private_ip_name, false)
-      app_env_var_will_exist(endpoint.private_port_name, false)
+      assert_app_env_var(endpoint.private_ip_name, false)
+      assert_app_env_var(endpoint.private_port_name, false)
     when 'concealed'
-      app_env_var_will_not_exist(endpoint.private_ip_name, false)
-      app_env_var_will_not_exist(endpoint.private_port_name, false)
+      refute_app_env_var(endpoint.private_ip_name, false)
+      refute_app_env_var(endpoint.private_port_name, false)
     end
   end
 end
@@ -820,9 +875,9 @@ Then /^the ([^ ]+) cartridge endpoints with ssl to gear option will be (exposed|
                    "#{endpoint.public_port_name} for cartridge #{cart_name}")
       case action
       when 'exposed'
-        app_env_var_will_exist(endpoint.public_port_name, false)
+        assert_app_env_var(endpoint.public_port_name, false)
       when 'concealed'
-        app_env_var_will_not_exist(endpoint.public_port_name, false)
+        refute_app_env_var(endpoint.public_port_name, false)
       end
     end
   end
@@ -838,9 +893,13 @@ end
 
 Then /^the ([^ ]+) cartridge status should be (running|stopped)$/ do |cart_name, expected_status|
   begin
-    @gear.carts[cart_name].status
-    # If we're here, the cart status is 'running'
-    raise "Expected #{cart_name} cartridge to be stopped" if expected_status == "stopped"
+    status = @gear.carts[cart_name].status
+    if status.include? "ERROR: Non-zero exitcode returned while executing 'status' command on cartridge"
+      raise "Expected #{cart_name} cartridge to be running" if expected_status == "running"
+    else
+      # If we're here, the cart status is 'running'
+      raise "Expected #{cart_name} cartridge to be stopped" if expected_status == "stopped"
+    end
   rescue OpenShift::Runtime::Utils::ShellExecutionException
     # If we're here, the cart status is 'stopped'
     raise if expected_status == "running"
@@ -851,9 +910,9 @@ Then /^the application stoplock should( not)? be present$/ do |negate|
   stop_lock = File.join($home_root, @gear.uuid, 'app-root', 'runtime', '.stop_lock')
 
   if negate
-    assert_file_not_exists stop_lock
+    refute_file_exist stop_lock
   else
-    assert_file_exists stop_lock
+    assert_file_exist stop_lock
   end 
 end
 
@@ -949,4 +1008,49 @@ When /^I (start|stop) the application using ctl_all via rhcsh$/ do |action|
   output = `#{cmd}`
 
   $logger.debug "Output: #{output}"
+end
+
+Then /^the Apache nodes DB file will contain ([^ ]+) for the ssl_to_gear endpoint$/ do |option|
+  file = File.join($home_root,".httpd.d","nodes.txt")
+  assert_file_exist file
+  option_found = false
+  File.read(file).each_line do |line|
+    if line[/#{@app.name}[^ ]+\s#{option}/]
+      option_found = true
+      line.match(/#{option}:([0-9\.]+):([0-9]+)/) do |match|
+        assert_equal match[1], File.read(File.join($home_root,@app.uid,".env","OPENSHIFT_HAPROXY_IP"))
+        assert_equal match[2], File.read(File.join($home_root,@app.uid,".env","OPENSHIFT_HAPROXY_PORT"))
+      end
+    end
+  end
+  assert option_found
+end
+
+Then /^the haproxy.cfg file will( not)? be configured to proxy SSL to the backend gear$/ do |negate|
+  file = File.join($home_root,@app.uid,"haproxy","conf","haproxy.cfg")
+  assert_file_exist file
+  content = File.read(file)
+  assert_not_nil content.match(/mode tcp\n/)
+  assert_not_nil content.match(/option ssl-hello-chk\n/)
+  assert_not_nil content.match(/option tcplog\n/)
+end
+
+When /^I send an (https?) request to the app( on port (\d+))?$/ do |protocol, onport, port|
+  urlstr = "#{protocol}://#{@app.name}-#{@app.namespace}.#{$cloud_domain}"
+  if port and (port.to_i > 0)
+    urlstr += ":#{port.to_i}"
+  end
+  # httpclient set to TLSv1 is required for SNI support
+  http = HTTPClient.new()
+  http.ssl_config.verify_mode=OpenSSL::SSL::VERIFY_NONE
+  http.ssl_config.ssl_version="TLSv1"
+  @response = http.get(urlstr)
+end
+
+Then /^It will return ([^ ]+)($|\s.*)$/ do |check, value|
+  if check == "redirect"
+    assert_equal "https://#{@app.hostname}", @response.header["location"].first
+  elsif check == "content"
+    assert value, @response.body
+  end
 end

@@ -7,14 +7,16 @@ if ARGV.include? "--outfile"
   outfile = ARGV[index+1]
 end
 
-if outfile.nil? 
+if outfile.nil?
+  puts "Synopsis:"
+  puts "Utiltity to export the mongo database into json documents containing analytics data for applications" 
   puts "Usage :"
   puts "  #{__FILE__} --outfile <filename>" 
   exit 1
 end
 
 
-require '/var/www/openshift/broker/config/environment'
+require "#{ENV['OPENSHIFT_BROKER_DIR'] || '/var/www/openshift/broker'}/config/environment"
 
 u = Rails.application.config.datastore[:user]
 p = Rails.application.config.datastore[:password]
@@ -23,10 +25,10 @@ db = Rails.application.config.datastore[:db]
 
 `mkdir -p /tmp/analytics`
 
-`mongoexport --username #{u} --password #{p} --host #{hp} --db #{db} --collection applications --out /tmp/analytics/analytics.apps.json --fields _id,uuid,aliases,analytics,init_git_url,created_at,updated_at,domain_id,default_gear_size,group_instances,component_instances`
-`mongoexport --username #{u} --password #{p} --host #{hp} --db #{db} --collection domains --out /tmp/analytics/analytics.domains.json --fields _id,owner_id,user_ids,namespace`
+`mongoexport --username #{u} --password #{p} --host #{hp} --db #{db} --collection applications --out /tmp/analytics/analytics.apps.json --fields _id,uuid,aliases,analytics,scalable,init_git_url,created_at,updated_at,domain_id,default_gear_size,gears,component_instances,members`
+`mongoexport --username #{u} --password #{p} --host #{hp} --db #{db} --collection domains --out /tmp/analytics/analytics.domains.json --fields _id,owner_id,members,namespace`
 `mongoexport --username #{u} --password #{p} --host #{hp} --db #{db} --collection usage --out /tmp/analytics/analytics.usage.json`
-`mongoexport --username #{u} --password #{p} --host #{hp} --db #{db} --collection cloud_users --out /tmp/analytics/analytics.users.json --fields _id,login,parent_user_id,created_at,consumed_gears,capabilities,plan_id`
+`mongoexport --username #{u} --password #{p} --host #{hp} --db #{db} --collection cloud_users --out /tmp/analytics/analytics.users.json --fields _id,login,parent_user_id,created_at,consumed_gears,capabilities,plan_id,usage_account_id`
 `tar cvzf #{outfile} /tmp/analytics >& /dev/null`
 `rm -rf /tmp/analytics`
 

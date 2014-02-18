@@ -53,8 +53,9 @@ class ActiveSupport::TestCase
 
   def cleanup_domain
     if cleanup_domain? 
-      @domain.destroy_recursive if @domain
+      @domain.destroy_recursive if @domain 
     end
+  rescue RestApi::ResourceNotFound
   end
 
   def with_unique_domain
@@ -189,9 +190,10 @@ class ActiveSupport::TestCase
   # Needs to be an accessible web cart definition on devenv or public web
   DOWNLOADED_CART_URL = 'https://github.com/openshift/downloadable-mock/raw/master/metadata/manifest.yml'
   DOWNLOADED_CART_NAME = 'openshift-downloadable-mock-0.1'
+  DOWNLOADED_CART_DISPLAY_NAME = 'Downloadable Mock Cartridge 0.1'
 
   def with_app
-    use_app(:readable_app) { Application.new({:name => "normal", :cartridge => 'ruby-1.8', :as => new_named_user('user_with_normal_app')}) }
+    use_app(:readable_app) { Application.new({:id => "normalid", :name => "normal", :cartridge => 'ruby-1.8', :as => new_named_user('user_with_normal_app')}) }
   end
 
   def with_downloaded_app
@@ -215,6 +217,7 @@ class ActiveSupport::TestCase
     h = {}
     h['Cookie'] = "rh_sso=#{@user.ticket}" if @user.ticket
     h['Authorization'] = ActionController::HttpAuthentication::Basic.encode_credentials(@user.login, @user.password) if @user.login
+    h['X-Forwarded-For'] = '0.0.0.0' if self.class < ActionController::TestCase
     h
   end
 
@@ -223,7 +226,7 @@ class ActiveSupport::TestCase
   end
 
   def anonymous_json_header(is_post=false, nolinks=true)
-    mime = "application/json#{nolinks ? ';nolinks' : ''};version=1.4"
+    mime = "application/json#{nolinks ? ';nolinks' : ''};version=1.6"
     (is_post ? {'Content-Type' => mime} : {}).merge('Accept' => mime, 'User-Agent' => Console.config.api[:user_agent])
   end
 end

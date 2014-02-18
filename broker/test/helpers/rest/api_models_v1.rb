@@ -50,14 +50,14 @@ class OptionalParam_V1 < BaseObj
 end
 
 class Link_V1 < BaseObj
-  attr_accessor :rel, :method, :href, :required_params, :optional_params                               
-                                                                                                       
+  attr_accessor :rel, :method, :href, :required_params, :optional_params
+
   def initialize(method=nil, href=nil, required_params=nil, optional_params=nil)
-    self.rel = nil 
-    self.method = method                                                                               
-    self.href = href.to_s                                                                              
-    self.required_params = Array(required_params)                                                
-    self.optional_params = Array(optional_params)                                                
+    self.rel = nil
+    self.method = method
+    self.href = href.to_s
+    self.required_params = Array(required_params)
+    self.optional_params = Array(optional_params)
   end
 
   def self.to_obj(hash)
@@ -104,8 +104,8 @@ class Link_V1 < BaseObj
         opt_params[i].compare(obj_opt_params[i])
       end
     end
-  end                                                                                                  
-end                                                                                                    
+  end
+end
 
 class BaseObj_V1 < BaseObj
   def self.to_obj(hash)
@@ -144,7 +144,9 @@ class BaseApi_V1 < BaseObj_V1
          "ADD_DOMAIN" => Link_V1.new("POST", "domains", [
            Param_V1.new("id", "string")
           ]),
-         "LIST_CARTRIDGES" => Link_V1.new("GET", "cartridges")
+         "LIST_CARTRIDGES" => Link_V1.new("GET", "cartridges", [], [
+           OptionalParam_V1.new('category', 'string')
+          ])
     } unless $nolinks
   end
 end
@@ -153,7 +155,7 @@ class RestUser_V1 < BaseObj_V1
   attr_accessor :login, :consumed_gears, :max_gears, :capabilities, :plan_id, :usage_account_id, :links
   KEY_TYPES = ['ssh-rsa', 'ssh-dss', 'ssh-rsa-cert-v01@openssh.com', 'ssh-dss-cert-v01@openssh.com',
                'ssh-rsa-cert-v00@openssh.com', 'ssh-dss-cert-v00@openssh.com']
-                                                                                                       
+
   def initialize
     self.login = nil
     self.consumed_gears = 0
@@ -174,12 +176,12 @@ class RestUser_V1 < BaseObj_V1
   def compare(obj)
     raise_ex("User 'login' NOT found") if obj.login.nil?
     super
-  end                                                                                                  
+  end
 end
 
 class RestEmbeddedCartridge_V1 < BaseObj_V1
   attr_accessor :type, :name, :links, :properties, :status_messages
- 
+
   def initialize(type=nil, name=nil, app=nil)
     self.name = name
     self.type = type
@@ -195,13 +197,13 @@ class RestEmbeddedCartridge_V1 < BaseObj_V1
           Param_V1.new("event", "string", "start")
         ]),
         "STOP" => Link_V1.new("POST", "/cartridges/#{name}/events", [
-          Param_V1.new("event", "string", "stop")                                              
+          Param_V1.new("event", "string", "stop")
         ]),
         "RESTART" => Link_V1.new("POST", "/cartridges/#{name}/events", [
-          Param_V1.new("event", "string", "restart")                                           
-        ]),                                                                                          
+          Param_V1.new("event", "string", "restart")
+        ]),
         "RELOAD" => Link_V1.new("POST", "/cartridges/#{name}/events", [ 
-          Param_V1.new("event", "string", "reload")                                            
+          Param_V1.new("event", "string", "reload")
         ]),
         "DELETE" => Link_V1.new("DELETE", "/cartridges/#{name}")
       }) if type == "embedded"
@@ -239,7 +241,7 @@ class RestDomain_V1 < BaseObj_V1
         [OptionalParam_V1.new("cartridge", "string"),
          OptionalParam_V1.new("scale", "boolean", [true, false], false),
          OptionalParam_V1.new("gear_profile", "string"),
-         OptionalParam_V1.new("initial_git_url", "string", ["*", "empty"]),
+         OptionalParam_V1.new("initial_git_url", "string", ["*", "empty"])
         ]),
       "UPDATE" => Link_V1.new("PUT", "domains/#{id}",
         [ Param_V1.new("id", "string") ]),
@@ -269,7 +271,7 @@ class RestKey_V1 < BaseObj_V1
 end
 
 class RestApplication_V1 < BaseObj_V1
-  attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url, :gear_profile, :scalable, :health_check_path, :scale_min, :scale_max, :building_with, :building_app, :build_job_url
+  attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url, :gear_profile, :scalable, :health_check_path, :scale_min, :scale_max, :building_with, :building_app, :build_job_url, :auto_deploy, :deployment_branch, :keep_deployments, :deployment_type
 
   def initialize(name=nil, framework=nil, domain_id=nil, scalable=nil)
     self.name = name
@@ -286,11 +288,15 @@ class RestApplication_V1 < BaseObj_V1
     self.ssh_url = nil
     self.scalable = scalable
     self.health_check_path = nil
+    self.auto_deploy = false
+    self.deployment_branch = 'master'
+    self.keep_deployments = 1
+    self.deployment_type = 'git'
     self.links = {
       "GET" => Link_V1.new("GET", "domains/#{domain_id}/applications/#{name}"),
       "GET_DESCRIPTOR" => Link_V1.new("GET", "domains/#{domain_id}/applications/#{name}/descriptor"),
       "GET_GEARS" => Link_V1.new("GET", "domains/#{domain_id}/applications/#{name}/gears"),
-      "GET_GEAR_GROUPS" => Link_V1.new("GET", "domains/#{domain_id}/applications/#{name}/gear_groups"),      
+      "GET_GEAR_GROUPS" => Link_V1.new("GET", "domains/#{domain_id}/applications/#{name}/gear_groups"),
       "START" => Link_V1.new("POST", "domains/#{domain_id}/applications/#{name}/events",
         [ Param_V1.new("event", "string", "start") ]),
       "STOP" => Link_V1.new("POST", "domains/#{domain_id}/applications/#{name}/events",
@@ -300,10 +306,10 @@ class RestApplication_V1 < BaseObj_V1
       "FORCE_STOP" => Link_V1.new("POST", "domains/#{domain_id}/applications/#{name}/events",
         [ Param_V1.new("event", "string", "force-stop") ]),
       "ADD_ALIAS" => Link_V1.new("POST", "domains/#{domain_id}/applications/#{name}/events",
-        [ Param_V1.new("event", "string", "add-alias"),                                            
+        [ Param_V1.new("event", "string", "add-alias"),
           Param_V1.new("alias", "string") ]),
       "REMOVE_ALIAS" => Link_V1.new("POST", "domains/#{domain_id}/applications/#{name}/events",
-        [ Param_V1.new("event", "string", "remove-alias"),                                         
+        [ Param_V1.new("event", "string", "remove-alias"),
           Param_V1.new("alias", "string") ]),
       "SCALE_UP" => Link_V1.new("POST", "domains/#{domain_id}/applications/#{name}/events",
         [ Param_V1.new("event", "string", "scale-up") ]),

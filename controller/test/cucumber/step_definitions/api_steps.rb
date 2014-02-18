@@ -1,7 +1,6 @@
 require 'rubygems'
 require 'rest_client'
 require 'nokogiri'
-#require '/var/www/openshift/broker/config/environment'
 require 'logger'
 require 'parseconfig'
 require 'rspec'
@@ -48,18 +47,18 @@ Given /^a new user, verify updating a domain with an php-([^ ]+) application in 
   steps %{
     Given a new user
     And I accept "#{format}"
-    When I send a POST request to "/domains" with the following:"id=api<random>"
+    When I send a POST request to "/domains" with the following:"name=api<random>"
     Then the response should be "201"
     When I send a POST request to "/domains/api<random>/applications" with the following:"name=app&cartridge=php-#{php_version}"
     Then the response should be "201"
-    When I send a PUT request to "/domains/api<random>" with the following:"id=apix<random>"
+    When I send a PUT request to "/domains/api<random>" with the following:"name=apix<random>"
     Then the response should be "422"
     And the error message should have "severity=error&exit_code=128"
     When I send a DELETE request to "/domains/api<random>/applications/app"
     Then the response should be "200"
-    When I send a PUT request to "/domains/api<random>" with the following:"id=apix<random>"
+    When I send a PUT request to "/domains/api<random>" with the following:"name=apix<random>"
     Then the response should be "200"
-    And the response should be a "domain" with attributes "id=apix<random>"
+    And the response should be a "domain" with attributes "name=apix<random>"
   }
 end
 
@@ -67,7 +66,7 @@ Given /^a new user, verify deleting a domain with an php-([^ ]+) application in 
   steps %{
     Given a new user
     And I accept "#{format}"
-    When I send a POST request to "/domains" with the following:"id=api<random>"
+    When I send a POST request to "/domains" with the following:"name=api<random>"
     Then the response should be "201"
     When I send a POST request to "/domains/api<random>/applications" with the following:"name=app&cartridge=php-#{php_version}"
     Then the response should be "201"
@@ -83,7 +82,7 @@ Given /^a new user, verify force deleting a domain with an php-([^ ]+) applicati
   steps %{
     Given a new user
     And I accept "#{format}"
-    When I send a POST request to "/domains" with the following:"id=api<random>"
+    When I send a POST request to "/domains" with the following:"name=api<random>"
     Then the response should be "201"
     When I send a POST request to "/domains/api<random>/applications" with the following:"name=app&cartridge=php-#{php_version}"
     Then the response should be "201"
@@ -96,29 +95,29 @@ Given /^a new user, create a ([^ ]+) application using ([^ ]+) format and verify
   steps %{
     Given a new user
     And I accept "#{format}"
-    When I send a POST request to "/domains" with the following:"id=api<random>"
+    When I send a POST request to "/domains" with the following:"name=api<random>"
     Then the response should be "201"
     When I send a POST request to "/domains/api<random>/applications" with the following:"name=app&cartridge=#{cart_name}"
     Then the response should be "201"
-    
+
     When I send a GET request to "/domains/api<random>/applications/app/gear_groups"
     Then the response should be a "gear-group/gears/gear" with attributes "state=started"
-    
+
     When I send a POST request to "/domains/api<random>/applications/app/events" with the following:"event=stop"
     Then the response should be "200"
     When I send a GET request to "/domains/api<random>/applications/app/gear_groups"
     Then the response should be a "gear-group/gears/gear" with attributes "state=stopped"
-    
+
     When I send a POST request to "/domains/api<random>/applications/app/events" with the following:"event=start"
     Then the response should be "200"
     When I send a GET request to "/domains/api<random>/applications/app/gear_groups"
     Then the response should be a "gear-group/gears/gear" with attributes "state=started"
-    
+
     When I send a POST request to "/domains/api<random>/applications/app/events" with the following:"event=restart"
     Then the response should be "200"
     When I send a GET request to "/domains/api<random>/applications/app/gear_groups"
     Then the response should be a "gear-group/gears/gear" with attributes "state=started"
-    
+
     When I send a DELETE request to "/domains/api<random>/applications/app"
     Then the response should be "200"
   }
@@ -128,7 +127,7 @@ Given /^a new user$/ do
   @random = rand(99999999)
   @username = "rest-test-#{@random}"
   @password = "xyz123"
-  
+
   register_user(@username, @password) if $registration_required
 
 #TODO authenticate user
@@ -163,6 +162,10 @@ Given /^a quickstart UUID$/ do
   quickstarts = unpacked_data(@response.body)
 
   @uuid = quickstarts[0]['quickstart']['id']
+end
+
+When /^the user has MAX_DOMAINS set to (\d*)$/ do |max_domains|
+  set_max_domains(@username,max_domains)
 end
 
 When /^I send a GET request to "([^\"]*)"$/ do |path|

@@ -1,29 +1,25 @@
 class ScalingController < ConsoleController
 
   def show
-    user_default_domain
-    @application = @domain.find_application params[:application_id]
-    @cartridges = @application.cartridges
+    @application = Application.find(params[:application_id], :as => current_user)
+    @cartridges = @application.cartridges.sort
     @user = User.find :one, :as => current_user
     redirect_to new_application_scaling_path(@application) unless @application.scales?
   end
 
   def new
-    user_default_domain
-    @application = @domain.find_application params[:application_id]
+    @application = Application.find(params[:application_id], :as => current_user)
   end
 
   def delete
-    user_default_domain
-    @application = @domain.find_application params[:application_id]
+    @application = Application.find(params[:application_id], :as => current_user)
     redirect_to new_application_scaling_path(@application) unless @application.scales?
   end
 
   def update
-    user_default_domain
     @user = User.find :one, :as => current_user
-    @application = @domain.find_application params[:application_id]
-    @cartridges = @application.cartridges
+    @application = Application.find(params[:application_id], :as => current_user)
+    @cartridges = @application.cartridges.sort
     @cartridge = @cartridges.find{ |c| c.name == params[:id] } or raise RestApi::ResourceNotFound.new(Cartridge.model_name, params[:id])
 
     range = [params[:cartridge][:scales_from].to_i, params[:cartridge][:scales_to].to_i]
@@ -31,7 +27,7 @@ class ScalingController < ConsoleController
     @cartridge.scales_from, @cartridge.scales_to = range
 
     if @cartridge.save
-      redirect_to application_scaling_path, :flash => {:success => "Updated scale settings for cartridge '#{@cartridge.display_name}'"}
+      redirect_to application_scaling_path, :flash => flash_messages(@cartridge.messages).merge({:success => "Updated scale settings for cartridge '#{@cartridge.display_name}'"})
     else
       render :show
     end
@@ -41,4 +37,9 @@ class ScalingController < ConsoleController
     # commit form parameters to a cartridge on an application
   #  redirect_to application_scaling_path
   #end
+  
+  protected
+    def active_tab
+      :applications
+    end  
 end

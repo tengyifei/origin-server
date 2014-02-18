@@ -12,10 +12,13 @@
 .font-icon {
   display: inline-block;
   top: 0;
-  @include icon-text-shadow();
   &.font-icon-inline  {
     position: relative;
   }
+}
+
+.font-icon-shadow {
+  @include icon-text-shadow();
 }
 
 .font-icon
@@ -59,21 +62,17 @@
 .font-icon-size-44      {font-size: 44px !important;}
 
 
-h1[class*="icon-"]:before,
-h2[class*="icon-"]:before {
-  left: -8px;
-  margin-left: 8px;
+h1.icon-heading .font-icon {
+  margin-right: 4px;
+  color: #aaa;
+  @include icon-text-shadow($color: rgba(255, 255, 255, 1));
 }
-h3[class*="icon-"]:before,
-h4[class*="icon-"]:before,
-h5[class*="icon-"]:before {
-  left: -6px;
-  margin-left: 6px;
+h1.icon-heading .font-icon {
+  font-size: $h1FontSize - 3; 
 }
 
 h1, h2, h3, h4, h5, h6 {
   .font-icon-block {
-    margin-right: .2em;
   }
 }
 
@@ -126,17 +125,32 @@ h5.alert-heading {
 }
 
 dl.font-icon-legend {
-  margin: 5px 0 0 40px;
-  
+  margin: 0;
+  position: relative;
   dd {
-    margin: 0 0 25px 18px;
+    margin: 0 0 3px 23px;
+    font-size: $smallFontSize;
+    b {
+      font-weight: 600;
+    }
   }
-  dt .font-icon {
-    margin: 0 15px 0 -20px;
-    font-size: $leadFontSize;
+  dt {
+    position: absolute;
+    text-align: center;
+    width: 15px;
+    font-size: $smallFontSize;
+    color: $grayMedium;
+    .label-premium {
+      @include usage_rate_indicator()
+    }
+  }
+  &.font-icon-legend-large {
+    dd {
+      margin: 0 0 10px 28px;
+      font-size: $baseFontSize;
+    }
+    dt {
+      font-size: $baseFontSize;
+    }
   }
 }
-
-
-
- 

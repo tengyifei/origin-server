@@ -3,12 +3,23 @@ locked_files:
 - ~/.pearrc
 - bin/
 - bin/*
+- conf/
+- conf/performance.conf.erb.hidden
 - configuration/
 - configuration/etc/
+- configuration/etc/conf/
+- configuration/etc/conf/*
+- configuration/etc/conf.d/
+- configuration/etc/conf.d/openshift.conf
+- configuration/etc/conf.d/php.conf
+- configuration/etc/php.ini
 - metadata/
 - metadata/*
 - env/
 - env/*
-- conf/
+- hooks/
+- hooks/*
 processed_templates:
 - '**/*.erb'
+dependency_dirs:
+- phplib

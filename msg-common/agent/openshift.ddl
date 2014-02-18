@@ -21,8 +21,76 @@ action "cartridge_do", :description => "run a cartridge action" do
     input :action,
         :prompt         => "Action",
         :description    => "Cartridge hook to run",
-        :type           => :string,
-        :validation     => '^(app-create|app-destroy|env-var-add|env-var-remove|broker-auth-key-add|broker-auth-key-remove|authorized-ssh-key-add|authorized-ssh-key-remove|authorized-ssh-keys-replace|app-state-show|cartridge-list|configure|post-configure|deconfigure|unsubscribe|tidy|deploy-httpd-proxy|remove-httpd-proxy|info|post-install|post-remove|pre-install|reload|restart|start|status|stop|force-stop|add-alias|remove-alias|threaddump|expose-port|conceal-port|show-port|frontend-backup|frontend-restore|frontend-create|frontend-destroy|frontend-update-name|frontend-connect|frontend-disconnect|frontend-connections|frontend-idle|frontend-unidle|frontend-check-idle|frontend-sts|frontend-no-sts|frontend-get-sts|aliases|ssl-cert-add|ssl-cert-remove|ssl-certs|frontend-to-hash|system-messages|connector-execute|get-quota|set-quota)$',
+        :type           => :list,
+        :list           => %w(
+                              add-alias
+                              add-aliases
+                              aliases
+                              app-create
+                              app-destroy
+                              app-state-show
+                              authorized-ssh-key-add
+                              authorized-ssh-key-batch-add
+                              authorized-ssh-key-remove
+                              authorized-ssh-key-batch-remove
+                              authorized-ssh-keys-replace
+                              broker-auth-key-add
+                              broker-auth-key-remove
+                              cartridge-list
+                              conceal-port
+                              configure
+                              connector-execute
+                              deconfigure
+                              deploy-httpd-proxy
+                              env-var-add
+                              env-var-remove
+                              expose-port
+                              force-stop
+                              frontend-backup
+                              frontend-check-idle
+                              frontend-connect
+                              frontend-connections
+                              frontend-create
+                              frontend-destroy
+                              frontend-disconnect
+                              frontend-reconnect
+                              frontend-get-sts
+                              frontend-idle
+                              frontend-no-sts
+                              frontend-restore
+                              frontend-sts
+                              frontend-to-hash
+                              frontend-unidle
+                              frontend-update-name
+                              get-quota
+                              post-configure
+                              post-install
+                              post-remove
+                              pre-install
+                              reload
+                              remove-alias
+                              remove-aliases
+                              remove-httpd-proxy
+                              restart
+                              set-quota
+                              show-port
+                              ssl-cert-add
+                              ssl-cert-remove
+                              ssl-certs
+                              start
+                              status
+                              stop
+                              threaddump
+                              tidy
+                              user-var-add
+                              user-var-remove
+                              user-var-list
+                              unsubscribe
+                              update-cluster
+                              update-configuration
+                              deploy
+                              activate
+                              ),
         :optional       => false,
         :maxlength      => 64
 
@@ -43,6 +111,10 @@ action "cartridge_do", :description => "run a cartridge action" do
     output :exitcode,
            :description => "Exit code",
            :display_as => "Exit Code"
+
+    output :addtl_params,
+           :description => "Additional Params",
+           :display_as => "Additional Params"
 end
 
 action "get_facts", :description => "get a specific list of facts" do
@@ -63,6 +135,17 @@ action "execute_parallel", :description => "run commands in parallel" do
     display :always
     output  :output,
             :description => "Output from script",
+            :display_as => "Output"
+
+    output :exitcode,
+           :description => "Exit code",
+           :display_as => "Exit Code"
+end
+
+action "get_all_gears_endpoints", :description => "get ports info about all gears" do
+    display :always
+    output  :output,
+            :description => "Gear external ports information",
             :display_as => "Output"
 
     output :exitcode,
@@ -103,7 +186,7 @@ action "get_all_gears_sshkeys", :description => "get all sshkeys for all gears" 
            :display_as => "Exit Code"
 end
 
-action "set_district", :description => "run a cartridge action" do
+action "set_district", :description => "Set the District of a Node" do
     display :always
 
     input :uuid,
@@ -113,11 +196,23 @@ action "set_district", :description => "run a cartridge action" do
         :validation     => '^[a-zA-Z0-9]+$',
         :optional       => false,
         :maxlength      => 32
-        
+
     input :active,
         :prompt         => "District active boolean",
         :description    => "District active boolean",
         :type           => :boolean,
+        :optional       => false
+
+    input :first_uid,
+        :prompt         => "First uid",
+        :description    => "First uid",
+        :type           => :integer,
+        :optional       => false
+
+    input :max_uid,
+        :prompt         => "Max uid",
+        :description    => "Max uid",
+        :type           => :integer,
         :optional       => false
 
     output  :time,
@@ -133,20 +228,40 @@ action "set_district", :description => "run a cartridge action" do
            :display_as => "Exit Code"
 end
 
-action "has_app", :description => "Does this server contain a specified app?" do
+action "set_district_uid_limits", :description => "Set District uid limits for a Node" do
+    display :always
+
+    input :first_uid,
+        :prompt         => "First uid",
+        :description    => "First uid",
+        :type           => :integer,
+        :optional       => false
+
+    input :max_uid,
+        :prompt         => "Max uid",
+        :description    => "Max uid",
+        :type           => :integer,
+        :optional       => false
+
+    output  :time,
+            :description => "The time as a message",
+            :display_as => "Time"
+
+    output  :output,
+            :description => "Output from script",
+            :display_as => "Output"
+
+    output :exitcode,
+           :description => "Exit code",
+           :display_as => "Exit Code"
+end
+
+action "has_gear", :description => "Does this server contain a specified gear?" do
     display :always
 
     input :uuid,
-        :prompt         => "Application uuid",
-        :description    => "Application uuid",
-        :type           => :string,
-        :validation     => '^[a-zA-Z0-9]+$',
-        :optional       => false,
-        :maxlength      => 32
-
-    input :application,
-        :prompt         => "Application Name",
-        :description    => "Name of an application to search for",
+        :prompt         => "Gear uuid",
+        :description    => "Gear uuid",
         :type           => :string,
         :validation     => '^[a-zA-Z0-9]+$',
         :optional       => false,
@@ -356,7 +471,15 @@ action "upgrade", :description => "upgrade a gear" do
         :validation     => '^[a-zA-Z0-9]+$',
         :optional       => false,
         :maxlength      => 32
-        
+
+    input :app_uuid,
+        :prompt         => "Application uuid",
+        :description    => "Application uuid",
+        :type           => :string,
+        :validation     => '^[a-zA-Z0-9]+$',
+        :optional       => false,
+        :maxlength      => 32
+
     input :namespace,
         :prompt         => "Namespace",
         :description    => "Namespace",

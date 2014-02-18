@@ -6,7 +6,7 @@ module OpenShift
       class Plugin
         include OpenShift::Runtime::NodeLogger
 
-        attr_reader :gear_shell, :mcs_label
+        attr_reader :gear_shell
 
         def self.container_dir(container)
           File.join(container.base_dir, container.uuid)
@@ -15,8 +15,19 @@ module OpenShift
         def initialize(application_container)
           @container  = application_container
           @config     = ::OpenShift::Config.new
-          @mcs_label  = ::OpenShift::Runtime::Utils::SELinux.get_mcs_label(@container.uid) if @container.uid
           @gear_shell = @config.get("GEAR_SHELL")    || "/bin/bash"
+        end
+
+        # Public
+        #
+        # Lazy load the MCS label only when its needed
+        def mcs_label
+          if not @mcs_label
+            if @container.uid
+              @mcs_label = ::OpenShift::Runtime::Utils::SELinux.get_mcs_label(@container.uid)
+            end
+          end
+          @mcs_label
         end
 
         # Public: Create an empty gear.
@@ -29,13 +40,11 @@ module OpenShift
         #   # Setup permissions
         #
         # Returns nil on Success or raises on Failure
-        def create
+        def create(create_initial_deployment_dir = true)
           # Lock to prevent race condition on obtaining a UNIX user uid.
           # When running without districts, there is a simple search on the
           #   passwd file for the next available uid.
-          File.open("/var/lock/oo-create", File::RDWR|File::CREAT|File::TRUNC, 0o0600) do | uid_lock |
-            uid_lock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-            uid_lock.flock(File::LOCK_EX)
+          PathUtils.flock('/var/lock/oo-create', false) do
 
             unless @container.uid
               @container.uid = @container.gid = @container.next_uid
@@ -56,16 +65,14 @@ module OpenShift
                       "ERROR: unable to create user account(#{rc}): #{cmd.squeeze(" ")} stdout: #{out} stderr: #{err}"
                   ) unless rc == 0
 
-            @mcs_label  = ::OpenShift::Runtime::Utils::SELinux.get_mcs_label(@container.uid)
-
             set_ro_permission(@container.container_dir)
-            FileUtils.chmod 0o0750, @container.container_dir
+            FileUtils.chmod 0750, @container.container_dir
           end
 
           enable_cgroups
           enable_traffic_control
 
-          @container.initialize_homedir(@container.base_dir, @container.container_dir)
+          @container.initialize_homedir(@container.base_dir, @container.container_dir, create_initial_deployment_dir)
 
           enable_fs_limits
           delete_all_public_endpoints
@@ -97,7 +104,7 @@ module OpenShift
           freeze_cgroups
           disable_traffic_control
           last_access_dir = @config.get("LAST_ACCESS_DIR")
-          ::OpenShift::Runtime::Utils::oo_spawn("rm -f #{last_access_dir}/#{@container.name} > /dev/null")
+          ::OpenShift::Runtime::Utils::oo_spawn("rm #{last_access_dir}/#{@container.uuid}")
           @container.kill_procs
 
           purge_sysvipc
@@ -109,9 +116,21 @@ module OpenShift
           begin
             cmd = "userdel --remove -f \"#{@container.uuid}\""
             out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn(cmd)
-            raise ::OpenShift::Runtime::UserDeletionException.new(
-                      "ERROR: unable to destroy user account(#{rc}): #{cmd} stdout: #{out} stderr: #{err}"
-                  ) unless rc == 0
+            # Ref man userdel(8) for exit codes.
+            case rc
+            when 0
+            when 6
+              logger.debug("Userdel: user does not exist: #{@container.uuid}")
+            when 12
+              logger.debug("Userdel: could not remove home directory, we will retry: #{@container.uuid}")
+            else
+              # 1 == cannot update password file.
+              # 2 == invalid command syntax.
+              # 8 == currently logged in, should not be possible after we kill the pids.
+              # 10 == can't update group file
+              msg = "ERROR: unable to delete user account(#{rc}): #{cmd} stdout: #{out} stderr: #{err}"
+              raise ::OpenShift::Runtime::UserDeletionException.new(msg)
+            end
           rescue ArgumentError => e
             logger.debug("user does not exist. ignore.")
           end
@@ -157,11 +176,12 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
         #
         # Raises exception on error.
         #
-        def stop
-          @container.kill_procs
+        def stop(options={})
+          @container.kill_procs(options)
         end
 
         def start
+          restore_cgroups
         end
 
         # Deterministically constructs an IP address for the given UID based on the given
@@ -200,6 +220,11 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
           proxy.delete_all(proxy_mappings.map{|p| p[:proxy_port]}, true)
         end
 
+        def delete_public_endpoint(public_port)
+          proxy = ::OpenShift::Runtime::FrontendProxyServer.new
+          proxy.system_proxy_delete(public_port)
+        end
+
         # Public: Initialize OpenShift Port Proxy for this gear
         #
         # The port proxy range is determined by configuration and must
@@ -220,25 +245,25 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
         end
 
         def enable_cgroups
-          ::OpenShift::Runtime::Utils::Cgroups.enable(@container.uuid)
+          ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).create
         end
 
         def stop_cgroups
-          ::OpenShift::Runtime::Utils::Cgroups.disable(@container.uuid)
+          ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).delete
         end
 
         def enable_traffic_control
-          out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn("service openshift-tc status > /dev/null 2>&1")
-          if rc == 0
-            out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn("/usr/sbin/oo-admin-ctl-tc startuser #{@container.uuid} > /dev/null")
-            raise ::OpenShift::Runtime::UserCreationException.new("Unable to setup tc for #{@container.uuid}") unless rc == 0
+          begin
+            ::OpenShift::Runtime::Utils::TC.new.startuser(@container.uuid)
+          rescue RuntimeError, ArgumentError => e
+            raise ::OpenShift::Runtime::UserCreationException.new("Unable to setup tc for #{@container.uuid}")
           end
         end
 
         def disable_traffic_control
-          out,err,rc = ::OpenShift::Runtime::Utils::oo_spawn("service openshift-tc status > /dev/null 2>&1")
-          if rc == 0
-            ::OpenShift::Runtime::Utils::oo_spawn("/usr/sbin/oo-admin-ctl-tc deluser #{@container.uuid} > /dev/null")
+          begin
+            ::OpenShift::Runtime::Utils::TC.new.deluser(@container.uuid)
+          rescue RuntimeError, ArgumentError => e
           end
         end
 
@@ -250,6 +275,32 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
         def disable_fs_limits
           ::OpenShift::Runtime::Node.remove_pam_limits(@container.uuid)
           ::OpenShift::Runtime::Node.remove_quota(@container.uuid)
+        end
+
+        # Returns true if the given IP and port are currently bound
+        # according to lsof, otherwise false.
+        def address_bound?(ip, port, hourglass, ignoreClosed=false)
+          if ignoreClosed
+            _, _, rc = Utils.oo_spawn("/usr/sbin/lsof -sTCP:^CLOSE_WAIT,^FIN_WAIT1,^FIN_WAIT2 -i @#{ip}:#{port}", timeout: hourglass.remaining)
+          else
+            _, _, rc = Utils.oo_spawn("/usr/sbin/lsof -i @#{ip}:#{port}", timeout: hourglass.remaining)
+          end
+          rc == 0
+        end
+
+        def addresses_bound?(addresses, hourglass, ignoreClosed=false)
+          command = "/usr/sbin/lsof"
+          addresses.each do |addr|
+            if ignoreClosed
+              command << " -sTCP:^CLOSE_WAIT,^FIN_WAIT1,^FIN_WAIT2 -i @#{addr[:ip]}:#{addr[:port]}"
+            else
+              command << " -i @#{addr[:ip]}:#{addr[:port]}"
+            end
+            
+          end
+
+          _, _, rc = Utils.oo_spawn(command, timeout: hourglass.remaining)
+          rc == 0
         end
 
         # run_in_container_context(command, [, options]) -> [stdout, stderr, exit status]
@@ -284,53 +335,87 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
           options[:unsetenv_others] = true
           options[:uid] = @container.uid
           options[:gid] = @container.gid
-          options[:selinux_context] = ::OpenShift::Runtime::Utils::SELinux.context_from_defaults(@mcs_label)
+          options[:selinux_context] = ::OpenShift::Runtime::Utils::SELinux.context_from_defaults(mcs_label)
           ::OpenShift::Runtime::Utils::oo_spawn(command, options)
         end
 
         def reset_permission(paths)
           ::OpenShift::Runtime::Utils::SELinux.clear_mcs_label(paths)
-          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label(@mcs_label, paths)
+          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label(mcs_label, paths)
         end
 
         def reset_permission_R(paths)
           ::OpenShift::Runtime::Utils::SELinux.clear_mcs_label_R(paths)
-          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label_R(@mcs_label, paths)
+          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label_R(mcs_label, paths)
         end
 
         def set_ro_permission_R(paths)
           PathUtils.oo_chown_R(0, @container.gid, paths)
-          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label_R(@mcs_label, paths)
+          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label_R(mcs_label, paths)
         end
 
         def set_ro_permission(paths)
           PathUtils.oo_chown(0, @container.gid, paths)
-          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label(@mcs_label, paths)
+          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label(mcs_label, paths)
         end
 
         def set_rw_permission_R(paths)
           PathUtils.oo_chown_R(@container.uid, @container.gid, paths)
-          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label_R(@mcs_label, paths)
+          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label_R(mcs_label, paths)
         end
 
         def set_rw_permission(paths)
           PathUtils.oo_chown(@container.uid, @container.gid, paths)
-          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label(@mcs_label, paths)
+          ::OpenShift::Runtime::Utils::SELinux.set_mcs_label(mcs_label, paths)
         end
 
-        private
+        def chcon(path, label = nil, type=nil, role=nil, user=nil)
+          ::OpenShift::Runtime::Utils::SELinux.chcon(path, label, type, role, user)
+        end
+
+        # retrieve the default maximum memory limit
+        def memory_in_bytes(uuid)
+          OpenShift::Runtime::Utils::Cgroups.new(uuid).templates[:default]['memory.limit_in_bytes'].to_i
+        end
+
+      private
 
         def freeze_fs_limits
           ::OpenShift::Runtime::Node.pam_freeze(@container.uuid)
         end
 
         def freeze_cgroups
-          ::OpenShift::Runtime::Utils::Cgroups.freezer_burn(@container.uuid)
+          begin
+            cg = ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid)
+            cg.freeze
+            20.times do
+              pids = cg.processes
+              if pids.empty?
+                return
+              else
+                Process::Kill("KILL",*pids)
+                cg.thaw
+                sleep(0.1)
+                cg.freeze
+              end
+            end
+          rescue
+          end
         end
 
         # release resources (cgroups thaw), this causes Zombies to get killed
         def unfreeze_cgroups
-          ::OpenShift::Runtime::Utils::Cgroups.thaw(@container.uuid)
+          begin
+            ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).thaw
+          rescue
+          end
+        end
+
+        def restore_cgroups
+          begin
+            ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).restore
+          rescue
+          end
         end
 
         # Private: list directories (cartridges) in home directory

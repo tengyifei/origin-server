@@ -1,5 +1,7 @@
 #!/bin/bash -eu
 
+echo "Building Perl cartridge"
+
 if [ -f ${OPENSHIFT_REPO_DIR}.openshift/markers/force_clean_build ]
 then
     echo ".openshift/markers/force_clean_build found!  Rebuilding perl modules" 1>&2
@@ -21,13 +23,22 @@ then
 
   for f in $( ( echo "$DEPS" | xargs /usr/lib/rpm/perl.req | awk '{ print $1 }' | sed 's/^perl(\(.*\))$/\1/'; cat ${OPENSHIFT_REPO_DIR}deplist.txt ) | sort -u)
   do
-    # Check if local and not overriden in deplist.txt
-    if egrep -re "^\s*package\s*$f" $DEPS >/dev/null 2>&1  &&  \
-       ! grep "$f" ${OPENSHIFT_REPO_DIR}deplist.txt >/dev/null 2>&1;
-    then
-       echo "***  Skipping module $f install from CPAN (found locally)."
-       echo "***  Please add $f to deplist.txt to install it from CPAN."
-       continue;
+    # Skip checking if module is available locally or installed in system
+    # if module is listed in deplist.txt
+    #
+    if ! grep "$f" ${OPENSHIFT_REPO_DIR}deplist.txt >/dev/null 2>&1; then
+
+      if egrep -re "^\s*package\s*$f" $DEPS >/dev/null 2>&1; then
+        echo "***  Skipping module $f install from CPAN (found locally)."
+        echo "***  Please add $f to deplist.txt to install it from CPAN."
+        continue;
+      fi
+
+      if perl -e "use $f;" 2> /dev/null; then
+        echo "***   Skipping module $f install from CPAN (found in system)."
+        echo "***   Please add $f to deplist.txt to install it from CPAN."
+        continue;
+      fi
     fi
 
     DISABLE_TEST="-n"

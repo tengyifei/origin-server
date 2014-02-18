@@ -8,6 +8,9 @@ locked_files:
 - env/*
 - metadata/
 - metadata/*
+- lib/*
+- conf/
+- conf/my.cnf.erb.hidden
 - hooks/
 - hooks/*
 processed_templates:

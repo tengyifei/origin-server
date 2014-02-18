@@ -16,10 +16,10 @@
 class GroupInstance
   include Mongoid::Document
   embedded_in :application, class_name: Application.name
-  embeds_many :gears, class_name: Gear.name
-  
-  attr_accessor :min, :max
-  
+
+  field :gear_size, type: String
+  field :addtl_fs_gb, type: Integer
+
   # Initializes the application
   #
   # == Parameters:
@@ -34,45 +34,45 @@ class GroupInstance
     super(attrs, options)
     self._id = custom_id unless custom_id.nil?
   end
-  
+
+  def gears
+    application.gears.select{ |g| g.group_instance_id == _id }
+  end
+
+  def application_dns_gear
+    application.gears.each do |gear|
+      if gear.app_dns
+        return (gear.group_instance_id == _id) ? gear : nil
+      end
+    end
+  end
+
   def component_instances
-    all_component_instances.select{|c| !c.is_sparse?}
+    all_component_instances.reject(&:is_sparse?)
   end
-  
-  def sparse_instances
-    all_component_instances.select{|c| c.is_sparse?}
-  end
-  
+
   def all_component_instances
-    application.component_instances.where(group_instance_id: self._id)
+    application.component_instances.select{ |i| i.group_instance_id == self._id }
   end
 
-  def get_gears(component_instance=nil)
-    if component_instance.nil? or not component_instance.is_sparse?
-      return gears
-    else
-      return gears.select { |g| g.sparse_carts.include? component_instance._id or g.host_singletons }
-    end
-  end
-  
   def gear_size
-    get_group_override("gear_size") || application.default_gear_size
-  end
-
-  def gear_size=(value)
-    if value == application.default_gear_size
-      unset_group_override("gear_size")
-    else
-      set_group_override("gear_size", value)
-    end
+    super || group_override.gear_size
   end
 
   def addtl_fs_gb
-    get_group_override("additional_filesystem_gb") || 0
+    super || group_override.additional_filesystem_gb
   end
 
-  def addtl_fs_gb=(value)
-    set_group_override("additional_filesystem_gb", value)
+  def server_identities
+    identities = self.gears.map{|gear| gear.server_identity}
+    identities.uniq!
+    identities
+  end
+
+  def has_component?(comp_spec)
+    all_component_instances.any? do |ci|
+      ci.component_name == comp_spec.name and ci.cartridge_name == comp_spec.cartridge.name
+    end
   end
 
   # Adds ssh keys to all gears within the group instance.
@@ -81,7 +81,7 @@ class GroupInstance
   # add_keys::
   #   Array of Hash containing name, type, content of the ssh keys
   # remove_keys::
-  #   Array of Hash containing name, type, content of the ssh keys  
+  #   Array of Hash containing name, type, content of the ssh keys
   # add_envs::
   #   Array of Hash containing key, value of the environment variables
   # remove_envs::
@@ -92,10 +92,10 @@ class GroupInstance
   def self.update_configuration(add_keys=[], remove_keys=[], add_envs=[], remove_envs=[], gears=nil)
     handle = RemoteJob.create_parallel_job
     tag = ""
-    
+
     RemoteJob.run_parallel_on_gears(gears, handle) do |exec_handle, gear|
-      add_keys.each     { |ssh_key| RemoteJob.add_parallel_job(exec_handle, tag, gear, gear.get_proxy.get_add_authorized_ssh_key_job(gear, ssh_key["content"], ssh_key["type"], ssh_key["name"])) } unless add_keys.nil?
-      remove_keys.each  { |ssh_key| RemoteJob.add_parallel_job(exec_handle, tag, gear, gear.get_proxy.get_remove_authorized_ssh_key_job(gear, ssh_key["content"], ssh_key["name"])) } unless remove_keys.nil?
+      RemoteJob.add_parallel_job(exec_handle, tag, gear, gear.get_proxy.get_add_authorized_ssh_keys_job(gear, add_keys))  unless add_keys.nil?
+      remove_keys.each  { |ssh_key| RemoteJob.add_parallel_job(exec_handle, tag, gear, gear.get_proxy.get_remove_authorized_ssh_keys_job(gear, ssh_key["content"], ssh_key["type"], ssh_key["name"])) } unless remove_keys.nil?
 
       add_envs.each     {|env|      RemoteJob.add_parallel_job(exec_handle, tag, gear, gear.get_proxy.get_env_var_add_job(gear, env["key"],env["value"]))} unless add_envs.nil?
       remove_envs.each  {|env|      RemoteJob.add_parallel_job(exec_handle, tag, gear, gear.get_proxy.get_env_var_remove_job(gear, env["key"]))} unless remove_envs.nil?
@@ -111,51 +111,13 @@ class GroupInstance
     result_io
   end
 
-  # @return [Hash] a simplified hash representing this {GroupInstance} object which is used by {Application#compute_diffs}  
-  def to_hash
-    comps = all_component_instances.map{ |c| c.to_hash }
-    {component_instances: comps, scale: {current: self.gears.length, additional_filesystem_gb: self.addtl_fs_gb, gear_size: self.gear_size}, _id: _id}
-  end
-
-  def get_group_override(key=nil)
-    comps = all_component_instances.map{ |c| c.to_hash }
-    comps.each do |comp|
-      application.group_overrides.each do |group_override|
-        if group_override["components"].include?(comp)
-          if key
-            return group_override[key]
-          else
-            return group_override
-          end
-        end
-      end if application.group_overrides
-    end
-    if !key
-      return { "components" => comps }
-    end
-    return nil 
-  end
- 
-  def set_group_override(key, value)
-    return unless key
-    group_override = get_group_override(key)
-    if group_override
-      group_override[key] = value
-    else
-      comps = all_component_instances.map{ |c| c.to_hash }
-      new_group_override = { "components" => comps }
-      new_group_override[key] = value
-      application.group_overrides << new_group_override
-    end
-  end
-
-  def unset_group_override(key)
-    group_override = get_group_override(key)
-    group_override.delete(key) if group_override
+  def group_override
+    # FIXME: May not be safe to cache
+    @group_override ||= GroupOverride.reduce_to([GroupOverride.for_instance(self)], application.application_overrides).first.defaults(1, -1, application.default_gear_size, 0)
   end
 
   protected
-  
+
   # Run an operation on a list of gears on this group instance.
   #
   # == Parameters:
@@ -202,5 +164,5 @@ class GroupInstance
       end
     end
     [successful_runs,failed_runs]
-  end 
+  end
 end
