@@ -1,5 +1,11 @@
 class AuthenticationController < Console.config.parent_controller.constantize
+  include Console::UserManagerHelper
+  include Console::HelpHelper
+  include Console::LanguageHelper
+
   layout 'authentication'
+
+  before_filter :set_locale
 
   def signin
   end
@@ -13,10 +19,11 @@ class AuthenticationController < Console.config.parent_controller.constantize
   def auth
     authentication = Authentication.new
     authentication.generate params[:login], params[:password]
-    
-    session[:authentication] = authentication
 
-  	redirect_to applications_path
+    session[:authentication] = authentication
+    session[:lang] = user_manager_account_lang
+
+    redirect_to applications_path
   end
 
   def reset
@@ -35,9 +42,9 @@ class AuthenticationController < Console.config.parent_controller.constantize
     updated = authentication.update_password params[:password], session[:token]
 
     if updated
-      flash[:success] = "New password saved."
+      flash[:success] = I18n.t(:new_pass_saved)
     else
-      flash[:error] = "Error to save your new password."
+      flash[:error] = I18n.t(:error_saving_pass)
     end
 
     redirect_to signin_path    
@@ -45,12 +52,12 @@ class AuthenticationController < Console.config.parent_controller.constantize
 
   def send_token
     authentication = Authentication.new
-    authentication.reset_password params[:login]
-
-    flash[:success] = "Password reset requested."
-
+    begin
+      authentication.reset_password params[:login]
+      flash[:success] = I18n.t(:reset_password_flash)
+    rescue
+      flash[:error] = I18n.t(:reset_password_error, {email: support_email})
+    end
     redirect_to signin_path
   end
 end
-
-

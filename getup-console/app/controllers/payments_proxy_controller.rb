@@ -11,7 +11,7 @@ class PaymentsProxyController < ConsoleController
   def cancel
     # TODO verify status
     user_manager_subscription_cancel
-    redirect_to gears_path, :flash => {:warning => 'Subscription canceled.'}
+    redirect_to gears_path, :flash => {:warning => I18n.t(:Subscription_canceled)}
   end
 
 end

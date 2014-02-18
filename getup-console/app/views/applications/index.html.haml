@@ -8,12 +8,12 @@
 - content_for :top do
   .grid-wrapper.section-header
     %nav.span12.span-flush-right
-      %h1 All Applications
+      %h1= I18n.t(:Applications)
 
 
 %section#app-list.span7
   %header
-    %h3.invisible Application list
+    %h3.invisible= I18n.t(:Applications)
   .row.tile-dark
     - @applications.each do |application|
       .grid-wrapper.tile-click
@@ -26,25 +26,24 @@
 
   .btn-toolbar.base.right
     = link_to application_types_path, :class => 'btn btn-danger btn-large' do
-      Add
-      %strong Application
+      %strong= I18n.t :Add_Application
       %i.icon-add
 
 %section#account-digest.span5
   .digest-bg
     %aside#secondary
       #assistance
-        %h5 Getup Help
+        %h5= I18n.t :Help
         %ul.unstyled
           - console_help_links.each do |l|
             %li= link_to l[:name], l[:href]
-          %li= link_to 'More help »', console_help_path
+          %li= link_to I18n.t(:More_help), console_help_path
 
-        %h5 Popular FAQs
+        %h5= I18n.t(:Popular_Faqs)
         %ul.unstyled
           - console_faq_links.each do |l|
             %li= link_to l[:name], l[:href]
-          %li= link_to 'More FAQs »', faq_url
+          %li= link_to I18n.t(:More_faqs), faq_url
 
 -# FIXME: Refactor me into an unobtrusive javascript function
 - content_for :javascripts do

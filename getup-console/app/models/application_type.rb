@@ -1,4 +1,5 @@
 class ApplicationType
+  include ActionView::Helpers
   include ActiveModel::Conversion
   include ActiveModel::MassAssignmentSecurity
   include RestApi::Cacheable
@@ -37,6 +38,12 @@ class ApplicationType
       send("#{name}=", value)
     end
     @persisted = persisted
+  end
+
+  def description
+    return @description if @description.is_a? String
+    return @description[Console::LanguageHelper.locale] if @description.key? Console::LanguageHelper.locale
+    return @description['en-us'] || @description['en'] || @description.first
   end
 
   def persisted?

@@ -15,25 +15,25 @@
   = show_description type.description
 
   - if type.learn_more_url
-    %p.help-block= link_to "Learn more", type.learn_more_url
+    %p.help-block= link_to I18n.t(:Learn_more), type.learn_more_url
   - elsif type.website
     %p.help-block= link_to type.website, type.website
 
   %p.help-block
     - case type.support_type
     - when :openshift
-      %span.label-support.label-support-openshift{:title => 'Updated and maintained by the OpenShift team'} OpenShift maintained
+      %span.label-support.label-support-openshift{:title => I18n.t(:cart_maintained_team_title)}= I18n.t(:cart_maintained_team)
     - when :partner
-      %span.label-support.label-support-openshift{:title => 'Updated and maintained by a partner'} Partner created
+      %span.label-support.label-support-openshift{:title => I18n.t(:cart_maintained_partner_title)}= I18n.t(:cart_maintained_partner)
     - else
-      %span.label-support.label-support-community.text-warning{:title => 'Created by a community member and not maintained by OpenShift'} Community created
+      %span.label-support.label-support-community.text-warning{:title => I18n.t(:cart_maintained_community_title)}= I18n.t(:cart_maintained_community)
 
     - unless type.automatic_updates?
-      %span.text-warning{:title => 'When you create a QuickStart or a community cartridge, you are copying code from another repository. You are responsible for applying security fixes and updates.'}
-        =" / Does not receive automatic security updates"
+      %span.text-warning{:title => I18n.t(:cart_maintained_warning)}
+        = I18n.t(:cart_maintained_warning_2)
 
 
   - if type.tags.include? :in_development
-    %p This type is development only and will not be accessible in production
+    %p= I18n.t(:devel_cart)
 
   = application_type_tags(type.tags - excluded_tags)

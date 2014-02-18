@@ -1,4 +1,5 @@
 class CartridgeType < RestApi::Base
+  include ActionView::Helpers
   include ActiveModel::Conversion
   extend ActiveModel::Naming
   include Comparable
@@ -46,6 +47,12 @@ class CartridgeType < RestApi::Base
 
   def display_name
     @display_name || name
+  end
+
+  def description
+    return @description if @description.is_a? String
+    return @description[Console::LanguageHelper.locale] if @description.key? Console::LanguageHelper.locale
+    return @description['en-us'] || @description['en'] || @description.first
   end
 
   # Legacy, use #tags

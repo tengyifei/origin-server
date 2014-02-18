@@ -5,16 +5,12 @@ class ConsoleController < Console.config.parent_controller.constantize
   include SshkeyAware
   include Console::CommunityAware
   include Console::UserManagerHelper
-
+  include Console::LanguageHelper
 
   layout 'console'
 
   before_filter :authenticate_user!
   before_filter :set_locale
-
-  def set_locale
-    I18n.locale = params[:locale] || user_manager_account_lang ||  I18n.default_locale
-  end
 
   protected
     def active_tab

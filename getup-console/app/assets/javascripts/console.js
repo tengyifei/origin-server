@@ -12,3 +12,5 @@
 //= require bootstrap-popover
 //= require console/form
 //= require console/chat
+//= require cssua.min
+//= require skeuocard

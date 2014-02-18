@@ -7,7 +7,7 @@ class ApplicationTypesController < ConsoleController
 
     unless @capabilities.gears_free?
       flash.clear
-      flash.now[:warning] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{gears_path}">Click here to get more</a>.].html_safe
+      flash.now[:warning] = (I18n.t(:gears_count, gears_free: @capabilities.gears_free, max_gears: @capabilities.max_gears) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe
     end
 
     @browse_tags = [
@@ -18,12 +18,13 @@ class ApplicationTypesController < ConsoleController
       ['Node.js', :nodejs],
       ['Perl', :perl],
       nil,
-      ['All web cartridges', :cartridge],
-      ['All instant applications', :instant_app],
+      [I18n.t(:all_web_carts), :cartridge],
+      [I18n.t(:all_inst_apps), :instant_app],
       nil,
       ['Blogs', :blog],
-      ['Content management systems', :cms],
-      #['MongoDB', :mongo],
+      ['CMS', :cms],
+      ['Cache', :cache],
+      ['Big Data', :big_data],
     ]
 
     if @tag = params[:tag].presence
@@ -71,14 +72,14 @@ class ApplicationTypesController < ConsoleController
 
     begin
       @cartridges, @missing_cartridges = @application_type.matching_cartridges
-      flash.now[:error] = "No cartridges are defined for this type - all applications require at least one web cartridge" unless @cartridges.present?
+      flash.now[:error] = I18n.t(:undef_cart_type) unless @cartridges.present?
     rescue ApplicationType::CartridgeSpecInvalid
       logger.debug $!
-      flash.now[:error] = "The cartridges defined for this type are not valid.  The #{@application_type.source} may not be correct."
+      flash.now[:error] = I18n.t(:invalid_cart_type, source: @application_type.source)
     end
 
     #flash.now[:error] = "There are not enough free gears available to create a new application. You will either need to scale down or delete existing applications to free up resources." unless @capabilities.gears_free?
-    flash.now[:error] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{gears_path}">Click here to get more</a>.].html_safe unless @capabilities.gears_free?
+      flash.now[:error] = (I18n.t(:gears_count, gears_free: @capabilities.gears_free, max_gears: @capabilities.max_gears) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe unless @capabilities.gears_free?
     @disabled = @missing_cartridges.present? || @cartridges.blank?
 
     user_default_domain rescue nil

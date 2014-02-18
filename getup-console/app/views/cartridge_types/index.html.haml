@@ -1,16 +1,16 @@
-- breadcrumb_for_application @application, 'Add a Cartridge'
-- content_for :page_title, 'Add a Cartridge'
+- breadcrumb_for_application @application, I18n.t(:add_a_cartridge)
+- content_for :page_title, I18n.t(:add_a_cartridge)
 
-%h1.invisible Add a New Cartridge
+%h1.invisible= I18n.t(:add_new_cartridge)
 = cartridge_wizard_steps_create 0
 
 %section.row
   - if @carts.empty?
-    .alert.alert-info There are no cartridges that can be installed
+    .alert.alert-info= I1n8.t(:no_cartridge)
 
   - else
     .span8
-      %p Choose a cartridge to add to your application.
+      %p= I18n.t(:choose_cart)
       .row
         - @carts.in_groups(2, false).each do |types|
           .span4
@@ -20,11 +20,11 @@
   - unless @installed.empty? and @requires.empty? and @conflicts.empty? and @blocked.empty?
     .span4
       - unless @installed.empty?
-        %h3 Installed
+        %h3= I18n.t(:Installed)
         = render :collection => @installed, :partial => 'cartridge_types/cartridge_type', :locals => {:application => @application, :inactive => true, :reason => :installed}
 
       - unless @requires.empty? and @conflicts.empty? and @blocked.empty?
-        %h3 Has Dependencies
+        %h3= I18n.t(:has_dependencies)
         = render :collection => @requires, :partial => 'cartridge_types/cartridge_type', :locals => {:application => @application, :inactive => true, :reason => :requires}
         = render :collection => @conflicts, :partial => 'cartridge_types/cartridge_type', :locals => {:application => @application, :inactive => true, :reason => :conflicts}
         = render :collection => @blocked, :partial => 'cartridge_types/cartridge_type', :locals => {:application => @application, :inactive => true, :reason => :blocked}

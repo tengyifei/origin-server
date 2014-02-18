@@ -40,18 +40,19 @@
     text-shadow: none;
   }
 
-- content_for :page_title, @message || "An error occurred"
+= content_for :page_title, @message || I18n.t(:error_title)
 
-%h1= @message || "An error has occurred"
+%h1= @message || I18n.t(:error_title)
 
-%p You can try <a href="javascript:window.location.reload();">refreshing the page</a>, if the problem is temporary.
+%p!= I18n.t(:error_reload)
 
-%p You can also try the following:
+%p= I18n.t(:error_try_also)
 
 %ul.spaced-items
-  %li Seek assistance in the #{link_to "support forum", forums_url}.
-  %li Join #{link_to "IRC channel #openshift", irc_web_url } on Freenode.
-  %li If you are experiencing a repeatable error not related to a service outage, #{link_to "report it as a bug", open_bug_url }.
+  %li!= I18n.t(:error_try_also_1, forum: link_to(I18n.t(:help_forum), forum_path))
+  %li!= I18n.t(:error_try_also_2, email: link_to(support_email, 'mailto:' + support_email))
+  %li= I18n.t(:error_try_also_3)
+  %li!= I18n.t(:error_try_also_4, irc: link_to(I18n.t(:help_irc), irc_web_url))
 
 - if @reference_id
   %p.error-reference Reference ##{@reference_id}

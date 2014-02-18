@@ -27,8 +27,8 @@
   
       .row-fluid
         .span6
-          Created
+          = I18n.t(:Created)
           = "#{time_ago_in_words(application.creation_time)} ago"
         .span6.right
-          = link_to("Delete", delete_application_path(application), :class => ['btn', 'btn-danger'])
-          = link_to("Details »", application_path(application), :class => ['btn', 'btn-info'])
+          = link_to(I18n.t(:Delete), delete_application_path(application), :class => ['btn', 'btn-danger'])
+          = link_to(I18n.t(:Details), application_path(application), :class => ['btn', 'btn-info'])

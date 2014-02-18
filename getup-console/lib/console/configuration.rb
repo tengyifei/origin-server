@@ -191,6 +191,7 @@ module Console
             :account_password_change => config[:USER_MANAGER_ACCOUNT_PASSWORD_CHANGE_URL],
             :account_password_reset => config[:USER_MANAGER_ACCOUNT_PASSWORD_RESET_URL],
             :account_password_reset_key => config[:USER_MANAGER_ACCOUNT_PASSWORD_RESET_KEY_URL],
+            :validate => config[:USER_MANAGER_VALIDATE_URL],
             :subscription => config[:USER_MANAGER_SUBSCRIPTION_URL],
             :subscription_confirm => config[:USER_MANAGER_SUBSCRIPTION_CONFIRM_URL],
             :subscription_cancel  => config[:USER_MANAGER_SUBSCRIPTION_CANCEL_URL],

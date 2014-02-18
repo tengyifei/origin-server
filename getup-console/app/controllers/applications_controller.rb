@@ -77,7 +77,7 @@ class ApplicationsController < ConsoleController
     # in the future
     #domain = Domain.find :one, :as => current_user rescue nil
     user_default_domain rescue nil
-    return redirect_to application_types_path, :notice => 'Create your first application now!' if @domain.nil? || @domain.applications.empty?
+    return redirect_to application_types_path, :notice => I18n.t(:create_first_app) if @domain.nil? || @domain.applications.empty?
 
     @applications_filter = ApplicationsFilter.new params[:applications_filter]
     @applications = @applications_filter.apply(@domain.applications)
@@ -87,7 +87,7 @@ class ApplicationsController < ConsoleController
     @domain = Domain.find :one, :as => current_user
     @application = @domain.find_application params[:id]
     if @application.destroy
-      redirect_to applications_path, :flash => {:success => "The application '#{@application.name}' has been deleted"}
+      redirect_to applications_path, :flash => {:success => I18n.t(:app_deleted, name: @application.name)}
     else
       render :delete
     end
@@ -121,16 +121,16 @@ class ApplicationsController < ConsoleController
 
     begin
       @cartridges, @missing_cartridges = @application_type.matching_cartridges
-      flash.now[:error] = "No cartridges are defined for this type - all applications require at least one web cartridge" unless @cartridges.present?
+      flash.now[:error] = I18n.t(:undef_cart_type) unless @cartridges.present?
     rescue ApplicationType::CartridgeSpecInvalid
       logger.debug $!
-      flash.now[:error] = "The cartridges defined for this type are not valid.  The #{@application_type.source} may not be correct."
+      flash.now[:error] = I18n.t(:invalid_cart_type, source: @application_type.source)
     end
 
     #@cartridges, @missing_cartridges = ApplicationType.matching_cartridges(@application.cartridge_names.presence || @application_type.cartridges)
 
     #flash.now[:error] = "You have no free gears.  You'll need to scale down or delete another application first." unless @capabilities.gears_free?
-    flash.now[:error] = %Q[You have #{@capabilities.gears_free} gears available of #{@capabilities.max_gears} authorized. <a href="#{gears_path}">Click here to get more</a>.].html_safe unless @capabilities.gears_free?
+    flash.now[:error] = (I18n.t(:gears_count, gears_free: @capabilities.gears_free, max_gears: @capabilities.max_gears) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe unless @capabilities.gears_free?
     @disabled = @missing_cartridges.present? || @cartridges.blank?
 
     # opened bug 789763 to track simplifying this block - with domain_name submission we would

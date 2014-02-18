@@ -22,7 +22,7 @@ class DomainsController < ConsoleController
     @domain = Domain.find(:one, :as => current_user)
     @domain.attributes = params[:domain]
     if @domain.save
-      redirect_to settings_path, :flash => {:success => 'Your domain has been changed.  Your public URLs will now be different'}
+      redirect_to settings_path, :flash => {:success => I18n.t(:domain_changed_caption)}
     else
       render :edit
     end

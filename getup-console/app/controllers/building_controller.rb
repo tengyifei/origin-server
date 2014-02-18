@@ -54,7 +54,7 @@ class BuildingController < ConsoleController
       redirect_to application_building_path(@application), :flash => {:info_pre => @cartridge.remote_results.concat(message || []).concat(['Your application is now building with Jenkins.'])}
     else
       if @cartridge.has_exit_code?(157, :on => :cartridge)
-        message = 'The Jenkins server is not yet registered with DNS. Please wait a few minutes before trying again.'
+        message = I18n.t(:jenkin_wait_dns)
       else
         @cartridge.errors.full_messages.each{ |m| @jenkins_server.errors.add(:base, m) }
       end
@@ -73,7 +73,7 @@ class BuildingController < ConsoleController
     @domain = Domain.find :one, :as => current_user
     @application = @domain.find_application params[:application_id]
     if @application.destroy_build_cartridge
-      redirect_to application_path(@application), :flash => {:success => "#{@application.name} is no longer building through Jenkins."}
+      redirect_to application_path(@application), :flash => {:success => I18n.t(:jenkins_app_not_building, app: @application.name)}
     else
       render :delete
     end

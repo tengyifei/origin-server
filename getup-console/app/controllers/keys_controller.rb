@@ -11,7 +11,7 @@ class KeysController < ConsoleController
     @key.as = current_user
 
     if @key.save
-      redirect_to (@first ? :back : settings_path), :flash => {:success => 'Your public key has been created'} rescue redirect_to settings_path
+      redirect_to (@first ? :back : settings_path), :flash => {:success => I18n.t(:pubkey_created_caption)} rescue redirect_to settings_path
     else
       Rails.logger.debug @key.errors.inspect
       render :new
@@ -32,7 +32,7 @@ class KeysController < ConsoleController
       @retried = true
       retry
     end
-    @key.errors.add(:name, 'You have already created a key with that name')
+    @key.errors.add(:name, I18n.t(:pubkey_exists))
     render :new
   end
 

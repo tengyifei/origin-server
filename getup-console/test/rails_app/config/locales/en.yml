@@ -1,5 +1,565 @@
-# Sample localization file for English. Add more files in this directory for other locales.
-# See https://github.com/svenfuchs/rails-i18n/tree/master/rails%2Flocale for starting points.
-
 en:
-  hello: "Hello world"
+  types:
+    php: PHP
+
+  rest_api:
+    errors:
+      '116': 'Your SSH public key appears to be invalid. Keys should start with a type (usually ssh-rsa or ssh-dss), a blank space, and then a long string of numbers and letters.'
+      '121': 'You have already saved this public key with a different name. Provide a different key here.'
+      '151': 'You must create a Jenkins application (to act as a build server) before you can add the Jenkins cartridge to an application.'
+      '153': 'You are currently using more gears than the new plan would allow. Please scale down or delete applications before downgrading.'
+
+  unknown: 'A system error has occurred. If the problem persists, please contact the support.'
+  Name: 'Name'
+  Email: 'Email'
+  Phone: 'Phone'
+  Address: 'Address'
+  City: 'City'
+  State: 'State'
+  Country: 'Country'
+  Postal_code: 'Postal Code'
+  Save: 'Save'
+  Cancel: 'Cancel'
+  Currency: 'Currency'
+  Gears: 'Gears'
+  Credit: 'Credit'
+  Cost_unit: 'Unit cost'
+  Cost: 'Cost'
+  Namespace: 'Namespace'
+  Create: 'Create'
+  Example: 'Example'
+  Delete: 'Delete'
+  Disable: 'Disable'
+  Content: 'Content'
+  Scope: 'Scope'
+  Description: 'Description'
+  Session: 'Session'
+  Read: 'Read'
+  Userinfo: 'Userinfo'
+  session: 'session'
+  read: 'read'
+  userinfo: 'userinfo'
+  default: 'default'
+  Default: 'Default'
+  Authorization: 'Authorization'
+  Edit: 'Edit'
+  edit: 'edit'
+  Developers: 'Developers'
+  Get_Started: 'Get Started'
+  Change: 'Change'
+  en: 'English'
+  pt: 'Portuguese'
+  Invoice: 'Invoice'
+  Period: 'Period'
+  Client: 'Client'
+  Reference: 'Reference'
+  Application: 'Application'
+  Item: 'Item'
+  Type: 'Type'
+  Quantity: 'Quantity'
+  Unit: 'Unit'
+  Unit_cost: 'Unit cost'
+  Total_cost: 'Total cost'
+  Credits: 'Credits'
+  Total_credit: 'Total credit'
+  Free_gear: 'Free gear'
+  Back: 'Back'
+  Restart: 'Restart'
+  Shared: 'Shared'
+  Git_Repository: 'Git Repository'
+  Aliases: 'Aliases'
+  configure: 'configure'
+  Add: 'Add'
+  Need_Help: 'Need Help?'
+  Installed: 'Installed'
+  Experimental: 'Experimental'
+  Version: 'Version'
+  Requires: 'Requires'
+  Conflicts_with: 'Conflicts with'
+  Cannot_be_added_to: 'Cannot be added to'
+  Select: 'Select »'
+  Add_Cartridge: 'Add Cartridge'
+  Next_Steps: 'Next Steps'
+  managing_cartridge: 'Managing your cartridge'
+  Quickstart_Gallery: 'Quickstart Galley'
+  Adding_capabilities: 'Adding capabilities'
+  Building_your_Application: 'Building your Application'
+  Create_server: 'Create server'
+  Create_cartridge: 'Create cartridge'
+  Delete_Application: 'Delete Application'
+  Confirm_delete: 'Confirm delete'
+  Domain_name: 'Domain name'
+  Application_URL: 'Application URL'
+  hour: 'hour'
+  day: 'day'
+  month: 'month'
+  not_found_caption: 'Were you looking for any of the following?'
+  Page_not_found: 'Page not found'
+  no_description: 'no description'
+  none: 'none'
+  Note: 'Note'
+  Expires_in: 'Expira em'
+  Revoke_all: 'Revoke all'
+  Cartridge_info: 'Cartridge info'
+
+## Signin
+  Dashboard_Auth: "Welcome to Dashboard"
+  Sign_in: "Sign in"
+  forgot_password: "Forgot your password?"
+  reset_password_title: "Reset Password"
+  reset_password_caption: "Choose a new password"
+  reset_password_flash: "Password reset requested."
+  reset_password_error: "An error has occurred. Please, report this to our support team: %{email}."
+
+## Error
+  error_title: "An error has occurred"
+  error_reload: 'You can try <a href="javascript:window.location.reload();">refreshing the page</a>, if the problem is temporary.'
+  error_try_also: 'You can also try the following:'
+  error_try_also_1: 'Seek assistance in the %{forum}.'
+  error_try_also_2: 'Send an email to our support team: %{email}.'
+  error_try_also_3: 'Talk to us using the chat widget on this same page.'
+  error_try_also_4: 'Join our IRC channel %{irc}.'
+
+## Header
+  Sign_Out: 'Sign Out'
+  My_Account: 'My Account'
+  Settings: 'Settings'
+  Create_Application: 'Create'
+  My_Applications: 'Applications'
+  Help: 'Help'
+  Community: 'Community'
+  Developer_Center: 'Developer Center'
+
+## Footer
+  footer_github: 'available on GitHub'
+  footer_caption_1: 'Source code for the OpenShift Origin management console is %{github}. See %{readme} for copyright and source information. OpenShift, OpenShift Origin and the OpenShift Logo are trademarks of Red Hat, Inc.'
+  irc_channel: "IRC Channel"
+
+## Domains
+  domain_changed_caption: 'Your domain has been changed. Your public URLs will now be different.'
+
+## Application Types
+  Applications: 'Applications'
+  Create_an_App: 'Create an Application'
+  create_type: 'Choose type'
+  based_on_name: 'Based On %{name}'
+  from_scratch: 'From scratch'
+  based_on: 'Based On'
+  usage_rates_warning: 'Include additional usage fees at certain levels, see plan for details.'
+  Learn_more: 'Learn more'
+  app_is_link: 'This application is based on a link'
+  share_link: 'Share this link'
+  devel_cart: 'This type is development only and will not be accessible in production'
+  all_web_carts: 'All web cartridges'
+  all_inst_apps: 'All quickstarts'
+  browse_by_tag: 'Browse by tag...'
+  invalid_cart_type: "The cartridges defined for this type are not valid.  The %{source} may not be correct."
+  undef_cart_type: "No cartridges are defined for this type - all applications require at least one web cartridge"
+  app_deleted: "The application '%{name}' has been deleted"
+  create_first_app: 'Create your first application now!'
+  search_caption: "Can't find what you're looking for? Try broadening your search or filtering by another tag."
+  see_all_app_types: "All application types"
+
+## Applications
+  Add_Application: 'Add Application'
+  More_help: 'More_help »'
+  help_install_rhc: 'Installing OpenShift client tools on Mac OSX, Linux, and Windows'
+  help_sync_repo: 'Sync your OpenShift repo with an existing Git repo'
+  Popular_Faqs: 'Popular FAQs'
+  faq_own_domain: 'How to use my own domain?'
+  faq_install_win: 'How do I install the rhc client tools on Windows?'
+  faq_pub_site: 'How to publish my site files? What tools should I use?'
+  More_faqs: 'More FAQs »'
+  gear_group_count_title: "OpenShift runs each cartridge inside one or more gears on a server and is allocated a fixed portion of CPU time and memory use."
+  public_url: "Public URL"
+  source_code: "Source Code"
+  scaling: 'Scaling'
+  scale_web_loader: "Scaling your web cartridge will allocate an extra gear for the load balancer"
+  domain_register: 'OpenShift will automatically register this domain name for your application. You can add your own domain name later.'
+  app_name: 'Application name'
+  git_repo_url: 'URL to a Git repository'
+  git_repo_caption_1: "Your application will start with an exact copy of the code and configuration provided in 
+            this Git repository. OpenShift may expect certain files to exist in certain directories,
+            which may require you to update your repository after creation."
+  git_repo_caption_2: "We'll create a Git code repository in the cloud, and populate it with a set of reasonable defaults."
+  gears_explain: "Gears are the application containers running your code. For most applications,
+               the '%{gear_size}' gear size provides plenty of resources."
+  cartridges_explain: "Applications are composed of cartridges - each of which exposes a service or 
+          capability to your code.  All applications must have a web cartridge."
+  scale_explain_1: 'OpenShift automatically routes web requests to your web gear.'
+  scale_explain_2: "If you allow your application to scale, we'll set up a load balancer and
+            allocate more gears to handle traffic as you need it."
+  choose_cart_match: "Choose a cartridge that matches '%{name}'"
+  cart_maintained_team_title: 'Updated and maintained by the Getup Cloud team'
+  cart_maintained_team: 'Getup Cloud maintained'
+  cart_maintained_partner_title: 'Updated and maintained by a partner'
+  cart_maintained_partner: 'Partner created'
+  cart_maintained_community_title: 'Created by a community member and not maintained by OpenShift'
+  cart_maintained_community: 'Community created'
+  cart_maintained_warning: 'When you create a QuickStart or a community cartridge, you are copying code from another repository. You are responsible for applying security fixes and updates.'
+  cart_maintained_warning_2: '/ Does not receive automatic security updates'
+  larger_gear: 'If you require more resources, select a larger gear size here.'
+  app_req_web_cart: 'All applications require at least a web cartridge'
+  Create_a_New_Application: 'Create a New Application'
+  app_create_caption_1: "Choose a web programming cartridge or kick the tires with a
+      quickstart. After you create the application 
+      you can add <strong>cartridges</strong> to enable additional 
+      capabilities like databases, metrics, and continuous build 
+      support with Jenkins."
+  app_create_search: 'Search by keyword or tag'
+  app_create_cart_caption: 'A managed runtime that receives security updates and upgrades automatically.'
+  app_create_quickstart_caption: "An quick way to try out a new technology with code and libraries preconfigured. You are 
+        responsible for updating core libraries for security updates."
+  app_create_see_all: "(see all)"
+  app_choose_a_type: "Choose a type of application"
+  app_config_and_deploy: 'Configure and deploy the application'
+  app_create_cant_find: "Can't find what you're looking for?  Try searching for a specific quickstart or filtering by tag.
+      Or, browse the entire list in our #{link_to 'QuickStart gallery', community_quickstarts_url}."
+  app_create_set_namespace: 'Because this is your first application, you need to provide a domain name under which your applications will be grouped'
+  app_create_next_steps: "Your application has been created. If you're new to OpenShift check out these tips for where to go next."
+  app_create_get_started: "Looking for tips on what to build or where to go next?  We've organized some helpful hints for you."
+  app_acessing: 'Accessing your application'
+  app_create_caption_2: "Your application has one or more cartridges that expose a public URL to the Internet.  Click the link below
+        to see your application:"
+  app_create_caption_3: "If your application exposes services to the Internet they will be available at"
+  app_create_summary_link: "application overview page"
+  app_create_summary: "The %{app} provides a summary of your application and its cartridges."
+  app_create_code_change: 'Making code changes'
+  app_create_set_key: 'Set your Public Key'
+  app_create_set_key_ssh: 'read more about SSH keys and remote access'
+  app_create_set_key_caption: 'Before you can upload code, you need to provide us with a <strong>public key</strong>
+            to identify you to our servers. If this is your first time creating a public key %{ssh}'
+  app_create_git_url: "Git version control system"
+  app_create_git: "OpenShift uses the %{git} to manage the code of your application. Each cartridge has a single Git <strong>repository</strong>
+        that you'll use to check in changes to your application. When you <strong>push</strong>
+        a change to your Git repository we'll automatically deploy your code and restart your 
+        application if necessary."
+  app_create_git_inst: 'Install the Git client for your operating system, and from your command line run'
+  app_create_git_caption_a: 'This will create a folder with the source code of your application. After making a change,'
+  app_create_git_caption_b: 'the new code.'
+  app_create_git_hooks: 'deploy hooks'
+  app_create_git_caption_2: "When you push changes the OpenShift server will report back its status on deploying your code. 
+            The server will run any of your configured %{hooks} and then restart the application."
+  git_commit_mesg: "git commit -m 'My changes'"
+  adding_a_cart: 'Adding a cartridge'
+  add_cap: "Cartridges are the components of an OpenShift application, and include databases, build systems,
+      and management capabilities. <strong>%{cart}</strong> such as %{mysql} or %{mongo} to an application
+      provides the desired capability without forcing you to administrate or update that feature."
+  add_cart_now: "Add a cartridge to your application now"
+  manage_app: 'Managing your application'
+  rhc_link: "Follow these steps to install the client"
+  rhc_caption: "Most of the capabilities of OpenShift are exposed through our command line tool, rhc.
+      Whether it's adding cartridges, checking uptime, or pulling log files from
+      the server, you can quickly put a finger on the pulse of your application.
+      %[link} on Linux, Mac OS X, or Windows."
+  rhc_cart_list: 'You can get a list of cartridges by running'
+  rhc_cart_man: 'You can manage the cartridge by running one of these commands'
+  rhc_cart_rm: 'You can remove the cartridge by running the following command'
+  rhc_cart_rm_warn: "Warning: make sure you've backed up any data you wish to keep before running this command"
+
+## Applications / AppName
+  Details: 'Details »'
+  Restart_Application: 'Restart Application'
+  shared_resources: 'This cartridge shares resources with the other cartridges it is grouped with.'
+  No_aliases_set: 'No aliases set'
+  add_alias: 'Add Alias'
+  set_one_now: 'Set one now'
+  git_repo_caption: 'The code for your application will be available through this Git repository.'
+  ssh_login: 'Want to log in to your application?'
+  ssh_login_caption: 'The command below will open a Secure Shell (SSH) session to your application on most 
+                      operating systems. See our %{ssh_url} for information about connecting with Windows, Mac, and Linux computers.'
+  ssh_help_page: 'SSH help page'
+  ssh_command: 'Cut and paste this command into a command shell to access your application.'
+  ssh_add_pub_key: 'add an SSH public key to your account'
+  ssh_add_key_link: 'You must %{key_url} before you can upload code or remotely access your application.'
+  scale_with_haproxy: 'Scales with HAProxy'
+  scale_with_haproxy_caption: 'Your web cartridge will automatically scale up when we detect you are receiving more web traffic'
+  scaled_number: 'Scaled up with HAProxy x%{scale}'
+  jenkins_caption_1: 'See Jenkins Build jobs'
+  jenkins_caption_2: 'Jenkins is currently running builds for your application'
+  jenkins_caption_3: 'Remove or change your Jenkins configuration'
+  jenkins_caption_4: "Enable Jenkins builds"
+  jenkins_caption_5: 'Jenkins helps you run builds, tests, and deployment steps when you push changes to your application.'
+  ssl_cert: 'SSL certificate attached'
+  no_ssl_cert: 'no SSL certificate'
+  new_to_openshift: 'New to OpenShift?'
+  app_getting_started: 'See the getting started tips for this app →'
+  delete_this_app: 'Delete this application'
+  app_not_found_title: "Application %{app} not found"
+  app_alternative: "Application %{app}"
+  see_other_app_types: 'See other application types'
+  app_restarted: "The application '%{app}' has been restarted"
+  scale_settings_updated: "Updated scale settings for cartridge '%{cart}'"
+  passwd_change_error_1: 'Old password must not be blank.'
+  passwd_change_error_2: 'New password must not be blank.'
+  passwd_change_error_3: "Password doesn't match confirmation."
+  passwd_change_error_4: 'Invalid password.'
+  passwd_change_error_5: 'Your password cannot be changed.'
+  passwd_changed: 'Your password has been changed.'
+
+
+## Applications / Appname / Cartridges
+  add_a_cartridge: 'Add a Cartridge'
+  add_new_cartridge: 'Add a New Cartridge'
+  no_cartridge: 'There are no cartridges that can be installed'
+  choose_cart: 'Choose a cartridge to add to your application.'
+  has_dependencies: 'Has Dependencies'
+  What_you_get: 'What you get'
+  add_cartridge_ask_1: 'Do you want to add the'
+  add_cartridge_ask_2: 'cartridge to your application?'
+
+## Applications / Delete
+  delete_app_ask: 'Are you sure you want to delete the application '
+  delete_app_caption: 'This will delete all the code and data associated with 
+    the app, and cannot be undone. Make sure this is something 
+    you really want to do!'
+
+## Building
+
+  Building_your_Application: 'Building your Application'
+  build_caption_1: "OpenShift is configured to build this application with %{jenkins} when you make changes through Git.
+   You can track the progress of builds through the following Jenkins job:"
+  build_rm_jenkins: "remove the Jenkins cartridge"
+  build_caption_2: "If you no longer wish to run Jenkins builds, you can %{rm_jenkins}."
+  build_disable: 'Disable Jenkins Builds'
+  build_disable_caption_1: "OpenShift is configured to build this application with %{jenkins} when you make 
+    changes through Git. If you remove the Jenkins cartridge your build history and results are preserved,
+    but new changes to Git will no longer start builds."
+  build_disable_ask: 'Are you sure you wish to disable builds for this application?'
+  build_enable: 'Enable Builds'
+  build_enable_caption_1: "To build with Jenkins, OpenShift needs a server (created as a separate 
+      application) and a Jenkins client cartridge attached to each buildable 
+      application.  Build jobs execute on the gear that contains the client cartridge,
+      while the Jenkins server schedules jobs and stores history and other build
+      results."
+  Build_server_available: 'Build server available'
+  build_enable_caption_2: "You have created a Jenkins application (%{app}) to schedule and host builds.  You can log in to Jenkins at:"
+  build_create_caption_1: 'You must create a Jenkins server to store build history.
+       You can customize the name of the application within your domain:'
+  build_create_cart_caption_1: "The Jenkins client cartridge listens for changes to your Git source code repository and triggers new builds.
+      If you remove the cartridge later, your build history will remain but the job will be disabled."
+  build_create_cart_caption_2: "Enabling the Jenkins server and configuring your build job may take a few minutes to complete while
+      we wait for your new application to become available through DNS."
+  build_enable_ask: 'Do you want to enable Jenkins for your application?'
+  Add_Jenkins: 'Add Jenkins'
+  jenkins_wait_dns: 'The Jenkins server is not yet registered with DNS. Please wait a few minutes before trying again.'
+  jenkins_app_not_building: "%{app} is no longer building through Jenkins."
+
+## Storage
+
+  storage_title: 'Change Gear Storage'
+  storage_caption_1: "Gear storage space is used for code, logs, cache, config files, and databases.
+      Gear storage is only accessible to the gear it's associated with, and isn't able to be shared between gears.
+      User files should be kept in shared storage."
+  storage_caption_2: "If you are decreasing your storage, make sure to check your usage to ensure you will still have sufficient disk space."
+  Check_Your_Usage: 'Check Your Usage'
+  storage_check_usage: 'You can check your usage by SSH-ing into your app and running the quota command.'
+  storage_space: 'Each gear this cartridge is deployed to has %{gb}GB of free included storage.'
+  storage_extra: 'This cartridge is scalable. The additional storage will apply to each extra gear.'
+  storage_shared: 'This storage will also be shared by:'
+  Add_Storage: 'Additional Storage (R$ 1,87/GB/Gear)'
+  Additional_Storage: 'Additional Storage'
+  storage_info: 'For more information about storage for your application see'
+  storage_info_link: 'our FAQ on storage'
+  storage_updated: "Updated storage for cartridge '%{cart}'"
+
+## Alias
+
+  New_Alias: 'New Alias'
+  Delete_Alias: 'Delete Alias'
+  alias_caption_1: 'Aliases allow you to use your own domain names for your apps on OpenShift. To set up your own domain name for app'
+  alias_caption_2: 'Set up the CNAME record with your DNS provider'
+  alias_caption_3: 'Tell us about your alias using the form on this page'
+  alias_caption_4: 'The current application URL. Set up a CNAME record with your DNS provider pointing to this URL.'
+  alias_caption_5_cname: 'CNAME record with your DNS provider'
+  alias_caption_5: 'To successfully use this alias, you must have an active %{cname}.'
+  alias_caption_6: 'The alias is "%{name}" and the destination app is "%{app}. '
+  alias_domain_caption: 'Enter your custom domain name. e.g. www.example.com or something.example.com'
+  alias_no_allow: 'Your account does not allow custom SSL certificates.'
+  View_your_account: 'View your account →'
+  SSL_Certificate: 'SSL Certificate'
+  alias_ssl_caption: 'Optionally upload a SSL certificate for your custom domain alias to allow secure HTTPS communication with your app.'
+  alias_ssl_help: 'Certificate files must be Base64 PEM-encoded and typically have a .crt or .pem extension.
+        You may combine multiple certificates and certificate chains in a single file, but the RSA or DSA private key must always be provided in a separate file.'
+  alias_cert_chain: 'SSL Certificate Chain'
+  alias_cert_chain_help: 'Optionally you can provide a certificate chain in a separate PEM-encoded file.'
+  alias_cert_priv: 'Certificate Private Key'
+  alias_cert_priv_help: 'RSA or DSA private key file for the root certificate in PEM-encoded format.'
+  alias_cert_pass: 'Private Key Pass Phrase'
+  alias_cert_pass_help: 'Pass phrase for the certificate private key, required if the provided private key is encrypted.'
+  alias_created: "Alias '%{name}' has been created"
+  alias_removed: "Alias '%{name}' has been removed"
+  alias_updated: "Alias '%{name}' has been updated"
+  alias_create_error: "Unable to create alias '%{name}'"
+  alias_remove_error: "Unable to remove alias '%{name}'"
+  alias_update_error: "Unable to update alias '%{name}'"
+  alias_delete_caption_1: 'If you need to change the domain name, please delete the alias and create a new one.'
+  alias_delete_caption_2: 'If you delete this alias, your app will not be accessible from this URL. Deleting this alias will also delete the certificate.'
+  alias_delete_ask: 'Are you sure you wish to delete the alias'
+  alias_cert_timestamp: 'Date and time the existing certificate was added to this alias.'
+  alias_cert_del_caption_1: 'If you delete this certificate, your users will not be able to browse your site securely.'
+  alias_cert_del_ask: 'Are you sure you wish to delete the certificate?'
+  Delete_Certificate: 'Delete Certificate'
+  alias_cert_overwrite: 'Your alias already have a SSL Certificate attached. Uploading a new certificate will override the existing one.'
+
+## My Account
+  add_gears: 'Authorize gears'
+  Billing: 'Billing'
+  billing_title: 'Account Billing'
+  billing_history_caption: 'View your billing history'
+  billing_history_button: 'Billing history...'
+  addr_info_caption: 'Edit your contact and billing information.'
+  contact_info_btn: 'Contact information...'
+  billing_info_btn: 'Billing information...'
+  gears_count: 'You have %{gears_free} gears available of %{max_gears} authorized.'
+  get_more_gears: 'Click here to get more'
+  new_pass_saved: "New password saved."
+  error_saving_pass: "Error to save your new password."
+  auth_updated: 'Authorization updated'
+  auth_revoked: 'The authorization has been revoked'
+  auth_revoked_all: 'All authorizations revoked'
+
+## My Account / Billing
+  billing_history_title: 'Billing History'
+  Id: 'Id'
+  Month: 'Month'
+  Processed: 'Processed'
+  Due_Date: 'Due Data'
+  Status: 'Status'
+  Amount: 'Amount'
+
+## Contact Information
+  contact_info_title: 'Contact Information'
+  contact_info_caption: 'Fill in your contact information.'
+
+## Billing Information
+  billing_info_title: 'Billing Information'
+  billing_info_caption: 'Fill in your billing information.'
+  use_contact_info: 'Use contact information (ignore below)'
+
+# Subscription
+  Subscription_canceled: 'Subscription canceled'
+
+## Gears
+  gears_title: 'Authorize Gears'
+  gears_info: 'You are using %{consumed_gears} gears of %{max_gears} total authorized gears.'
+  gears_change_limits: 'Change your limits below.'
+  gears_limit_caption: 'New gears limit'
+  monthly_estimated: 'Monthly (estimated¹)'
+  total_preapproved: 'Total pre-approved² - Valid for 12 months'
+  gears_ref_1: 'Monthly: Estimated cost considering the amount of gears running all time for an entire month. This is also the max amount we will charge you by month.'
+  gears_ref_2: 'Total pre-approved: For security reasons, this pre-approval is valid for 12 months and the sum of all monthly charges cannot exceed R$ 8.750,00 or US$ 5.000,00. When the value or validity of pre-approval is about to expire or be exceeded, we will ask you for another pre-approval operation.'
+  gears_ref_3: "Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime."
+  gears_authorize: 'Authorize Gears'
+
+## Settings
+  namespace_caption_1: 'Your namespace is unique to your account and is the suffix of the public URLs we assign to your applications.'
+  namespace_caption_2: 'Your namespace must be letters or numbers with no spaces or symbols.'
+  namespace_caption_3: 'Your namespace is: <code>%{namespace}</code>'
+  example_namespace: 'Application URL example: <a href=#>http://appname-%{namespace}.%{domain_suffix}</a>'
+  Set_namespace: 'Set your namespace...'
+  change_namespace: 'Change your namespace...'
+  namespace_created: 'Your namespace has been created'
+  password_title: 'Change Password'
+  password_caption: 'Allow to change your Getup account password.'
+  change_password_btn: 'Change password...'
+  authorizations_title: 'Authorizations'
+  authorizations_caption: 'Allow clients and 3rd parties to access your account via a secret token.'
+  authorization_btn: 'Add authorization...'
+  public_keys_caption: 'OpenShift uses a public key to securely encrypt the connection between your local machine and your application and to authorize you to upload code.'
+  public_keys_learn: 'Learn more about SSH keys.'
+  key_paste_caption: 'Copy and paste the contents of your public key file (.pub)'
+  public_keys_title: 'Public Keys'
+  pub_key_form_placeholder: 'The contents of your public key file...'
+  pub_key_form_title: "Your SSH key will start with a short prefix that describes its type, followed by a long string of numbers and characters.  Some keys have a bit of text at the end to describe who generated the key. Example:\n\nssh-rsa AAAAB3NzaC1yc....HcLJ bob@smith"
+  key_name: 'Key name'
+  key_name_title: 'laptop, home, work...'
+  delete_key_confirm: "Are you sure you want to delete your key '%{key_name}'?"
+  add_key_btn: "Add a new key..."
+  Language: 'Language'
+  select_language: 'Select Language'
+  add_pub_key_title: "Add a public SSH key"
+  add_pub_key_caption: "Add a public key"
+  pubkey_created_caption: 'Your public key has been created'
+  pubkey_exists: 'You have already created a key with that name'
+
+## Settings - Change Password
+  change_password_caption: 'To change your password, enter your old password and the new password in the fields below.'
+  old_password: 'Old Password'
+  new_password: 'New Password'
+  new_password_again: 'New Password (again)'
+
+## Settings - Change Namespace
+  change_namespace_warning: 'Warning! Changing your namespace will alter the public URLs of your applications.<br/>If you change your namespace you will need to update any bookmarks or external links to your applications.'
+
+## Authorization/Token
+  token_add_title: 'Add an Authorization'
+  token_usage_title: 'How to use your token'
+  token_caption_1: 'Select which rights you want to allow clients to have. You may select multiple scopes, or if you select none the server will choose a default scope.'
+  token_caption_2: 'Or, you can enter scopes directly for those that require a parameter.  Separate multiple scopes with a space or comma.'
+  token_caption_3: "If you select several scopes, you'll be able to perform actions that any of your scopes allow, but your token will expire after the shortest scope expires."
+  token_caption_4: 'The token will allow clients to perform these operations on your behalf:'
+  token_remainder: 'Add a reminder about what this authorization is for (optional)'
+  authz_title: 'Authorization Token'
+  authz_caption: 'The token will allow clients to perform these operations on your behalf:'
+  token_created_at: "Created at %{time}, expires in %{expires}"
+  token_revoke: 'Revoke this authorization token permanently'
+  token_revoke_confirm: 'Are you sure you want to revoke this authorization?'
+  token_usage_caption_1: 'To make a request to the OpenShift REST API, pass the token as an <code>Authorization</code> header'
+  token_usage_caption_2: 'For example, from the command line program cURL use the <code>-H</code> option'
+  token_usage_caption_3: 'You can pass this token directly to the <code>rhc</code> command with the <code>--token</code> option:'
+  token_edit_title: 'Edit Authorization'
+  token_change_desc: 'Change the description of this authorization token'
+  update_auth_help: 'Update this authorization token'
+  token_revoke_all_mesg: "Are you sure you want to revoke all authorizations for this account? This will end any active sessions immediately."
+
+## Help
+  help_title_1: 'Create'
+  help_create_app_btn: 'Create an app now!'
+  help_getting_started: 'Getting Started page'
+  help_let_us_know: 'let us know'
+  help_caption_1_1: 'Just starting with Getup?'
+  help_caption_1_2: 'Get your first application up off the ground through the application creation wizard.'
+  help_caption_1_3: 'If you prefer the command line, our %{getting_started} will help you install the client tools, create your application, and make your first change.'
+  help_caption_1_4: "Create apps based on many different technologies like %{drupal}, %{ror}, and %{wp}. If you don't see your favorite framework, %{let_us_know}."
+
+  help_title_2: 'Learn'
+  help_forum: 'Our Forum'
+  help_caption_2_1: 'Want to explore our platform?'
+  help_caption_2_2: '%{forum} is the first destination for new developers to find valuable information.'
+
+  help_title_3: 'Troubleshoot'
+  help_community_forum: 'Community Forum'
+  help_knowledge_base: 'Knowledge Base'
+  help_faq: 'FAQ'
+  help_irc: '#getupcloud on freenode.net'
+  help_caption_3_1: 'Hit a bump on the road?'
+  help_caption_3_2: 'Our %{community_forum} is watched round the clock by an army of developers, evangelists, and OpenShift devotees.'
+  help_caption_3_3: 'Check out the %{knowledge_base} for known headaches and %{faq} for more general questions'
+  help_caption_3_4: 'Talk directly to the team on IRC - %{irc}.'
+
+  help_title_4: 'Engage'
+  help_subscribe: 'Subscribe now!'
+  help_facebook: 'Facebook page'
+  help_youtube: 'Youtube channel'
+  help_caption_4_1: "Like to know what's new?"
+  help_caption_4_2: 'The Getup newsletter is a great way to track the latest news.'
+  help_caption_4_3: 'Follow us on Twitter at %{twitter} or in our %{facebook}.'
+  help_caption_4_4: 'Watch some videos in our %{youtube}.'
+
+## Scale
+  scale_caption_min: 'Your web cartridge is running on the minimum amount of gears and will scale up if needed'
+  scale_caption_max: 'Your web cartridge is running on the maximum amount of gears and cannot scale up any further'
+  scale_caption_mul: 'Your web cartridge is running multiple copies to handle increased web traffic'
+  scale_hint: 'Use -1 to scale to your current account limits'
+  scale_web_traffic: 'Scale with web traffic'
+  scale_no: 'No scaling'
+  scale_fs_share: "This application shares filesystem resources and can't be scaled."
+  scale_all: 'All available'
+
+  time:
+    formats:
+      default: ! '%a, %d de %B de %Y, %H:%M:%S %z'
+      long: ! '%d de %B de %Y, %H:%M'
+      pretty_date: ! '%B %d'
+      pretty_time: ! '%A, %b %d'

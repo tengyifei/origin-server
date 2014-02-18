@@ -122,14 +122,14 @@ module Console::LayoutHelper
 
   AppWizardStepsCreate = [
     {
-      :name => 'Choose a type of application',
+      :name => :app_choose_a_type,
       :link => 'application_types_path'
     },
     {
-      :name => 'Configure and deploy the application'
+      :name => :app_config_and_deploy
     },
     {
-      :name => 'Next steps'
+      :name => :Next_Steps
     }
   ]
 
@@ -139,14 +139,14 @@ module Console::LayoutHelper
 
   CartridgeWizardStepsCreate = [
     {
-      :name => 'Choose a cartridge type',
+      :name => :app_choose_a_type,
       :link => 'application_cartridge_types_path'
     },
     {
-      :name => 'Configure and deploy the cartridge'
+      :name => :app_config_and_deploy
     },
     {
-      :name => 'Next steps'
+      :name => :Next_Steps
     }
   ]
 
@@ -162,7 +162,7 @@ module Console::LayoutHelper
     content_tag(
       :ol,
       (items + [options[:and]].compact).each_with_index.map do |item, index|
-        name = item[:name]
+        name = I18n.t(item[:name])
         content = if item[:link] and ((index < active and !options[:completed]) or options[:active])
           link_to(name, send("#{item[:link]}")).html_safe
         else
@@ -204,33 +204,33 @@ module Console::LayoutHelper
 
   def breadcrumb_for_application(application, *args)
     breadcrumbs_for_each [
-      link_to('My Applications', :applications, :action => :index),
+      link_to(I18n.t(:My_Applications), :applications, :action => :index),
       link_to(application.name, application),
     ] + args
   end
 
   def breadcrumb_for_create_application(*args)
     breadcrumbs_for_each [
-      link_to('Create an application', application_types_path), 
+      link_to(I18n.t(:Create_an_App), application_types_path), 
     ] + args
   end
 
   def breadcrumb_for_settings(*args)
     breadcrumbs_for_each [
-      link_to('Settings', settings_path),
+      link_to(I18n.t(:Settings), settings_path),
     ] + args
   end
 
   def breadcrumb_for_account(*args)
     breadcrumbs_for_each [
-      link_to('My Account', account_path),
+      link_to(I18n.t(:My_Account), account_path),
     ] + args
   end
 
   def breadcrumb_for_account_billing(*args)
     breadcrumbs_for_each [
-      link_to('My Account', account_path),
-      link_to('Billing', billing_index_path),
+      link_to(I18n.t(:My_Account), account_path),
+      link_to(I18n.t(:Billing), billing_index_path),
     ] + args
   end
 

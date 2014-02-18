@@ -1,22 +1,18 @@
-- breadcrumb_for_application @application, 'Change Gear Storage'
-- content_for :page_title, 'Change Gear Storage'
+= breadcrumb_for_application @application, I18n.t(:storage_title)
+= content_for :page_title, I18n.t(:storage_title)
 
-%h1 Change Gear Storage
+%h1= I18n.t(:storage_title)
 
 %section#storage-gear-groups
   %section
-    %p
-      Gear storage space is used for code, logs, cache, config files, and databases.
-      %strong Gear storage is only accessible to the gear it's associated with, and isn't able to be shared between gears.
-      User files should be kept in shared storage.
+    %p= I18n.t(:storage_caption_1)
 
-    %p
-      If you are decreasing your storage, make sure to check your usage to ensure you will still have sufficient disk space.
+    %p= I18n.t(:storage_caption_2)
 
   %section
-    %h3 Check Your Usage
+    %h3= I18n.t(:Check_Your_Usage)
     %p
-      You can check your usage by SSH-ing into your app and running the quota command.
+      = I18n.t(:storage_check_usage)
 
       %pre.cli
         = preserve do
@@ -36,16 +32,13 @@
         = cartridge.display_name
         %span.pull-right= scaled_cartridge_storage(cartridge)
 
-      %p
-        Each gear this cartridge is deployed to has #{cartridge.base_gear_storage}GB of included storage.
+      %p= I18n.t(:storage_space, gb: cartridge.base_gear_storage)
 
       - if cartridge.scales?
-        %p
-          This cartridge is scalable.
-          The additional storage will apply to each extra gear.
+        %p= I18n.t(:storage_extra)
 
       - unless other_carts.empty?
-        %p This storage will also be shared by:
+        %p= I18n.t(:storage_shared)
         %ul
           - other_carts.each do |cart|
             %li= cart.display_name
@@ -60,20 +53,20 @@
           = f.semantic_errors :except => :additional_gear_storage
           = f.inputs :inline => true do
             .input-prepend
-              %span.add-on Add Storage (R$ 1,87/GB/Gear)
+              %span.add-on= I18n.t(:Add_Storage)
               :ruby
                 default_html = {
                   :style => 'width: auto',
-                  :title => 'Additional Storage',
+                  :title => I18n.t(:Additional_Storage),
                 }
               = f.input :additional_gear_storage, storage_options(0,@max_storage).merge({:input_html => default_html})
 
-            = f.commit_button :label => 'Save', :button_html => {:class => 'btn btn-small'}
+            = f.commit_button :label => I18n.t(:Save), :button_html => {:class => 'btn btn-small'}
             = f.loading
 
   %p
-    For more information about storage for your application see
-    #{link_to 'our FAQ on storage', storage_help_url}.
+    = I18n.t(:storage_info)
+    #{link_to I18n.t(:storage_info_link), storage_help_url}.
 
 - content_for :javascripts do
   - if @can_modify_storage

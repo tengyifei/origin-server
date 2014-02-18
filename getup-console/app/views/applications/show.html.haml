@@ -12,8 +12,8 @@
           %span.data #{@application.gear_count} total
 
         %li#restart-container.popover-restart
-          = link_to application_restart_path(@application), { :id => 'restart-link', 'data-html' => 'true', 'data-placement' => 'bottom', :class => 'block btn-console-header', :title => 'Restart Application'} do
-            %span.font-icon.font-icon-size-34.font-icon-grey{:alt => 'Restart', :title =>"Restart application", "aria-hidden" => "true", "data-icon" => "\ue020"}
+          = link_to application_restart_path(@application), { :id => 'restart-link', 'data-html' => 'true', 'data-placement' => 'bottom', :class => 'block btn-console-header', :title => I18n.t(:Restart_Application)} do
+            %span.font-icon.font-icon-size-34.font-icon-grey{:alt => I18n.t(:Restart), :title => I18n.t(:Restart_Application), "aria-hidden" => "true", "data-icon" => "\ue020"}
           #restart-popover.hide
             = render 'restarts/form'
 
@@ -29,7 +29,7 @@
       Cartridges
     .header-btn
       = link_to application_cartridge_types_path(@application) do
-        %span.header-btn-title add cartridge
+        %span.header-btn-title= I18n.t(:Add_Cartridge)
         %span.font-icon{"aria-hidden" => "true", "data-icon" => "\uee16"}
     -#%h3.pull-left Cartridges
       .pull-right
@@ -47,7 +47,7 @@
                 %ul.pull-right.unstyled-flat.bits
                   - if c == 0
                     %li
-                      %h6 Status
+                      %h6= I18n.t(:Status)
                       %span.data= gear_group_state(group.states)
                     %li
                       %h6 Gears
@@ -59,7 +59,7 @@
                   - else
                     %li
                       %h6 Gears
-                      %span.data{:title => 'This cartridge shares resources with the other cartridges it is grouped with.'} Shared
+                      %span.data{:title => I18n.t(:shared_resources)}= I18n.t(:Shared)
 
                       -#%li
                         %h6 Type
@@ -71,96 +71,89 @@
 
               - if cartridge.git_url
                 - if @has_keys
-                  %h6 
-                    Git Repository
+                  %h6= I18n.t(:Git_Repository)
                   %p
-                    %input#application_git_url.git-url{:readonly => 'readonly', :value => cartridge.git_url, :title => 'The code for your application will be available through this Git repository.'}
+                    %input#application_git_url.git-url{:readonly => 'readonly', :value => cartridge.git_url, :title => I18n.t(:git_repo_caption)}
                     - content_for :javascripts do
                       :javascript
                         $('#application_git_url').focus(function() {this.select()});
 
-                  %h6= link_to 'Want to log in to your application?', '#', :'data-unhide' => '.ssh.hidden'
+                  %h6= link_to I18n.t(:ssh_login), '#', :'data-unhide' => '.ssh.hidden'
                   .ssh.hidden
-                    %p 
-                      The command below will open a Secure Shell (SSH) session to your application on most 
-                      operating systems.  See our #{link_to 'SSH help page', ssh_help_url} for information 
-                      about connecting with Windows, Mac, and Linux computers.
+                    %p!= I18n.t(:ssh_login_caption, ssh_url: link_to(I18n.t(:ssh_help_page), ssh_help_url))
                     %p
-                      %input#application_ssh_url.git-url{:readonly => 'readonly', :value => "ssh #{cartridge.ssh_string}", :title => 'Cut and paste this command into a command shell to access your OpenShift application.'}
+                      %input#application_ssh_url.git-url{:readonly => 'readonly', :value => "ssh #{cartridge.ssh_string}", :title => I18n.t(:ssh_command)}
                       - content_for :javascripts do
                         :javascript
                           $('#application_ssh_url').focus(function() {this.select()});
 
                 - else
-                  %p
-                    You must #{link_to "add an SSH public key to your account", new_key_path}
-                    before you can upload code or remotely access your application.
+                  %p!= I18n.t(:ssh_add_key_link, key_url: link_to(I18n.t(:ssh_add_pub_key), new_key_path))
 
               - if cartridge.scales? || cartridge.buildable?
                 .embedded
                   - if cartridge.scales?
                     .embedded-cart
                       - if cartridge.current_scale == 1
-                        = link_to "Scales with HAProxy", application_scaling_path(@application), :title => 'Your web cartridge will automatically scale up when we detect you are receiving more web traffic'
+                        = link_to I18n.t(:scale_with_haproxy), application_scaling_path(@application), :title => I18n.t(:scale_with_haproxy_caption)
                       - else
-                        = link_to "Scaled up with HAProxy x#{cartridge.current_scale}", 
+                        = link_to I18n.t(:scaled_number, scale: cartridge.current_scale),
                                   application_scaling_path(@application), 
                                   :title => web_cartridge_scale_title(cartridge)
                   - if cartridge.builds?
                     .embedded-cart 
-                      =link_to 'See Jenkins Build jobs', @application.build_job_url, :title=> 'Jenkins is currently running builds for your application'
-                      =link_to '(configure)', application_building_path(@application), :title => 'Remove or change your Jenkins configuration'
+                      =link_to I18n.t(:jenkins_caption_1), @application.build_job_url, :title=> I18n.t(:jenkins_caption_2)
+                      =link_to '(' + I18n.t(:configure) + ')', application_building_path(@application), :title => I18n.t(:jenkins_caption_3)
                   - elsif cartridge.buildable?
-                    .embedded-cart= link_to "Enable Jenkins builds", application_building_path(@application), :title => 'Jenkins helps you run builds, tests, and deployment steps when you push changes to your application.'
+                    .embedded-cart= link_to I18n.t(:jenkins_caption_4), application_building_path(@application), :title => I18n.t(:jenkins_caption_5)
 
 
   .right.btn-toolbar
     = link_to application_cartridge_types_path(@application), :class => 'btn btn-primary btn-large' do
-      Add
+      = I18n.t(:Add)
       %strong Cartridge
       %i.icon-add
 
 %aside#app-unique-info.span3
   %section#aliases.sidebar
     %header.clearfix.header-bar
-      %h5
-        Aliases
+      %h5= I18n.t(:Aliases)
       .header-btn
         = link_to application_aliases_path(@application) do
-          %span.header-btn-title add alias
+          %span.header-btn-title= I18n.t(:add_alias)
           %span.font-icon{"aria-hidden" => "true", "data-icon" => "\uee16"}
           
     %ul.unstyled
       - if @application.aliases.empty?
         %li 
-          %span No aliases set.
-          = link_to('Set one now', application_aliases_path(@application))
+          %span= I18n.t(:No_aliases_set)
+          = link_to(I18n.t(:set_one_now), application_aliases_path(@application))
       - else
         - alias_scheme = @application.web_url.split(':').first
         - @application.aliases.sort.each do |a|
           %li
             - if a.has_private_ssl_certificate?
-              %span.icon-lock.font-icon-size-12.font-icon-white.pull-left{'aria-hidden' => true, :title => 'SSL certificate attached'}
+              %span.icon-lock.font-icon-size-12.font-icon-white.pull-left{'aria-hidden' => true, :title => I18n.t(:ssl_cert)}
             - else
-              %span.icon-unlock.font-icon-size-12.font-icon-grey.pull-left{'aria-hidden' => true, :title => 'No SSL certificate'}
+              %span.icon-unlock.font-icon-size-12.font-icon-grey.pull-left{'aria-hidden' => true, :title => I18n.t(:no_ssl_cert)}
             = link_to a.name, application_alias_path(@application, a)
-            .pull-right.icon-pencil.font-icon-grey
-              = link_to 'edit', application_alias_path(@application, a)
+            %span.pull-right.icon-pencil.font-icon-grey
+              = link_to I18n.t(:edit), application_alias_path(@application, a)
 
     - if @application.initial_git_url.present?
-      %h5 Based On
+      %h5= I18n.t(:Based_On)
       %ul.unstyled
         %li= link_to @application.initial_git_url, @application.initial_git_url
 
   #assistance
-    %h5 New to OpenShift?
+    %h5= I18n.t(:new_to_openshift)
     %ul.unstyled
-      %li= link_to 'See the getting started tips for this app →', get_started_application_path(@application)
+      %li= link_to I18n.t(:app_getting_started), get_started_application_path(@application)
 
-    %h5 Need Help?
+    %h5= I18n.t(:Need_Help)
     %ul.unstyled
       //%li= link_to 'OpenShift User Guide', user_guide_url
-      %li= link_to 'Sync your OpenShift repo with an existing Git repo', sync_git_with_remote_repo_knowledge_base_url 
+      %li= link_to I18n.t(:help_sync_repo), sync_git_with_remote_repo_knowledge_base_url 
 
   -# %h5 Need Help? #restore later
     %ul.unstyled
@@ -172,7 +165,7 @@
           %li= link_to key, value
 
   .btn-toolbar
-    = link_to 'Delete this application', delete_application_path(@application), :class => 'btn btn-small'
+    = link_to I18n.t(:delete_this_app), delete_application_path(@application), :class => 'btn btn-small'
 
 - content_for :javascripts do
   :javascript

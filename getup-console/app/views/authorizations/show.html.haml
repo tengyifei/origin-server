@@ -24,7 +24,7 @@
                 %td= scope[:description]
 
       %p
-        = @authorization.note || "<no description>"
+        = @authorization.note || "<" + I18n.t(:no_description) + ">"
         = link_to I18n.t(:Edit), edit_authorization_path(@authorization), :class => 'btn btn-mini'
       %p
         = I18n.t(:token_created_at, time: @authorization.created_at.to_s(:pretty_time), expires: distance_of_time_in_words(@authorization.expires_at, Time.now))

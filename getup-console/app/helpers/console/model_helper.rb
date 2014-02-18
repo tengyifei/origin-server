@@ -23,11 +23,11 @@ module Console::ModelHelper
 
   def web_cartridge_scale_title(cartridge)
     if cartridge.current_scale == cartridge.scales_from
-      'Your web cartridge is running on the minimum amount of gears and will scale up if needed'
+      I18n.t(:scale_title_min)
     elsif cartridge.current_scale == cartridge.scales_to
-      'Your web cartridge is running on the maximum amount of gears and cannot scale up any further'
+      I18n.t(:scale_title_max)
     else
-      'Your web cartridge is running multiple copies to handle increased web traffic'
+      I18n.t(:scale_title_mul)
     end
   end
 
@@ -37,7 +37,7 @@ module Console::ModelHelper
   end
 
   def gear_group_count_title(total_gears)
-    "OpenShift runs each cartridge inside one or more gears on a server and is allocated a fixed portion of CPU time and memory use."
+    I18n.t(:gear_group_count_title)
   end
 
   def cartridge_storage(cart)
@@ -71,10 +71,10 @@ module Console::ModelHelper
   end
   def scale_to_options(obj, max, max_choices=20)
     if range = scale_range(obj.supported_scales_from, obj.supported_scales_to, max, max_choices)
-      range << ['All available', -1] if obj.supported_scales_to == -1
+      range << [I18n.t(:scale_all), -1] if obj.supported_scales_to == -1
       {:as => :select, :collection => range, :include_blank => false}
     else
-      {:as => :string, :hint => 'Use -1 to scale to your current account limits'}
+      {:as => :string, :hint => I18n.t(:scale_hint)}
     end
   end
 
@@ -83,7 +83,7 @@ module Console::ModelHelper
   end
 
   def scale_options
-    [['No scaling',false],['Scale with web traffic',true]]
+    [[I18n.t(:scale_no),false],[I18n.t(:scale_web_traffic),true]]
   end
 
   def can_scale_application_type(type, capabilities)
@@ -92,7 +92,7 @@ module Console::ModelHelper
 
   def cannot_scale_title(type, capabilities)
     unless can_scale_application_type(type, capabilities)
-      "This application shares filesystem resources and can't be scaled."
+      I18n.t(:scale_fs_share)
     end
   end
 
@@ -101,7 +101,7 @@ module Console::ModelHelper
   end
 
   def usage_rate_indicator
-    content_tag :span, user_currency_symbol, :class => "label label-premium", :title => 'May include additional usage fees at certain levels, see plan for details.'
+    content_tag :span, user_currency_symbol, :class => "label label-premium", :title => I18n.t(:usage_rates_warning)
   end
 
   def in_groups_by_tag(ary, tags)
