@@ -134,6 +134,14 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Thu Feb 20 2014 Unknown name 1.7.6-14
+- bump version (spinolacastro@gmail.com)
+- Merge branch 'translation' into getup-openshift-origin-release-3
+  (mateus.caruccio@getupcloud.com)
+- Console translation (mateus.caruccio@getupcloud.com)
+- Console translation (mateus.caruccio@getupcloud.com)
+- getup console (spinolacastro@gmail.com)
+
 * Thu Nov 21 2013 Unknown name 1.7.6-10
 - Release bump (mateus@caruccio.com)
 - Added support chat (mateus@caruccio.com)
