@@ -101,6 +101,7 @@ en:
   Expires_in: 'Expira em'
   Revoke_all: 'Revoke all'
   Cartridge_info: 'Cartridge info'
+  Validate: 'Validate'
 
 ## Signin
   Dashboard_Auth: "Welcome to Dashboard"
@@ -451,6 +452,20 @@ en:
   gears_ref_2: 'Total pre-approved: For security reasons, this pre-approval is valid for 12 months and the sum of all monthly charges cannot exceed R$ 8.750,00 or US$ 5.000,00. When the value or validity of pre-approval is about to expire or be exceeded, we will ask you for another pre-approval operation.'
   gears_ref_3: "Due to Paypal's policy, we can only charge you in Brazilian currency. When you receive your bill, it will be in R$ (Reais) instead of US$. Any problems or questions, feel free to contact us at anytime."
   gears_authorize: 'Authorize Gears'
+
+## Validate
+  validate_title: 'Validate account'
+  validate_caption_1: 'Fill in your Credit Card information.'
+  validate_caption_2: 'In order to validate your account, provide your credit card data.'
+  validate_not_supported: 'Either your JavaScript is disabled or you are using an old browser. Please upgrade your browser or activate your JavaScript.'
+  Card_Type: "Card Type"
+  Card_Number: "Card Number"
+  Expiration_Month: "Expiration Month"
+  Expiration_Year: "Expiration Year"
+  Cardholder_Name: "Cardholder's Name"
+  Card_Validation_Code: "Card Validation Code"
+  validate_success: "Your account is validated. Thanks."
+  validate_verify: 'Please, review your credit card information and try again.'
 
 ## Settings
   namespace_caption_1: 'Your namespace is unique to your account and is the suffix of the public URLs we assign to your applications.'

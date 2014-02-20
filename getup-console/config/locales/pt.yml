@@ -101,6 +101,7 @@ pt:
   Expires_in: 'Expira em'
   Revoke_all: 'Revogar tudo'
   Cartridge_info: 'Cartridge info'
+  Validate: 'Validar'
 
 ## Signin
   Dashboard_Auth: "BEM-VINDO AO DASHBOARD"
@@ -443,6 +444,20 @@ pt:
   gears_ref_2: 'Total pré-aprovado: Por razões de segurança, esta pré-aprovação têm validade de 12 meses e a soma de todos os meses não poderá ultrapassar R$ 8.750,00 ou US$ 5.000,00. Quando o valor ou a validade da pré-aprovação estiver para expirar ou ser excedida, nós iremos solicitar a você uma nova pré-aprovação.'
   gears_ref_3: 'Em acordo com as regras do Paypal, nós cobramos em moeda Brasileira. Quando você receber sua fatura, esta estará em R$ (reais) em vez de US$. Se você tiver alguma dúvida, não deixe de nos procurar.'
   gears_authorize: 'Autorizar Gears'
+
+## Validate
+  validate_title: 'Validar conta'
+  validate_caption_1: 'Preencha os dados de seu cartão de crédito.'
+  validate_caption_2: 'Para validar sua conta, insira os dados de seu cartão de crédito'
+  validate_not_supported: 'Ou seu JavaScipt está desabilitado ou você está usando um navegador muito antigo. Por favor, atualize o navegador ou habilite o JavaScipt.'
+  Card_Type: "Tipo"
+  Card_Number: "Número"
+  Expiration_Month: "Mes de Expiração"
+  Expiration_Year: "Ano de Expiração"
+  Cardholder_Name: "Nome do Portador"
+  Card_Validation_Code: "Código de Verificação"
+  validate_success: "Sua conta foi validada com sucesso. Obrigado."
+  validate_verify: 'Por favor, revise os dados de seu cartão de crédito e tente novamente.'
 
 ## Settings
   namespace_caption_1: 'Seu namespace é exclusivo da sua conta e identifica o suffixo da URL pública de suas aplicações'

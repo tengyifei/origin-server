@@ -5,7 +5,10 @@
 .row
   .span7
     %section
-      = render :partial => 'gears', :locals => {:capabilities => @capabilities}
+      = render :partial => 'validate', :locals => {:capabilities => @capabilities}
+
+    //%section
+    //  = render :partial => 'gears', :locals => {:capabilities => @capabilities}
 
   .span5
     %section

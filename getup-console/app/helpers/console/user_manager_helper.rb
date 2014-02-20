@@ -2,6 +2,11 @@ module Console::UserManagerHelper
   include Console::UserManagerApiHelper
   # 
   # 
+  def user_manager_validate_account(params)
+    cc = params.slice(:cc_type, :cc_number, :cc_exp_month, :cc_exp_year, :cc_name, :cc_cvc)
+    user_manager_post session[:authentication].login + _url('validate'), cc
+  end
+
   def user_manager_account_lang
     begin
       result = user_manager_get session[:authentication].login + _url('account_lang')
