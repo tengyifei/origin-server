@@ -134,6 +134,16 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Fri Feb 21 2014 Unknown name 1.7.6-15
+- bump version (root@mirror.ops.getupcloud.com)
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3
+  (root@mirror.ops.getupcloud.com)
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3
+  (mateus.caruccio@getupcloud.com)
+- no enforce valid locale (mateus.caruccio@getupcloud.com)
+
 * Fri Feb 21 2014 Unknown name
 - Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
   /origin-server into getup-openshift-origin-release-3
