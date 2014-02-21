@@ -24,4 +24,4 @@
 #
 #I18n.exception_handler = :fallback_exception_handler
 
-I18n.enforce_available_locales = true
+#I18n.enforce_available_locales = true
