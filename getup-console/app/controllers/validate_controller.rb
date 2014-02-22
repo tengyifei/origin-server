@@ -2,14 +2,6 @@ class ValidateController < ConsoleController
   include Console::UserManagerHelper
 
   def show
-    result = user_manager_account_plan.content
-    if result[:primary_address][:is_billing] and result[:billing_address][:name]
-      @username = result[:billing_address][:name]
-    elsif result[:primary_address][:is_billing] and result[:primary_address][:name]
-      @username = result[:primary_address][:name]
-    else
-      @username = result[:user][:first_name]
-    end
   end
 
 
