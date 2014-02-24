@@ -164,12 +164,19 @@ pt:
 ## Applications
   Add_Application: 'Criar Aplicação'
   More_help: 'Mais ajuda »'
+  OpenShift_User_Guide: 'Guia do usuário OpenShift'
   help_install_rhc: 'Instalando OpenShift client tools no Mac OSX, Linux, e Windows'
   help_sync_repo: 'Sincronize seu repo OpenShift com um repo Git existente'
+  'OpenShift User Guide': 'Guia do usuário OpenShift'
+  'Installing OpenShift client tools on Mac OSX, Linux, and Windows': 'Instalando OpenShift client tools no Mac OSX, Linux, e Windows'
+  'Sync your OpenShift repo with an existing Git repo': 'Sincronize seu repo OpenShift com um repo Git existente'
   Popular_Faqs: 'Perguntas frequentes'
   faq_own_domain: 'Como usar meu próprio domínio?'
   faq_install_win: 'Como instalo o rhc client tools no Windows?'
   faq_pub_site: 'Como publico os arquivos do meu site? Quais ferramentas devo usar?'
+  'How to use my own domain?': 'Como usar meu próprio domínio?'
+  'How do I install the rhc client tools on Windows?': 'Como instalo o rhc client tools no Windows?'
+  'How to publish my site files? What tools should I use?': 'Como publico os arquivos do meu site? Quais ferramentas devo usar?'
   More_faqs: 'Mais perguntas »'
   gear_group_count_title: 'OpenShift executa cada cartridge dentro de um ou mais gears em um servidor, alocando uma porção fixa de CPU e memória.'
   public_url: "URL Pública"
@@ -211,7 +218,9 @@ pt:
     Você é responsável por atualizar bibliotecas e aplicar correções de segurança."
   app_create_see_all: "(ver tudo)"
   app_choose_a_type: "Escolha um tipo de aplicação"
+  app_choose_a_cart_type: "Escolha um tipo de cartridge"
   app_config_and_deploy: 'Configure e publique a aplicação'
+  app_config_cart_and_deploy: 'Configure e publique o cartridge'
   app_create_cant_find: "Não encontra o que procura? Experimente procurar por um quickstart específico ou filtrar por uma tag.
       Navegue pela lista completa em nossa %{qs_gal}."
   app_create_set_namespace: 'Por ser sua primeira aplicação, você precisa definir o namespace usado para identificar sua conta.'
