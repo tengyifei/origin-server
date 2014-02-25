@@ -2,10 +2,7 @@
 'use strict';
 
 var toggle_controls = function(query, enable) {
-	$(query).each(function (a, el) {
-		if (enable) { el.removeAttribute('disabled'); }
-		else { el.setAttribute('disabled'); }
-	});
+	$(query).prop('disable', !enable);
 };
 
 var enable_pj_controls = function () {

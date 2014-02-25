@@ -30,9 +30,9 @@ class AliasesController < ConsoleController
     @alias.normalize_certificate_content!
 
     if @alias.save
-      redirect_to @application, :flash => {:success => I18n.t(:alias_created, name: %{name}) }
+      redirect_to @application, :flash => {:success => I18n.t(:alias_created, name: @alias.id) }
     else
-      message = @alias.errors.first || I18n.t(:alias_create_error, name: %{name})
+      message = @alias.errors.first || I18n.t(:alias_create_error, name: @alias.name)
       redirect_to application_aliases_path(@application), :flash => {:error => message.kind_of?(Array) ? message.select {|x| x.is_a?(String)} : message}
     end
   end

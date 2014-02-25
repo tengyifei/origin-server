@@ -189,14 +189,14 @@ pt:
   git_repo_caption_1: "Sua aplicação irá começar com uma cópia exata do código e configuração fornecidos neste repositório Git.
                       Espera-se que alguns arquivos existam em certos diretórios, o que pode tornar necessário
                       atualizar o repositório da aplicação após sua criação."
-  git_repo_caption_2: "Iremos criar um repositório git na nuvem, e populá-lo com um conjunto razoável de padrões."
+  git_repo_caption_2: "Iremos criar um repositório git na nuvem, preaparado com um conjunto razoável de padrões."
   gears_explain: "Gears são os 'containers' que executam seu código. Para a maioria das aplicações,
                o gear '%{gear_size}' possui uma quantidade de recursos suficientes."
   cartridges_explain: "Aplicações são compostas de cartridges - cada um expõem um serviço
-                     ou funcionalidade para seu código. Todas as aplicações deve ter um cartridge web."
-  scale_explain_1: 'Requisições web são automaticamente roteadas para seus gears web'
-  scale_explain_2: "Se você permitir que sua apicação escale, iremos configurar um balanceador de carga
-                   e alocar mais gears a medida que o tráfego aumente."
+                     ou funcionalidade para seu código. Todas as aplicações devem ter um cartridge web."
+  scale_explain_1: 'Requisições web são automaticamente roteadas para seus gears web.'
+  scale_explain_2: "Se você permitir que sua aplicação escale, iremos configurar um balanceador de carga
+                   e alocar mais gears a medida que o tráfego aumenter."
   choose_cart_match: "Escolha um cartridge que combine com '%{name}'"
   cart_maintained_team_title: 'Atualizado e mantido pela equipe Getup Cloud'
   cart_maintained_team: 'Mantido pela Getup Cloud'
@@ -204,13 +204,13 @@ pt:
   cart_maintained_partner: 'Criado por parceiro'
   cart_maintained_community_title: 'Criado por um membro de comunidade e não mantido pela equipe Getup Cloud'
   cart_maintained_community: 'Criado pela comunidade'
-  cart_maintained_warning: 'Quando você cria um uickstart ou um cartridge de comunidade, você está copiando código de outro repositório. Você é o responsável por aplicar correções de segurança e atualizações.'
+  cart_maintained_warning: 'Quando você cria um quickstart ou um cartridge de comunidade, você está copiando código de outro repositório. Você é o responsável por aplicar correções de segurança e atualizações.'
   cart_maintained_warning_2: '/ Não recebe atualizações de seguranças automaticamente'
   larger_gear: 'Se você precisa de mais recursos, selecione um gear maior aqui.'
   app_req_web_cart: 'Todas as aplicações necessitam pelo menos de um cartridge web'
   Create_a_New_Application: 'Crie uma Nova Aplicação'
   app_create_caption_1: "Escolha um cartridge web ou inicie com uma aplicação pronta com um quickstart.
-      Após criar a aplicação você você pode adicionar cartridges para hablitar funcionalidades como
+      Após criar a aplicação você poderá adicionar cartridges para hablitar funcionalidades como
       banco de dados, cache, e suporte a integração contínua com Jenkins."
   app_create_search: 'Procure por palavra ou tag'
   app_create_cart_caption: 'Componente com funcionalidade específica, que recebe atualizações automáticas'
@@ -221,10 +221,9 @@ pt:
   app_choose_a_cart_type: "Escolha um tipo de cartridge"
   app_config_and_deploy: 'Configure e publique a aplicação'
   app_config_cart_and_deploy: 'Configure e publique o cartridge'
-  app_create_cant_find: "Não encontra o que procura? Experimente procurar por um quickstart específico ou filtrar por uma tag.
-      Navegue pela lista completa em nossa %{qs_gal}."
+  app_create_cant_find: "Não encontra o que procura? Experimente procurar por um quickstart específico ou filtrar por uma tag."
   app_create_set_namespace: 'Por ser sua primeira aplicação, você precisa definir o namespace usado para identificar sua conta.'
-  app_create_next_steps: "Sua aplicação foi criada. Se você for novo com OpenShift, leia estas dicas para começar."
+  app_create_next_steps: "Sua aplicação foi criada. Se você for novo na nuvem, leia estas dicas para começar."
   app_create_get_started: "Procurando indicações do que fazer agora? Organizamos algumas dicas úteis para você."
   app_acessing: 'Acessando sua aplicação'
   app_create_caption_2: "Sua aplicação possui um ou mais cartridges que expõe uma URL pública na Internet. Clique no link abaixo para ver sua aplicação:"
@@ -237,9 +236,9 @@ pt:
   app_create_set_key_caption: 'Antes de publicar seu código você precisa enviar-nos uma Chave Pública que identifica você nos nossos servidores.
             Se esta é a primeira vez que você cria uma Chave Pública, %{ssh}.'
   app_create_git_url: "sistema de controle de versão Git"
-  app_create_git: 'OpenShift usa o %{git} para gerencia o código de sua aplicação.
+  app_create_git: 'OpenShift usa o %{git} para gerenciar o código de sua aplicação.
         Cada cartridge possui um repositório Git que você usa para publicar suas alterações à aplicação.
-        Quando você realiza o "push" para seu repositório da aplicação, nós iremos publicar automaticamente seu novo código
+        Quando você realizar o "push" para seu repositório da aplicação, nós iremos publicar automaticamente seu novo código
         e reiniciar a aplicação se necessário.'
   app_create_git_inst: 'Instale um cliente Git para seu sistema operacional, e a partir da linha de comando, execute'
   app_create_git_caption_a: 'Isto cria um diretório com o código fonte de sua aplicação. Após fazer suas alterações, execute '
@@ -250,13 +249,13 @@ pt:
   git_commit_mesg: "git commit -m 'Minhas alterações'"
   adding_a_cart: 'Adicionar um catridge'
   add_cap: "Cartridges são componentes de uma aplicação OpenShift, e inclui databases, sistemas de build e
-      componentes de cache. <strong>%{cart}</strong> como %{mysql} ou %{mongodb} a sua applicação
-      fornece a funcionalidade desejada, sem obrigá-lo a administrar ou atualiza este componente."
+      componentes de cache. <strong>%{cart}</strong> como %{mysql} ou %{mongodb} a sua aplicação
+      fornece a funcionalidade desejada, sem obrigá-lo a administrar ou atualizar este componente."
   add_cart_now: "Adicione agora um cartridge em sua aplicação"
   manage_app: 'Gerenciando sua aplicação'
   rhc_link: "Siga estes passos para instalar o cliente"
   rhc_caption: "A maioria das funcionalidades do OpenShift são expostos através de nossa ferramenta de linha de comando, rhc.
-        Tanto adicionar cartridges, verificar o uptime ou baixar os arquivos de log, você pode olhar mais de perto para sua aplicação.
+        Seja para adicionar cartridges, verificar o uptime ou baixar os arquivos de log, você pode olhar mais de perto para sua aplicação.
         %{link} em Linux, Mac OS X ou Windows."
   rhc_cart_list: 'Você pode ver a lista de cartridges com o comando'
   rhc_cart_man: 'Gerencie os cartridges com os comandos'
@@ -310,8 +309,8 @@ pt:
   choose_cart: 'Escolha um cartridge para adicionar a sua aplicação'
   has_dependencies: 'Possui Dependências'
   What_you_get: 'O que você ganha'
-  add_cartridge_ask_1: 'Você quer adicionar o cartridge'
-  add_cartridge_ask_2: 'a sua aplicação?'
+  add_cartridge_ask_1: 'Você quer adicionar um'
+  add_cartridge_ask_2: '?'
 
 ## Applications / Delete
 
@@ -371,8 +370,8 @@ pt:
   Delete_Alias: 'Deletar Alias'
   alias_caption_1: 'Aliases permitem que você utilize seu próprio nome de domínio para suas aplicações. Para usar seu próprio domínio para a aplicação'
   alias_caption_2: 'Inclua um registro CNAME em seu provedor de DNS'
-  alias_caption_3: 'Informe-nos sobre seu novo dmínio preenchendo o form abaixo'
-  alias_caption_4: 'A URL atual da aplicação. Inclua um registro CNAME em seu provedor de DNS, apontando para esta URL.'
+  alias_caption_3: 'Informe-nos sobre seu novo domínio preenchendo o form abaixo'
+  alias_caption_4: 'URL atual da aplicação. Inclua um registro CNAME em seu provedor de DNS, apontando para esta URL.'
   alias_caption_5_cname: 'registro CNAME ativo com seu provedor DNS'
   alias_caption_5: 'Para usar este alias corretamente, você precisa ter um %{cname}.'
   alias_caption_6: 'O alias é "%{name}" e o app destino é "%{app}".'
@@ -480,7 +479,7 @@ pt:
   password_caption: 'Troque a senha de sua conta Getup.'
   change_password_btn: 'Trocar senha...'
   authorizations_title: 'Autorizações'
-  authorizations_caption: 'Permitir a clientes e terceiros, acesso a sua conta via secret tokens.'
+  authorizations_caption: 'Permitir a clientes e terceiros acessar sua conta via secret tokens.'
   authorization_btn: 'Criar autorização...'
   public_keys_caption: 'Para baixar o código de sua apliação você precisa incluir sua chave pública SSH no campo abaixo.'
   public_keys_learn: 'Saiba mais sobre chaves SSH.'
@@ -506,14 +505,14 @@ pt:
   new_password_again: 'Senha Nova (repetir)'
 
 ## Settings - Change Namespace
-  change_namespace_warning: 'Cuidado! Trocar o namespace altera a URL pública de suas aplicações.<br/>Se você trocar seu namespace será necessário atualizar qualquer bookmark ou link externo para suas apicações.'
+  change_namespace_warning: 'Cuidado! Trocar o namespace altera a URL pública de suas aplicações.<br/>Se você trocar seu namespace será necessário atualizar qualquer bookmark ou link externo para suas aplicações.'
 
 ## Authorization/Token
   token_add_title: 'Criar autorização'
   token_usage_title: 'Como usar seu token'
   token_caption_1: 'Selecione quais permissões você quer dar ao cliente. Você deve escolher o escopo ou deixar em branco para o sistema utilizar o padrão.'
-  token_caption_2: 'Ou você pode inserir os escopos manualmente para aqueles que necessitam de um parâmetro. Separe multiplos escopos com um espaço ou vírgula.'
-  token_caption_3: 'Selecionando multiplos escopos, você pode realizar ações que qualquer um dos escopos permita, mas seu token expira após o período de expiração do escopo mais curto.'
+  token_caption_2: 'Ou você pode inserir os escopos manualmente para aqueles que necessitam de um parâmetro. Separe múltiplos escopos com um espaço ou vírgula.'
+  token_caption_3: 'Selecionando múltiplos escopos, você pode realizar ações que qualquer um dos escopos permita, mas seu token expira após o período de expiração do escopo mais curto.'
   token_caption_4: 'O token permitirá que terceiros realizem as seguintes operações em seu nome:'
   token_remainder: 'Inclua um lembrete para esta autorização (opcional)'
   authz_title: 'Token de Autorização'
@@ -542,7 +541,7 @@ pt:
   help_title_2: 'Aprenda'
   help_forum: 'Nosso Forum'
   help_caption_2_1: 'Deseja explorar nossa plataforma?'
-  help_caption_2_2: '%{forum} é o primeiro destino para novos desenvolvedores encontrarem informações sobre valiosas.'
+  help_caption_2_2: '%{forum} é o primeiro destino para novos desenvolvedores encontrarem informações valiosas.'
 
   help_title_3: 'Solucione'
   help_community_forum: 'Fórum da Comunidade'
@@ -550,8 +549,8 @@ pt:
   help_faq: 'FAQ'
   help_irc: '#getupcloud na freenode.net'
   help_caption_3_1: 'Encontrou uma pedra no caminho?'
-  help_caption_3_2: 'Nosso %{community_forum} é monitorado constantemente por um exército de desenvolvedores, evangelistas e pessoas devotadas ao OpenShift.'
-  help_caption_3_3: 'Confira a %{knowledge_base} para problemas conhecidos, e a %{faq} para perguntas mais frequentes.'
+  help_caption_3_2: 'Monitoramos nosso %{community_forum} constantemente. Poste suas dúvidas que responderemos o mais breve possível.'
+  help_caption_3_3: 'Confira a %{knowledge_base} para problemas conhecidos e a %{faq} para perguntas mais frequentes.'
   help_caption_3_4: 'Fale diretamente com o time no IRC - %{irc}.'
 
   help_title_4: 'Envolva-se'
