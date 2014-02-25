@@ -23,5 +23,4 @@ Gem::Specification.new do |s|
   s.add_dependency 'net-http-persistent', '>= 2.7'
   s.add_dependency 'haml',                '~> 3.1.7'
   s.add_dependency 'rdiscount',           '~> 1.6.3'
-  s.add_dependency 'bigdecimal',          '~> 1.2.5'
 end
