@@ -36,13 +36,13 @@
         %h5= I18n.t :Help
         %ul.unstyled
           - console_help_links.each do |l|
-            %li= link_to l[:name], l[:href]
+            %li= link_to I18n.t(l[:name]), l[:href]
           %li= link_to I18n.t(:More_help), console_help_path
 
         %h5= I18n.t(:Popular_Faqs)
         %ul.unstyled
           - console_faq_links.each do |l|
-            %li= link_to l[:name], l[:href]
+            %li= link_to I18n.t(l[:name]), l[:href]
           %li= link_to I18n.t(:More_faqs), faq_url
 
 -# FIXME: Refactor me into an unobtrusive javascript function

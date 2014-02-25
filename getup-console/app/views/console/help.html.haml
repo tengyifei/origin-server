@@ -42,7 +42,7 @@
     %p= link_to I18n.t(:help_create_app_btn), application_types_path, :class => 'btn btn-danger'
     %p!= I18n.t(:help_caption_1_3, getting_started: link_to(I18n.t(:help_getting_started), getting_started_path))
     %p!= I18n.t(:help_caption_1_4,
-      drupal: link_to('Drupal', openshift_github_project_url('drupal-example')),
+      drupal: link_to('Drupal', openshift_github_project_url('drupal-quickstart')),
       ror: link_to('Ruby on Rails', openshift_github_project_url('rails-example')),
       wp: link_to('Wordpress', openshift_github_project_url('wordpress-example')),
       let_us_know: link_to(I18n.t(:help_let_us_know), feature_request_path))

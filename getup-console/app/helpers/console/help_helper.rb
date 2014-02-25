@@ -176,7 +176,7 @@ module Console::HelpHelper
   end
 
   def getting_started_path(opts=nil)
-    community_base_url "entries/23660343"
+    community_base_url "entries/38835698"
   end
 
   def product_overview_path(opts=nil)
@@ -257,22 +257,22 @@ module Console::HelpHelper
   def console_help_links
     [
       {:href => user_guide_url,
-       :name => 'OpenShift User Guide'},
+       :name => :OpenShift_User_Guide },
       {:href => client_tools_install_help_url,
-       :name => I18n.t(:help_install_rhc) },
+       :name => :help_install_rhc },
       {:href => sync_git_with_remote_repo_knowledge_base_url,
-       :name => I18n.t(:help_sync_repo) }
+       :name => :help_sync_repo }
     ]
   end
 
   def console_faq_links
     [
       {:href => community_base_url('entries/23608756'),
-       :name => I18n.t(:faq_own_domain)},
+       :name => :faq_own_domain},
       {:href => cli_on_windows_user_guide_topic_url,
-       :name => I18n.t(:faq_install_win)},
+       :name => :faq_install_win},
       {:href => community_base_url('entries/23042806'),
-       :name => I18n.t(:faq_pub_site)}
+       :name => :faq_pub_site}
     ]
   end
 

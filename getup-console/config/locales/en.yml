@@ -163,13 +163,20 @@ en:
 
 ## Applications
   Add_Application: 'Add Application'
+  OpenShift_User_Guide: 'OpenShift User Guide'
   More_help: 'More_help »'
   help_install_rhc: 'Installing OpenShift client tools on Mac OSX, Linux, and Windows'
   help_sync_repo: 'Sync your OpenShift repo with an existing Git repo'
+  'OpenShift User Guide': 'OpenShift User Guide'
+  'Installing OpenShift client tools on Mac OSX, Linux, and Windows': 'Installing OpenShift client tools on Mac OSX, Linux, and Windows'
+  'Sync your OpenShift repo with an existing Git repo': 'Sync your OpenShift repo with an existing Git repo'
   Popular_Faqs: 'Popular FAQs'
   faq_own_domain: 'How to use my own domain?'
   faq_install_win: 'How do I install the rhc client tools on Windows?'
   faq_pub_site: 'How to publish my site files? What tools should I use?'
+  'How to use my own domain?': 'How to use my own domain?'
+  'How do I install the rhc client tools on Windows?': 'How do I install the rhc client tools on Windows?'
+  'How to publish my site files? What tools should I use?': 'How to publish my site files? What tools should I use?'
   More_faqs: 'More FAQs »'
   gear_group_count_title: "OpenShift runs each cartridge inside one or more gears on a server and is allocated a fixed portion of CPU time and memory use."
   public_url: "Public URL"
@@ -213,7 +220,9 @@ en:
         responsible for updating core libraries for security updates."
   app_create_see_all: "(see all)"
   app_choose_a_type: "Choose a type of application"
+  app_choose_a_cart_type: "Choose a type of cartridge"
   app_config_and_deploy: 'Configure and deploy the application'
+  app_config_cart_and_deploy: 'Configure and deploy the cartridge'
   app_create_cant_find: "Can't find what you're looking for?  Try searching for a specific quickstart or filtering by tag.
       Or, browse the entire list in our #{link_to 'QuickStart gallery', community_quickstarts_url}."
   app_create_set_namespace: 'Because this is your first application, you need to provide a domain name under which your applications will be grouped'

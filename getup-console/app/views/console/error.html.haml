@@ -50,7 +50,7 @@
 
 %ul.spaced-items
   %li!= I18n.t(:error_try_also_1, forum: link_to(I18n.t(:help_forum), forum_path))
-  %li!= I18n.t(:error_try_also_2, email: link_to(support_email, 'mailto:' + support_email))
+  %li!= I18n.t(:error_try_also_2, email: link_to('support@getupcloud.com', 'mailto:support@getupcloud.com'))
   %li= I18n.t(:error_try_also_3)
   %li!= I18n.t(:error_try_also_4, irc: link_to(I18n.t(:help_irc), irc_web_url))
 

@@ -139,11 +139,11 @@ module Console::LayoutHelper
 
   CartridgeWizardStepsCreate = [
     {
-      :name => :app_choose_a_type,
+      :name => :app_choose_a_cart_type,
       :link => 'application_cartridge_types_path'
     },
     {
-      :name => :app_config_and_deploy
+      :name => :app_config_cart_and_deploy
     },
     {
       :name => :Next_Steps

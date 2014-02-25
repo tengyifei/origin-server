@@ -74,7 +74,7 @@
 
 - unless Quickstart.disabled?
   %section
-    %p!= I18n.t(:app_create_cant_find, qs_gal: link_to(I18n.t(:Quickstart_Gallery), community_quickstarts_url))
+    %p!= I18n.t(:app_create_cant_find)
 
 - content_for :javascripts do
   :javascript
