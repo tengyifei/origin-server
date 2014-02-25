@@ -10,7 +10,7 @@
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
 Version: 1.7.6
-Release:       18%{?dist}
+Release:       19%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           https://openshift.redhat.com
@@ -134,6 +134,14 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Tue Feb 25 2014 Unknown name 1.7.6-19
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3
+  (root@mirror.ops.getupcloud.com)
+- correcoes de traducao (mateus.caruccio@getupcloud.com)
+- fix translations (mateus.caruccio@getupcloud.com)
+- added skeuocard assets (mateus.caruccio@getupcloud.com)
+
 * Sat Feb 22 2014 Unknown name 1.7.6-18
 - fix syntax error (mateus.caruccio@getupcloud.com)
 - dont auto-complete card name field (mateus.caruccio@getupcloud.com)
