@@ -33,8 +33,8 @@
           rhc cartridge reload -a #{@application.name} -c #{@cartridge.name}
           rhc cartridge status -a #{@application.name} -c #{@cartridge.name}
 
-    %p= I18n.t(:rhc_cart_rm)
-
+    %p
+      =I18n.t(:rhc_cart_rm)
       .warning= I18n.t(:rhc_cart_rm_warn)
 
     %pre.cli
