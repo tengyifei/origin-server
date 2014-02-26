@@ -102,6 +102,7 @@ pt:
   Revoke_all: 'Revogar tudo'
   Cartridge_info: 'Cartridge info'
   Validate: 'Validar'
+  Credit_Card: 'Cartão de Crédito'
 
 ## Signin
   Dashboard_Auth: "BEM-VINDO AO DASHBOARD"
@@ -454,12 +455,16 @@ pt:
   gears_authorize: 'Autorizar Gears'
 
 ## Validate
+  add_credit_card: 'Insira seu Cartão de Crédito'
+  change_credit_card: 'Alterar o Cartão de Crédito'
   validate_title: 'Validar conta'
   validate_caption_1: 'Preencha os dados de seu cartão de crédito.'
-  validate_caption_2: 'Para validar sua conta, insira os dados de seu cartão de crédito'
+  validate_caption_invalid: 'Esta conta não possui um cartão de crédito.'
+  validate_caption_valid: 'Esta conta está usando o seguinte cartão de crédito:'
   validate_not_supported: 'Ou seu JavaScipt está desabilitado ou você está usando um navegador muito antigo. Por favor, atualize o navegador ou habilite o JavaScipt.'
-  Card_Type: "Tipo"
+  Card_Type: "Cartão"
   Card_Number: "Número"
+  Expires_on: "Expira em"
   Expiration_Month: "Mes de Expiração"
   Expiration_Year: "Ano de Expiração"
   Cardholder_Name: "Nome do Portador"

@@ -102,6 +102,7 @@ en:
   Revoke_all: 'Revoke all'
   Cartridge_info: 'Cartridge info'
   Validate: 'Validate'
+  Credit_Card: 'Credit Card'
 
 ## Signin
   Dashboard_Auth: "Welcome to Dashboard"
@@ -463,12 +464,16 @@ en:
   gears_authorize: 'Authorize Gears'
 
 ## Validate
+  add_credit_card: 'Add a credit card'
+  change_credit_card: 'Change credit card'
   validate_title: 'Validate account'
-  validate_caption_1: 'Fill in your Credit Card information.'
-  validate_caption_2: 'In order to validate your account, provide your credit card data.'
+  validate_caption_1: 'Fill in your credit card information.'
+  validate_caption_invalid: 'This account does not have a credit card.'
+  validate_caption_valid: 'This account is using the following credit card:'
   validate_not_supported: 'Either your JavaScript is disabled or you are using an old browser. Please upgrade your browser or activate your JavaScript.'
   Card_Type: "Card Type"
   Card_Number: "Card Number"
+  Expires_on: "Expires on"
   Expiration_Month: "Expiration Month"
   Expiration_Year: "Expiration Year"
   Cardholder_Name: "Cardholder's Name"

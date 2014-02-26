@@ -1,6 +1,35 @@
-%h2= I18n.t(:Validate)
+%h2= I18n.t(:Credit_Card)
 
-%p= I18n.t(:validate_caption_2)
+- if payment[:valid]
 
-.btn-toolbar
-  = link_to I18n.t(:validate_title), validate_path, :class => 'btn btn-small btn-danger'
+  - if payment[:type] == 'cielo'
+    %p= I18n.t(:validate_caption_valid)
+
+    %table.table
+      %thead
+        %tr
+          %th{:scope => 'col'}= I18n.t(:Card_Type)
+          %th{:scope => 'col'}= I18n.t(:Card_Number)
+          %th{:scope => 'col'}= I18n.t(:Expires_on)
+          %th{:scope => 'col'}= I18n.t(:Cardholder_Name)
+      %tbody
+        - payment[:credit_cards].each do |cc|
+          %tr
+            %td{:scope => 'row'}= cc[:card_name]
+            %td{:scope => 'row'}= cc[:number]
+            %td{:scope => 'row'}= cc[:exp_date]
+            %td{:scope => 'row'}= cc[:name]
+  .row
+    .span4
+      .btn-toolbar
+        = link_to I18n.t(:change_credit_card), validate_path, :class => 'btn btn-small btn-danger'
+    .span3
+      = image_tag 'console/credit-cards.png'
+- else
+  %p= I18n.t(:validate_caption_invalid)
+  .row
+    .span4
+      .btn-toolbar
+        = link_to I18n.t(:add_credit_card), validate_path, :class => 'btn btn-small btn-danger'
+    .span3
+      = image_tag 'console/credit-cards.png'

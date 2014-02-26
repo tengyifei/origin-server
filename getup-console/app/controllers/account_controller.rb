@@ -1,5 +1,9 @@
 class AccountController < ConsoleController
+  include Console::UserManagerHelper
+
   def show
-  	@capabilities = user_capabilities :refresh => true
+    plan = user_manager_account_plan.content
+    @payment = plan[:payment]
+    @capabilities = user_capabilities :refresh => true
   end
 end
