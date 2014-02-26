@@ -67,9 +67,9 @@ module Console::UserManagerApiHelper
       #  puts "User Manager API Helper Data: #{params}"
       #end
       response = http.request request
-      puts "response: #{response}"
+      #puts "response: #{response}"
       response_code = response.code.to_i
-      puts "User Manager API Helper Res: #{response} => #{response.body}"
+      #puts "User Manager API Helper Res: #{response} => #{response.body}"
 
       if response_code == 500
         raise "Error retrieving resource: #{path}"
