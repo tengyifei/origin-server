@@ -32,37 +32,44 @@
         = cartridge.display_name
         %span.pull-right= scaled_cartridge_storage(cartridge)
 
-      %p= I18n.t(:storage_space, gb: cartridge.base_gear_storage)
+      .row
+        .span6
+          %p= I18n.t(:storage_space, gb: cartridge.base_gear_storage)
 
-      - if cartridge.scales?
-        %p= I18n.t(:storage_extra)
+          - if cartridge.scales?
+            %p= I18n.t(:storage_extra)
 
-      - unless other_carts.empty?
-        %p= I18n.t(:storage_shared)
-        %ul
-          - other_carts.each do |cart|
-            %li= cart.display_name
+          - unless other_carts.empty?
+            %p= I18n.t(:storage_shared)
+            %ul
+              - other_carts.each do |cart|
+                %li= cart.display_name
 
-      - if @can_modify_storage
-        = semantic_form_for cartridge,
-                            :simple => true,
-                            :method => :put,
-                            :url => application_storage_cartridge_path(@application.id, cartridge.name) do |f|
+        .span6
+          - if @can_modify_storage
+            = semantic_form_for cartridge,
+                                :simple => true,
+                                :method => :put,
+                                :url => application_storage_cartridge_path(@application.id, cartridge.name) do |f|
 
-          -# Currently storage errors are reported in :base, but this will properly handle :additional_gear_storage errors
-          = f.semantic_errors :except => :additional_gear_storage
-          = f.inputs :inline => true do
-            .input-prepend
-              %span.add-on= I18n.t(:Add_Storage)
-              :ruby
-                default_html = {
-                  :style => 'width: auto',
-                  :title => I18n.t(:Additional_Storage),
-                }
-              = f.input :additional_gear_storage, storage_options(0,@max_storage).merge({:input_html => default_html})
-
-            = f.commit_button :label => I18n.t(:Save), :button_html => {:class => 'btn btn-small'}
-            = f.loading
+              -# Currently storage errors are reported in :base, but this will properly handle :additional_gear_storage errors
+              = f.semantic_errors :except => :additional_gear_storage
+              = f.inputs :inline => true do
+                .input-prepend
+                  %span.add-on= I18n.t(:Add)
+                  :ruby
+                    default_html = {
+                      :style => 'width: auto',
+                      :title => I18n.t(:Additional_Storage),
+                    }
+                  = f.input :additional_gear_storage, storage_options(0,@max_storage).merge({:input_html => default_html})
+                  %span.add-on GB
+        
+                %span{:style => 'width: 25px'}
+                = f.commit_button :label => I18n.t(:Save), :button_html => {:class => 'btn btn-small'}
+                = f.loading
+        
+            %p= I18n.t(:storage_price, price: @storage_price)
 
   %p
     = I18n.t(:storage_info)

@@ -356,10 +356,10 @@ pt:
   storage_caption_2: "Se você stiver diminuindo seu storage, certifique-se de verificar seu consumo para garantir que ainda terá espaço em disco suficiente."
   Check_Your_Usage: 'Verifique seu Consumo'
   storage_check_usage: 'Você pode verificar seu consumo fazendo SSH na aplicação e executando o comando "quota".'
-  storage_space: 'Cada gear deste cartridge possui %{gb}GB de storage gratuito incluso.'
+  storage_space: 'Cada gear deste cartridge possui %{gb}GB de storage gratuito incluso. Adicione mais storage para aumentar o espaço disponível em disco.'
+  storage_price: 'Cada GB adicional custa %{price}/mês.'
   storage_extra: 'Este cartridge é escalável. O storage adicional aplica-se a cada gear extra.'
   storage_shared: 'Este storage será compartilhado por:'
-  Add_Storage: 'Storage adicional (R$ 1,87/GB/Gear)'
   Additional_Storage: 'Storage Adicional'
   storage_info: 'Para mais informações sobre storage para sua aplicação, veja'
   storage_info_link: 'nosso FAQ sobre storage'
