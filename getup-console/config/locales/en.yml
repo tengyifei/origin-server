@@ -423,7 +423,10 @@ en:
   contact_info_btn: 'Contact information...'
   billing_info_btn: 'Billing information...'
   gears_count: 'You have %{gears_free} gears available of %{max_gears} authorized.'
-  get_more_gears: 'Click here to get more'
+  validate_your_account_1: 'There are no more available gears.'
+  validate_your_account_2: 'Please, validate your account.'
+  increase_max_gears_limit: 'You already reached the limit of {max_gears} gears. Please, contact use to increase your limit.'
+  get_more_gears: 'Click here to validate your account'
   new_pass_saved: "New password saved."
   error_saving_pass: "Error to save your new password."
   auth_updated: 'Authorization updated'

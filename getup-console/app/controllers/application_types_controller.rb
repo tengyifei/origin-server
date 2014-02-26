@@ -1,14 +1,22 @@
 class ApplicationTypesController < ConsoleController
 
   include Console::ModelHelper
+  include Console::UserManagerHelper
+
+  def gear_count_message
+    flash.clear
+    if @plan[:payment][:valid]
+      flash.now[:warning] = I18n.t(:increase_max_gears_limit, max_gears: @capabilities.max_gears)
+    else
+      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{validate_path}'>" + I18n.t(:validate_your_account_2) + '</a>.').html_safe
+    end
+  end
 
   def index
     @capabilities = user_capabilities
+    @plan = user_manager_account_plan.content
 
-    unless @capabilities.gears_free?
-      flash.clear
-      flash.now[:warning] = (I18n.t(:gears_count, gears_free: @capabilities.gears_free, max_gears: @capabilities.max_gears) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe
-    end
+    gear_count_message unless @capabilities.gears_free?
 
     @browse_tags = [
       ['Java', :java],
