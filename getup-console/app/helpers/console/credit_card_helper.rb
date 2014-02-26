@@ -4,7 +4,6 @@ module Console::CreditCardHelper
      ['Visa', 'visa'],
      ['MasterCard', 'mastercard'],
      ['American Express', 'amex'],
-     ['JCB', 'jcb'],
      ['Diners Club', 'dinersclubintl']
     ]
 
