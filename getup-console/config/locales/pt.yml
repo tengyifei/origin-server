@@ -414,7 +414,10 @@ pt:
   contact_info_btn: 'Dados de contato...'
   billing_info_btn: 'Dados de cobrança...'
   gears_count: 'Você possui %{gears_free} gears disponíveis de %{max_gears} autorizado(s).'
-  get_more_gears: 'Click aqui para comprar mais'
+  validate_your_account_1: 'Não existem mais gears disponíveis.'
+  validate_your_account_2: 'Por favor, valide sua conta.'
+  increase_max_gears_limit: 'Você já alcançou o limite de {max_gears} gears. Por favor, entre em contato para aumentar seu limite.'
+  get_more_gears: 'Click aqui para validar sua conta.'
   new_pass_saved: "Senha atualizada."
   error_saving_pass: "Erro ao salvar sua nova senha."
   auth_updated: 'Autorização atualizada'
