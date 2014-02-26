@@ -27,7 +27,7 @@
       %p.well.application-url{:style => "font-size: 20px"}
         = link_to @application.web_url, @application.web_url, :target => '_blank'
 
-    %p!= I18n.t(:app_create_summary, app: link_to(I18n.t(:app_create_summay_link), application_path(@application)))
+    %p!= I18n.t(:app_create_summary, app: link_to(I18n.t(:app_create_summary_link), application_path(@application)))
 
     -# git/setup
     - if true #FIXME has at least one cartridge with source code
