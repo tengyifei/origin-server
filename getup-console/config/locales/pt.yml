@@ -416,7 +416,7 @@ pt:
   gears_count: 'Você possui %{gears_free} gears disponíveis de %{max_gears} autorizado(s).'
   validate_your_account_1: 'Não existem mais gears disponíveis.'
   validate_your_account_2: 'Por favor, valide sua conta.'
-  increase_max_gears_limit: 'Você já alcançou o limite de {max_gears} gears. Por favor, entre em contato para aumentar seu limite.'
+  increase_max_gears_limit: 'Você já alcançou o limite de %{max_gears} gears. Por favor, entre em contato para aumentar seu limite.'
   get_more_gears: 'Click aqui para validar sua conta.'
   new_pass_saved: "Senha atualizada."
   error_saving_pass: "Erro ao salvar sua nova senha."
