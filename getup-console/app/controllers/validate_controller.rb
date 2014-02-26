@@ -4,7 +4,6 @@ class ValidateController < ConsoleController
   def show
   end
 
-
   def create
     result = user_manager_validate_account params
     if result.code != 200
