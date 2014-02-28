@@ -58,7 +58,10 @@ module ActionDispatch::Routing
 
       def openshift_account_resource_routes
         resources :billing, :only => [:show, :index], :format => false
-        resource :validate, :controller => :validate, :only => [:show, :create]
+        #resource :validate, :controller => :validate, :only => [:show, :create]
+        resource :gears, :controller => :gears, :only => [:show, :create] do
+           get :confirm
+         end
 
         match 'payment/confirm' => 'payments_proxy#confirm', :format => false
         match 'payment/cancel' => 'payments_proxy#cancel', :format => false

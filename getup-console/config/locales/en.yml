@@ -8,6 +8,8 @@ en:
       '121': 'You have already saved this public key with a different name. Provide a different key here.'
       '151': 'You must create a Jenkins application (to act as a build server) before you can add the Jenkins cartridge to an application.'
       '153': 'You are currently using more gears than the new plan would allow. Please scale down or delete applications before downgrading.'
+      '128': 'This domain still have applications. You must remove all applications before renaming the domain.'
+      '104': 'Your account has no more available gears.'
 
   unknown: 'A system error has occurred. If the problem persists, please contact the support.'
   Name: 'Name'
