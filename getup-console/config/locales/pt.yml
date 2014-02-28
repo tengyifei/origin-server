@@ -8,7 +8,8 @@ pt:
       '121': 'Você já salvou esta chave com um nome diferente. Forneça uma nova chave.'
       '151': 'Você deve criar uma aplicação Jenkins (para ser o servidor de build) antes de adicionar o cartridge Jenkins a uma aplicação.'
       '153': 'Você está usando mais gear do que o novo plano permite. Por favor, reduza o numero de gears utilizados ou remova aplicações.'
-      '128': 'Este domínio contém aplicações. Voce precisa remover todas as aplicações antes de renomear o domínio.'
+      '128': 'Este domínio contém aplicações. Você precisa remover todas as aplicações antes de renomear o domínio.'
+      '104': 'Sua conta não possui gears disponíveis.'
 
   unknown: 'Ocorreu um erro de sistema. Se o problema persistir, por favor entre em contato com o suporte.'
   Name: 'Nome'
