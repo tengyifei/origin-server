@@ -4,11 +4,14 @@ class ApplicationTypesController < ConsoleController
   include Console::UserManagerHelper
 
   def gear_count_message
+    #DUP: applications_controller.rb
     flash.clear
     if @plan[:payment][:valid]
-      flash.now[:warning] = I18n.t(:increase_max_gears_limit, max_gears: @capabilities.max_gears)
+      #flash.now[:warning] = I18n.t(:increase_max_gears_limit, max_gears: @capabilities.max_gears)
+      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{gears_path}'>" + I18n.t(:increase_gears_limit) + '</a>.').html_safe
     else
-      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{validate_path}'>" + I18n.t(:validate_your_account_2) + '</a>.').html_safe
+      #flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{validate_path}'>" + I18n.t(:validate_your_account_2) + '</a>.').html_safe
+      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe
     end
   end
 
@@ -86,8 +89,7 @@ class ApplicationTypesController < ConsoleController
       flash.now[:error] = I18n.t(:invalid_cart_type, source: @application_type.source)
     end
 
-    #flash.now[:error] = "There are not enough free gears available to create a new application. You will either need to scale down or delete existing applications to free up resources." unless @capabilities.gears_free?
-      flash.now[:error] = (I18n.t(:gears_count, gears_free: @capabilities.gears_free, max_gears: @capabilities.max_gears) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe unless @capabilities.gears_free?
+    gear_count_message unless @capabilities.gears_free?
     @disabled = @missing_cartridges.present? || @cartridges.blank?
 
     user_default_domain rescue nil

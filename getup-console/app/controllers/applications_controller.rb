@@ -105,6 +105,18 @@ class ApplicationsController < ConsoleController
     redirect_to application_types_path
   end
 
+  def gear_count_message
+    #DUP: applications_controller.rb
+    flash.clear
+    if @plan[:payment][:valid]
+      #flash.now[:warning] = I18n.t(:increase_max_gears_limit, max_gears: @capabilities.max_gears)
+      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{gears_path}'>" + I18n.t(:increase_gears_limit) + '</a>.').html_safe
+    else
+      #flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{validate_path}'>" + I18n.t(:validate_your_account_2) + '</a>.').html_safe
+      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe
+    end
+  end
+
   def create
     app_params = params[:application] || params
     @advanced = to_boolean(params[:advanced])
@@ -129,8 +141,7 @@ class ApplicationsController < ConsoleController
 
     #@cartridges, @missing_cartridges = ApplicationType.matching_cartridges(@application.cartridge_names.presence || @application_type.cartridges)
 
-    #flash.now[:error] = "You have no free gears.  You'll need to scale down or delete another application first." unless @capabilities.gears_free?
-    flash.now[:error] = (I18n.t(:gears_count, gears_free: @capabilities.gears_free, max_gears: @capabilities.max_gears) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe unless @capabilities.gears_free?
+    gear_count_message unless @capabilities.gears_free?
     @disabled = @missing_cartridges.present? || @cartridges.blank?
 
     # opened bug 789763 to track simplifying this block - with domain_name submission we would
