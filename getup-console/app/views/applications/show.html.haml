@@ -141,7 +141,7 @@
               = link_to I18n.t(:edit), application_alias_path(@application, a)
 
     - if @application.initial_git_url.present?
-      %h5= I18n.t(:Based_On)
+      %h5= I18n.t(:based_on)
       %ul.unstyled
         %li= link_to @application.initial_git_url, @application.initial_git_url
 
