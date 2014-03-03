@@ -31,7 +31,8 @@ module Console::HelpHelper
   end
 
   def deploy_hook_user_guide_topic_url
-    community_base_url 'entries/23042806'
+    'http://openshift.github.io/documentation/oo_cartridge_developers_guide.html#application-developer-action-hooks'
+    #community_base_url 'entries/23042806'
   end
 
   def add_domains_user_guide_topic_url
@@ -67,19 +68,19 @@ module Console::HelpHelper
   end
 
   def get_started_quickstart_url
-    community_base_url 'developers/get-started'
+    community_base_url 'entries/38835698'
   end
 
   def developers_url
-    community_base_url 'developers'
+    community_base_url 'forums'
   end
 
   def developers_path
-    community_base_url 'developers'
+    community_base_url 'forums'
   end
 
   def ssh_help_url
-    community_base_url 'developers/remote-access'
+    community_base_url 'entries/23074108'
   end
 
   def client_tools_install_help_url
@@ -107,7 +108,7 @@ module Console::HelpHelper
   end
 
   def jenkins_help_url
-    community_base_url 'jenkins'
+    community_base_url 'entries/26199296'
   end
 
   def forums_url
@@ -175,7 +176,7 @@ module Console::HelpHelper
   end
 
   def getting_started_path(opts=nil)
-    community_base_url "entries/23660343"
+    community_base_url "entries/38835698"
   end
 
   def product_overview_path(opts=nil)
@@ -256,22 +257,22 @@ module Console::HelpHelper
   def console_help_links
     [
       {:href => user_guide_url,
-       :name => 'OpenShift User Guide'},
+       :name => :OpenShift_User_Guide },
       {:href => client_tools_install_help_url,
-       :name => 'Installing OpenShift client tools on Mac OSX, Linux, and Windows'},
+       :name => :help_install_rhc },
       {:href => sync_git_with_remote_repo_knowledge_base_url,
-       :name => 'Sync your OpenShift repo with an existing Git repo'}
+       :name => :help_sync_repo }
     ]
   end
 
   def console_faq_links
     [
       {:href => community_base_url('entries/23608756'),
-       :name => 'How to use my own domain?'},
+       :name => :faq_own_domain},
       {:href => cli_on_windows_user_guide_topic_url,
-       :name => 'How do I install the rhc client tools on Windows?'},
+       :name => :faq_install_win},
       {:href => community_base_url('entries/23042806'),
-       :name => 'How to publish my site files? What tools should I use?'}
+       :name => :faq_pub_site}
     ]
   end
 
@@ -281,6 +282,10 @@ module Console::HelpHelper
 
   def resource_request_url
     community_base_url 'page/resource-request-form'
+  end
+
+  def support_email
+    'support@getupcloud.com'
   end
 
   def support_url
