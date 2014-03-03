@@ -14,8 +14,8 @@
 
 Summary:       The OpenShift Management Console
 Name:          openshift-origin-console
-Version:       1.5.18
-Release:       1%{?dist}
+Version:       1.5.19
+Release:       2%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
 URL:           http://openshift.redhat.com
@@ -172,6 +172,17 @@ _EOF
 /sbin/fixfiles -R %{?scl:%scl_prefix}mod_passenger restore
 /sbin/restorecon -R -v /var/run
 %changelog
+* Mon Mar 03 2014 Builder <getup@getupcloud.com> 1.5.19-2
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3
+  (spinolacastro@gmail.com)
+- bump version (spinolacastro@gmail.com)
+
+* Mon Mar 03 2014 Builder <getup@getupcloud.com> 1.5.18-2
+- bump version (spinolacastro@gmail.com)
+- help_helper.rb (spinolacastro@gmail.com)
+- getup console (spinolacastro@gmail.com)
+
 * Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 1.5.18-1
 - Add a few base URLs and helpers for fetching assets during static page
   compilation (ccoleman@redhat.com)
