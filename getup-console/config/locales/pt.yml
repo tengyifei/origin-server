@@ -104,6 +104,7 @@ pt:
   Cartridge_info: 'Cartridge info'
   Validate: 'Validar'
   Credit_Card: 'Cartão de Crédito'
+  Create_App: 'Criar Aplicação'
 
 ## Signin
   Dashboard_Auth: "BEM-VINDO AO DASHBOARD"

@@ -105,6 +105,7 @@ en:
   Cartridge_info: 'Cartridge info'
   Validate: 'Validate'
   Credit_Card: 'Credit Card'
+  Create_App: 'Create Application'
 
 ## Signin
   Dashboard_Auth: "Welcome to Dashboard"
