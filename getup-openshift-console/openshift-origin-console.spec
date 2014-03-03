@@ -172,6 +172,11 @@ _EOF
 /sbin/fixfiles -R %{?scl:%scl_prefix}mod_passenger restore
 /sbin/restorecon -R -v /var/run
 %changelog
+* Mon Mar 03 2014 Builder <getup@getupcloud.com> 1.5.18-2
+- bump version (spinolacastro@gmail.com)
+- help_helper.rb (spinolacastro@gmail.com)
+- getup console (spinolacastro@gmail.com)
+
 * Sat Apr 13 2013 Krishna Raman <kraman@gmail.com> 1.5.18-1
 - Add a few base URLs and helpers for fetching assets during static page
   compilation (ccoleman@redhat.com)
