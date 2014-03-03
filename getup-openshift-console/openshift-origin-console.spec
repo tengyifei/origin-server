@@ -172,6 +172,12 @@ _EOF
 /sbin/fixfiles -R %{?scl:%scl_prefix}mod_passenger restore
 /sbin/restorecon -R -v /var/run
 %changelog
+* Mon Mar 03 2014 Builder <getup@getupcloud.com> 1.5.19-2
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3
+  (spinolacastro@gmail.com)
+- bump version (spinolacastro@gmail.com)
+
 * Mon Mar 03 2014 Builder <getup@getupcloud.com> 1.5.18-2
 - bump version (spinolacastro@gmail.com)
 - help_helper.rb (spinolacastro@gmail.com)
