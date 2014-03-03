@@ -209,7 +209,7 @@
 
   = f.buttons do
     = link_to I18n.t(:Back), application_types_path, :class => 'btn btn-danger'
-    = f.commit_button :button_html => { :disabled => @disabled } 
+    = f.commit_button :button_html => { :disabled => @disabled }, :label => I18n.t(:Create_App)
     = f.loading
 
 - if @compact
