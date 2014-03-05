@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Common
 Name:          rubygem-%{gem_name}
-Version: 1.18.0.2
+Version: 1.18.0.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -117,6 +117,9 @@ cp bin/man/*.8 %{buildroot}%{_mandir}/man8/
 %doc %{gem_docdir}
 
 %changelog
+* Wed Mar 05 2014 Builder <getup@getupcloud.com> 1.18.0.3-1
+- start usage-rates (mateus.caruccio@getupcloud.com)
+
 * Wed Dec 11 2013 Krishna Raman <kraman@gmail.com> 1.18.0.2-1
 - Bumping version numbers (release-3 build-2) (kraman@gmail.com)
 - <oo-diagnostics> rewording around broker failure (lmeyer@redhat.com)
