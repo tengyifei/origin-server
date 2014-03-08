@@ -3,7 +3,7 @@
 Summary:       Provides embedded mysql support
 Name:          openshift-origin-cartridge-mysql
 Version: 1.21.3
-Release:       1%{?dist}
+Release:       2%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
 URL:           http://www.openshift.com
@@ -59,6 +59,11 @@ Provides mysql cartridge support to OpenShift. (Cartridge Format V2)
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Sat Mar 08 2014 Builder <getup@getupcloud.com>
+- Merge branch 'mysql55' into getup-openshift-origin-release-3
+  (spinolacastro@gmail.com)
+- fix merge (spinolacastro@gmail.com)
+
 * Sat Mar 08 2014 Builder <getup@getupcloud.com> 1.21.3-1
 - Mysql-5.5 upstream/stage (spinolacastro@gmail.com)
 
