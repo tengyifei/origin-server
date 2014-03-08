@@ -81,6 +81,9 @@ find versions/ -name .gitkeep -delete
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Sat Mar 08 2014 Builder <getup@getupcloud.com> 1.22.3-1
+- fix nodejs bugs from stage (spinolacastro@gmail.com)
+
 * Thu Mar 06 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
 - Updating cartridge versions (jhadvig@redhat.com)
 
