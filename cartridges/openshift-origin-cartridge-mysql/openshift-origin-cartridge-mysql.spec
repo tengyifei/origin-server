@@ -59,6 +59,9 @@ Provides mysql cartridge support to OpenShift. (Cartridge Format V2)
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Sat Mar 08 2014 Builder <getup@getupcloud.com> 1.21.3-1
+- Mysql-5.5 upstream/stage (spinolacastro@gmail.com)
+
 * Thu Mar 06 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
 - Updating cartridge versions (jhadvig@redhat.com)
 
