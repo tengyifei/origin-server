@@ -11,6 +11,7 @@ locked_files:
 - configuration/etc/conf/*
 - configuration/etc/conf.d/
 - configuration/etc/conf.d/openshift.conf
+- configuration/etc/conf.d/multisite.conf.erb.hidden
 - configuration/etc/conf.d/php.conf
 - configuration/etc/php.ini
 - metadata/

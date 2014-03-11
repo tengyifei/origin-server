@@ -3,7 +3,7 @@
 
 Name:          openshift-origin-cartridge-php
 Version: 1.19.8
-Release:       2%{?dist}
+Release:       3%{?dist}
 Summary:       Php cartridge
 Group:         Development/Languages
 License:       ASL 2.0
