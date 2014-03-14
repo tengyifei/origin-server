@@ -28,7 +28,7 @@ function start() {
 function ensure_multisite() {
   if [ -f ${OPENSHIFT_REPO_DIR}.openshift/markers/multisite ]; then
     echo "Enabling multisite module"
-    oo-erb ${OPENSHIFT_PHP_DIR}conf/multisite.conf.erb.hidden > ${HTTPD_CFG_DIR}/multisite.conf
+    oo-erb ${HTTPD_CFG_DIR}/multisite.conf.erb.hidden > ${HTTPD_CFG_DIR}/multisite.conf
   else
     echo > ${HTTPD_CFG_DIR}/multisite.conf
   fi

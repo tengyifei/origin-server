@@ -20,4 +20,5 @@ fi
 
 if [[ $curr =~ 0.0.10 ]]; then
 	echo > $OPENSHIFT_PHP_DIR/configuration/etc/conf.d/multisite.conf
+	cp versions/shared/configuration/etc/conf.d/multisite.conf.erb.hidden $OPENSHIFT_PHP_DIR/configuration/etc/conf.d/
 fi

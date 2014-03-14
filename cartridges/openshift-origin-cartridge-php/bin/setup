@@ -19,5 +19,3 @@ echo > $OPENSHIFT_PHP_DIR/configuration/etc/conf.d/multisite.conf
 
 cp versions/shared/configuration/etc/conf.d/performance.conf.erb conf/performance.conf.erb
 cp conf/performance.conf.erb conf/performance.conf.erb.hidden
-cp versions/shared/configuration/etc/conf.d/multisite.conf.erb conf/multisite.conf.erb
-cp conf/multisite.conf.erb conf/multisite.conf.erb.hidden

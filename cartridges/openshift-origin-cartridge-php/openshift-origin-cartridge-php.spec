@@ -3,7 +3,7 @@
 
 Name:          openshift-origin-cartridge-php
 Version: 1.19.8
-Release:       3%{?dist}
+Release:       4%{?dist}
 Summary:       Php cartridge
 Group:         Development/Languages
 License:       ASL 2.0
@@ -119,6 +119,7 @@ PHP cartridge for openshift. (Cartridge Format V2)
 %__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel6 %{buildroot}%{cartridgedir}/metadata/manifest.yml
 %__mv %{buildroot}%{cartridgedir}/usr/lib/php_context.rhel6 %{buildroot}%{cartridgedir}/usr/lib/php_context
 %__mv %{buildroot}%{cartridgedir}/versions/5.4-scl %{buildroot}%{cartridgedir}/versions/5.4
+%__mv %{buildroot}%{cartridgedir}/versions/5.5-scl %{buildroot}%{cartridgedir}/versions/5.5
 %endif
 %if 0%{?fedora} >= 18
 %__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora %{buildroot}%{cartridgedir}/metadata/manifest.yml
