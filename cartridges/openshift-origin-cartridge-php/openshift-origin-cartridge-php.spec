@@ -135,6 +135,10 @@ PHP cartridge for openshift. (Cartridge Format V2)
 
 
 %changelog
+* Fri Mar 14 2014 Builder <getup@getupcloud.com> 1.19.8-3
+- fix upgrade (spinolacastro@gmail.com)
+- php multisite (spinolacastro@gmail.com)
+
 * Thu Feb 13 2014 Unknown name 1.19.8-2
 - haproxy and php new cartridges (spinolacastro@gmail.com)
 
