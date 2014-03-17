@@ -4,12 +4,12 @@
 
 .row
   .span7
-    - if @capabilities.max_gears > 0
-      %section
-        = render :partial => 'gears', :locals => {:capabilities => @capabilities}
+    //- if @capabilities.max_gears > 0
+    //  %section
+    //    = render :partial => 'gears', :locals => {:capabilities => @capabilities}
 
-    //%section
-    //  = render :partial => 'validate', :locals => {:capabilities => @capabilities, :payment=> @payment}
+    %section
+      = render :partial => 'validate', :locals => {:capabilities => @capabilities, :payment=> @payment}
 
   .span5
     %section
