@@ -130,6 +130,7 @@ CONSOLE_CONFIG_FILE=/etc/openshift/console.conf \
   RAILS_RELATIVE_URL_ROOT=/console \
   bundle exec rake assets:precompile assets:public_pages
 %{?scl:EOF}
+chown -R apache.apache /var/www/openshift/console
 
 %files
 %doc %{gem_instdir}/Gemfile
