@@ -124,6 +124,7 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %post
 %{?scl:scl enable %scl - << \EOF}
 echo Precompiling assets...
+cd /var/www/openshift/console
 CONSOLE_CONFIG_FILE=/etc/openshift/console.conf \
   RAILS_ENV=production \
   RAILS_LOG_PATH=%{buildroot}%{_var}/log/openshift/console/production.log \
