@@ -121,6 +121,16 @@ gem install -V \
 mkdir -p %{buildroot}%{gem_dir}
 cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 
+%post
+%{?scl:scl enable %scl - << \EOF}
+echo Precompiling assets...
+CONSOLE_CONFIG_FILE=/etc/openshift/console.conf \
+  RAILS_ENV=production \
+  RAILS_LOG_PATH=%{buildroot}%{_var}/log/openshift/console/production.log \
+  RAILS_RELATIVE_URL_ROOT=/console \
+  bundle exec rake assets:precompile assets:public_pages
+%{?scl:EOF}
+
 %files
 %doc %{gem_instdir}/Gemfile
 %doc %{gem_instdir}/LICENSE 
