@@ -10,7 +10,7 @@
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
 Version: 1.7.6
-Release:       39%{?dist}
+Release:       40%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           https://openshift.redhat.com
@@ -146,6 +146,11 @@ chown -R apache.apache /var/www/openshift/console
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Tue Mar 18 2014 Builder <getup@getupcloud.com> 1.7.6-40
+- Merge branch 'cielo' of github.com:getupcloud/origin-server into cielo
+  (getup@getupcloud.com)
+- fix assets compile (mateus.caruccio@getupcloud.com)
+
 * Tue Mar 18 2014 Builder <getup@getupcloud.com> 1.7.6-39
 - Merge branch 'cielo' of github.com:getupcloud/origin-server into cielo
   (getup@getupcloud.com)
