@@ -127,7 +127,7 @@ echo Precompiling assets...
 cd /var/www/openshift/console
 CONSOLE_CONFIG_FILE=/etc/openshift/console.conf \
   RAILS_ENV=production \
-  RAILS_LOG_PATH=%{buildroot}%{_var}/log/openshift/console/production.log \
+  RAILS_LOG_PATH=%{_var}/log/openshift/console/production.log \
   RAILS_RELATIVE_URL_ROOT=/console \
   bundle exec rake assets:precompile assets:public_pages
 %{?scl:EOF}
