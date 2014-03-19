@@ -14,6 +14,9 @@
 
     %a.skip-navigation{:href => '#content', :accesskey => '2'} Skip to main content
 
+    %header.userinfo
+      = render :partial => 'layouts/console/userinfo', :locals => {:userinfo => userinfo}
+
     %header.getup
       = render 'layouts/console/header'
 
