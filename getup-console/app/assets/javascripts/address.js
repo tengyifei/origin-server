@@ -2,7 +2,7 @@
 'use strict';
 
 var toggle_controls = function(query, enable) {
-	$(query).prop('disable', !enable);
+	$(query).prop('disabled', !enable);
 };
 
 var enable_pj_controls = function () {
