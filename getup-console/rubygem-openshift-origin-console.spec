@@ -10,7 +10,7 @@
 Summary:       OpenShift Origin Management Console
 Name:          rubygem-%{gem_name}
 Version: 1.7.6
-Release:       41%{?dist}
+Release:       43%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           https://openshift.redhat.com
@@ -134,6 +134,18 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Fri Mar 28 2014 Builder <getup@getupcloud.com> 1.7.6-43
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3 (getup@getupcloud.com)
+- passwd reset locales (mateus.caruccio@getupcloud.com)
+- chat ident (mateus.caruccio@getupcloud.com)
+
+* Fri Mar 28 2014 Builder <getup@getupcloud.com>
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3 (getup@getupcloud.com)
+- passwd reset locales (mateus.caruccio@getupcloud.com)
+- chat ident (mateus.caruccio@getupcloud.com)
+
 * Tue Mar 18 2014 Builder <getup@getupcloud.com> 1.7.6-41
 - fix addr form cpf/cnpj state (mateus.caruccio@getupcloud.com)
 - reactivate zopim (mateus.caruccio@getupcloud.com)
