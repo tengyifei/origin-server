@@ -2,9 +2,24 @@ module Console::UserManagerHelper
   include Console::UserManagerApiHelper
   # 
   # 
+
+  def userinfo
+    session[:name] = user_manager_account_userinfo[:name] unless session[:name]
+    {:login => session[:authentication].login, :name => session[:name], :email => session[:authentication].login}
+  end
+
   def user_manager_validate_account(params)
     cc = params.slice(:authenticity_token, :cc_type, :cc_number, :cc_exp_month, :cc_exp_year, :cc_name, :cc_cvc)
     user_manager_post session[:authentication].login + _url('validate'), cc
+  end
+
+  def user_manager_account_userinfo
+    begin
+      result = user_manager_get session[:authentication].login + _url('account_userinfo')
+      result.content[:data][0]
+    rescue
+      {}
+    end
   end
 
   def user_manager_account_lang
