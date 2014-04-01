@@ -4,8 +4,13 @@ module Console::UserManagerHelper
   # 
 
   def userinfo
+    ui = Hash.new("")
+    return ui if session.empty?
     session[:name] = user_manager_account_userinfo[:name] unless session[:name]
-    {:login => session[:authentication].login, :name => session[:name], :email => session[:authentication].login}
+    ui[:login] = session[:authentication].login
+    ui[:name] = session[:name]
+    ui[:email] = session[:authentication].login
+    ui
   end
 
   def user_manager_validate_account(params)
