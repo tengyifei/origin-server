@@ -1,4 +1,6 @@
 module Console::Html5BoilerplateHelper
+  include Console::UserManagerHelper
+
   # Create a named haml tag to wrap IE conditional around a block
   # http://paulirish.com/2008/conditional-stylesheets-vs-css-hacks-answer-neither
   def ie_tag(name=:body, attrs={}, &block)
