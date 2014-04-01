@@ -3,7 +3,7 @@
 %h1= I18n.t(:billing_info_title)
 = flashes
 
-%form.form-horizontal.formtastic{:action => billing_address_path, :id => 'form-billing-address', :method => 'post'}
+%form.form-horizontal.formtastic.form-address{:action => billing_address_path, :id => 'form-billing-address', :method => 'post'}
   = token_tag(nil)
   %p= I18n.t(:billing_info_caption)
 
@@ -90,4 +90,5 @@
       %button.btn.btn-danger.update{:type => 'submit'}= I18n.t(:Save)
 
 - content_for :javascripts do
+  = javascript_include_tag 'jquery.maskedinput'
   = javascript_include_tag 'address'
