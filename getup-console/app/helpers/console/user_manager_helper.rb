@@ -4,17 +4,8 @@ module Console::UserManagerHelper
   # 
 
   def userinfo
-puts "USERINFO"
-puts "USERINFO"
-puts "USERINFO"
-puts "USERINFO"
-puts "USERINFO"
-puts "USERINFO"
-puts "USERINFO"
     session[:name] = user_manager_account_userinfo[:name] unless session[:name]
-    x = {:login => session[:authentication].login, :name => session[:name], :email => session[:authentication].login}
-puts "USERINFO: #{x}"
-x
+    {:login => session[:authentication].login, :name => session[:name], :email => session[:authentication].login}
   end
 
   def user_manager_validate_account(params)
