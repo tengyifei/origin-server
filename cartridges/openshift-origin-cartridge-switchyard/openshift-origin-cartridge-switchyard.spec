@@ -2,7 +2,7 @@
 
 Summary:       Provides embedded switchyard support
 Name:          openshift-origin-cartridge-switchyard
-Version: 1.16.0
+Version: 1.17.3
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -44,12 +44,39 @@ alternatives --set switchyard-0.6 /usr/share/switchyard
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/metadata
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.17.3-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.17.2-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Both env OPENSHIFT_JBOSSEAP_MODULE_PATH and OPENSHIFT_JBOSSAS_MODULE_PATH
+  exist in jbosseap/as (bparees@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.17.1-1
+- bump spec to fix versioning between branches (admiller@redhat.com)
+
+* Tue Mar 18 2014 Adam Miller <admiller@redhat.com> 1.16.3-1
+- bump version number for build after tag fix
+
+* Tue Mar 18 2014 Adam Miller <admiller@redhat.com> 1.16.2-1
+- get version number in line with tag (admiller@redhat.com)
+- Automatic commit of package [openshift-origin-cartridge-switchyard] release
+  [1.16.2-1]. (admiller@redhat.com)
+- Updating cartridge versions (jhadvig@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.16.2-1
+- Updating cartridge versions (jhadvig@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.16.1-1
+- Bug 1066850 - Fixing urls (dmcphers@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 1.15.3-1
 - Fix obsoletes and provides (tdawson@redhat.com)
 

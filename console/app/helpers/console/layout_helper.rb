@@ -27,14 +27,21 @@ module Console::LayoutHelper
     classes = options[:classes] || []
     active = active_tab == name || (name.to_s == controller_name) && (action.nil? || action.to_s == controller.action_name)
     classes << 'active' if active
+
+    if action.blank? && name.is_a?(String)
+      url = name
+    else
+      url = url_for({
+        :action => action || :index,
+        :controller => name
+      })
+    end
+
     content_tag(
       :li,
       link_to(
         options[:name] || (!block.nil? ? capture(&block) : nil) || ActiveSupport::Inflector.humanize(name),
-        url_for({
-          :action => action || :index,
-          :controller => name
-        })
+        url
       ),
       {:class => classes.compact.join(' ')})
   end
@@ -332,7 +339,18 @@ module Console::LayoutHelper
     {
       :class => "font-icon",
       :title => item.cartridge?  || item.class.name == "CartridgeType" ? "Cartridge" : "Quickstart",
-      :data_icon => item.cartridge? || item.class.name == "CartridgeType" ? "\ue021" : "\ue029"
+      :data_icon => 
+        if item.cartridge? || item.class.name == "CartridgeType"
+          if (item.external? rescue false)
+            "\uee53"
+          elsif item.custom?
+            "\uee54"
+          else
+            "\uee51"
+          end
+        else 
+          "\ue029"
+        end
     }
   end
 

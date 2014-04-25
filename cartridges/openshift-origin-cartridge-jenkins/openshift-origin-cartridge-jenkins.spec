@@ -2,7 +2,7 @@
 
 Summary:       Provides jenkins-1.x support
 Name:          openshift-origin-cartridge-jenkins
-Version: 1.18.0
+Version: 1.20.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -38,12 +38,54 @@ chkconfig jenkins off
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/configuration
+%{cartridgedir}/metadata
+%{cartridgedir}/usr
+%{cartridgedir}/env
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.20.3-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.20.2-1
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.20.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.19.4-1
+- Merge pull request #5086 from VojtechVitek/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+- Fix bash brace expansion (vvitek@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.19.3-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.19.2-1
+- bump spec to fix versioning between branches (admiller@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.19.1-1
+- bump spec to fix versioning between branches (admiller@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.18.3-1
+- Remove unused teardowns (dmcphers@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.18.2-1
+- Merge pull request #4907 from bparees/jenkins_mixed
+  (dmcphers+openshiftbot@redhat.com)
+- Switch jenkins update url to use https to avoid mixed mode blocking in
+  browsers (bparees@redhat.com)
+- Updating cartridge versions (jhadvig@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.18.1-1
+- Bug 1066850 - Fixing urls (dmcphers@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 1.17.3-1
 - Merge pull request #4744 from mfojtik/latest_versions
   (dmcphers+openshiftbot@redhat.com)

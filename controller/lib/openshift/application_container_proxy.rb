@@ -36,13 +36,13 @@ module OpenShift
       opts ||= {}
       server_infos = @proxy_provider.find_all_available_impl(opts)
       server_id, district = select_best_fit_node(server_infos, opts[:gear])
-      
+
       raise OpenShift::NodeUnavailableException.new("No nodes available", 140) if server_id.nil?
       @proxy_provider.new(server_id, district)
     end
 
-    def self.find_one(node_profile=nil)
-      server_id = @proxy_provider.find_one_impl(node_profile)
+    def self.find_one(node_profile=nil, platform='linux')
+      server_id = @proxy_provider.find_one_impl(node_profile, platform)
       raise OpenShift::NodeUnavailableException.new("No nodes available", 140) if server_id.blank?
       @proxy_provider.new(server_id)
     end
@@ -74,7 +74,7 @@ module OpenShift
 
       return server_id, district
     end
-    
+
     def self.get_blacklisted
       @proxy_provider.get_blacklisted_in_impl
     end

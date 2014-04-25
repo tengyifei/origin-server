@@ -2,7 +2,7 @@
 
 Summary:       Embedded cron support for OpenShift
 Name:          openshift-origin-cartridge-cron
-Version: 1.19.0
+Version: 1.21.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -30,12 +30,49 @@ Cron cartridge for openshift. (Cartridge Format V2)
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/configuration
+%{cartridgedir}/metadata
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.21.2-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Use named pipes for logshifter redirection where appropriate
+  (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.20.4-1
+- Merge pull request #5086 from VojtechVitek/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5078 from jwhonce/bug/1065276
+  (dmcphers+openshiftbot@redhat.com)
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+- Bug 1065276 - Skip *.rpmnew when loading environments (jhonce@redhat.com)
+- cron/mongo logs does not get cleaned via rhc app-tidy (bparees@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.20.3-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Tue Mar 18 2014 Adam Miller <admiller@redhat.com> 1.20.2-1
+- Bug 1076626 - Fix LD_LIBRARY_PATH for cron_runjobs (mfojtik@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.20.1-1
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.19.2-1
+- Use SDK functions in rhcsh and cronjob task to build PATH/LD_LIBRARY_PATH
+  (mfojtik@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.19.1-1
+- <cron cart> Load env. vars. recursively (miciah.masters@gmail.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 1.18.4-1
 - Bug 1065045 - Enforce cronjob timeout (jhonce@redhat.com)
 

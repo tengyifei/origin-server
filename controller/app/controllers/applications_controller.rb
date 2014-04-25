@@ -18,8 +18,15 @@ class ApplicationsController < BaseController
     domain_id = params[:domain_id].presence
 
     by = domain_id.present? ? {domain_namespace: Domain.check_name!(domain_id).downcase} : {}
-    apps = Application.includes(:domain).accessible(current_user).where(by).sort_by{ |a| a.name }.map { |app| get_rest_application(app, include_cartridges) }
+    apps = 
+      case params[:owner]
+      when "@self" then Application.includes(:domain).accessible(current_user).where(owner: current_user)
+      when nil     then Application.includes(:domain).accessible(current_user)
+      else return render_error(:bad_request, "Only @self is supported for the 'owner' argument.") 
+      end.where(by).sort_by{ |a| a.name }.map { |app| get_rest_application(app, include_cartridges) }
     Domain.find_by(canonical_namespace: domain_id.downcase) if apps.empty? && domain_id.present? # check for a missing domain
+
+    @analytics_tracker.track_event('apps_list', nil, nil, {'domain_namespace' => domain_id})
 
     render_success(:ok, "applications", apps, "Found #{apps.length} applications.")
   end
@@ -141,6 +148,12 @@ class ApplicationsController < BaseController
 
     cartridges = CartridgeCache.find_and_download_cartridges(specs, "cartridge", true)
 
+    if (cartridges.map(&:additional_gear_storage).compact.map(&:to_i).max || 0) > @cloud_user.max_storage
+      return render_error(:unprocessable_entity,
+                          "#{@cloud_user.login} has requested more additional gear storage than allowed (max: #{@cloud_user.max_storage} GB)",
+                          166)
+    end
+
     frameworks = cartridges.select(&:is_web_framework?)
     if frameworks.empty? && !params[:advanced]
       framework_carts = CartridgeCache.web_framework_names.presence or
@@ -155,6 +168,9 @@ class ApplicationsController < BaseController
     end
 
     result = app.add_initial_cartridges(cartridges, init_git_url, user_env_vars)
+
+    @analytics_tracker.identify(@cloud_user.reload)
+    @analytics_tracker.track_event('app_create', @domain, @application)
 
     include_cartridges = (params[:include] == "cartridges")
     rest_app = get_rest_application(app, include_cartridges)
@@ -199,11 +215,12 @@ class ApplicationsController < BaseController
     return render_error(:unprocessable_entity, "Invalid deployment_branch: #{deployment_branch}. Deployment branches are limited to 256 characters",
                         1, "deployment_branch") if deployment_branch and deployment_branch.length > 256
 
-    @application.config['auto_deploy'] = auto_deploy if !auto_deploy.nil?
-    @application.config['deployment_branch'] = deployment_branch if deployment_branch
-    @application.config['keep_deployments'] = keep_deployments if keep_deployments
-    @application.config['deployment_type'] = deployment_type if deployment_type
-    result = @application.update_configuration
+    new_config = {}
+    new_config['auto_deploy'] = auto_deploy unless auto_deploy.nil?
+    new_config['deployment_branch'] = deployment_branch unless deployment_branch.nil?
+    new_config['keep_deployments'] = keep_deployments unless keep_deployments.nil?
+    new_config['deployment_type'] = deployment_type unless deployment_type.nil?
+    result = @application.update_configuration(new_config)
 
     include_cartridges = (params[:include] == "cartridges")
     app = get_rest_application(@application, include_cartridges)
@@ -223,7 +240,11 @@ class ApplicationsController < BaseController
 
     id = params[:id].downcase if params[:id].presence
 
+    cartridges = @application.cartridges.map(&:name).join(', ')
     result = @application.destroy_app
+
+    @analytics_tracker.identify(@cloud_user.reload)
+    @analytics_tracker.track_event('app_delete', @domain, @application, {'cartridges' => cartridges})
 
     status = requested_api_version <= 1.4 ? :no_content : :ok
     return render_success(status, nil, nil, "Application #{id} is deleted.", result)

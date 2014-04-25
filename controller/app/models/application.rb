@@ -365,7 +365,7 @@ class Application
       add_keys.push(key) unless key.class == UserSshKey and key.cloud_user and !Ability.has_permission?(key.cloud_user._id, :ssh_to_gears, Application, role_for(key.cloud_user._id), self)
     end
     keys_attrs = get_updated_ssh_keys(add_keys)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = UpdateAppConfigOpGroup.new(add_keys_attrs: keys_attrs, parent_op: parent_op, user_agent: self.user_agent)
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
@@ -383,7 +383,7 @@ class Application
   def remove_ssh_keys(keys, parent_op=nil)
     return if keys.empty?
     keys_attrs = get_updated_ssh_keys(keys)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = UpdateAppConfigOpGroup.new(remove_keys_attrs: keys_attrs, parent_op: parent_op, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       result_io = ResultIO.new
@@ -395,7 +395,13 @@ class Application
   ##
   # Updates the configuration of the application.
   # @return [ResultIO] Output from cartridges
-  def update_configuration
+  def update_configuration(new_config={})
+    # set the new config in the application object without persisting for validation 
+    self.config['auto_deploy'] = new_config['auto_deploy'] unless new_config['auto_deploy'].nil?
+    self.config['deployment_branch'] = new_config['deployment_branch'] unless new_config['deployment_branch'].nil?
+    self.config['keep_deployments'] = new_config['keep_deployments'] unless new_config['keep_deployments'].nil?
+    self.config['deployment_type'] = new_config['deployment_type'] unless new_config['deployment_type'].nil?
+
     if self.invalid?
       messages = []
       if self.errors.messages[:config]
@@ -409,10 +415,19 @@ class Application
       end
       raise OpenShift::UserException.new("Invalid application configuration: #{messages}", 1)
     end
-    Application.run_in_application_lock(self) do
-      op_group = UpdateAppConfigOpGroup.new(config: self.config)
-      self.pending_op_groups << op_group
-      self.save!
+
+    Lock.run_in_app_lock(self) do
+      # set the config parameters not specified in new_config based on the updates values in the application
+      ['auto_deploy', 'deployment_branch', 'keep_deployments', 'deployment_type'].each {|k| new_config[k] = self.config[k] if new_config[k].nil?}
+      op_group = UpdateAppConfigOpGroup.new(config: new_config)
+      op_group.set_created_at
+      app_updates = {"$push" => { pending_op_groups: op_group.as_document }, "$set" => {}}
+      new_config.keys.each { |k| app_updates["$set"]["config.#{k}"] = new_config[k] unless new_config[k].nil? }
+
+      # do an atomic update and reload the application
+      Application.where(_id: self._id).update(app_updates)
+      self.reload
+
       result_io = ResultIO.new
       self.run_jobs(result_io)
       result_io
@@ -425,10 +440,7 @@ class Application
   # @param keys [Array<SshKey>] Array of keys to add to the application.
   # @return [ResultIO] Output from cartridges
   def fix_gear_ssh_keys
-    Application.run_in_application_lock(self) do
-      # reload the application to get the latest data
-      self.reload
-
+    Lock.run_in_app_lock(self) do
       op_group = ReplaceAllSshKeysOpGroup.new(keys_attrs: self.get_all_updated_ssh_keys, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       result_io = ResultIO.new
@@ -443,7 +455,7 @@ class Application
   # @param parent_op [PendingDomainOps] object used to track this operation at a domain level
   # @return [ResultIO] Output from cartridges
   def add_env_variables(vars, parent_op=nil)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = UpdateAppConfigOpGroup.new(add_env_vars: vars, parent_op: parent_op, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       result_io = ResultIO.new
@@ -458,7 +470,7 @@ class Application
   # @param parent_op [PendingDomainOps] object used to track this operation at a domain level
   # @return [ResultIO] Output from cartridges
   def remove_env_variables(vars, parent_op=nil)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = UpdateAppConfigOpGroup.new(remove_env_vars: vars, parent_op: parent_op, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       result_io = ResultIO.new
@@ -472,7 +484,7 @@ class Application
   # @param vars [Array<Hash>] User environment variables. Each entry contains name and/or value
   # @return [ResultIO] Output from node platform
   def patch_user_env_variables(vars)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = PatchUserEnvVarsOpGroup.new(user_env_vars: vars, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       result_io = ResultIO.new
@@ -504,24 +516,41 @@ class Application
 
     # Overrides from the basic cartridge definitions.
     overrides = []
+
     specs.each do |spec|
       # Cartridges can contribute overrides
       spec.cartridge.group_overrides.each do |override|
         if o = GroupOverride.resolve_from(specs, override)
-          overrides << o.implicit
+          platforms = o.components.map do |component|
+            cart = CartridgeCache.find_cartridge(component.cartridge_name, self)
+
+            unless cart
+              # check inside specs for the cartridge object,
+              # since d/l carts are not stored in the application yet
+              cart = specs.map {|s| s.cartridge if s.cartridge.name == component.cartridge_name }.compact.first
+            end
+
+            cart ? cart.platform : nil
+          end
+
+          # only allow grouping if we're working with a single platform
+          # compact will remove nils from the array, to exclude carts that have not been found
+          if platforms.compact.uniq.size == 1
+            overrides << o.implicit
+          end
         end
       end
 
       # Each component has an implicit override based on its scaling
       comp = spec.component
       overrides <<
-        if comp.is_sparse?
-          GroupOverride.new([spec]).implicit
-        elsif spec.cartridge.is_external?
-          GroupOverride.new([spec], 0, 0).implicit
-        else
-          GroupOverride.new([spec], comp.scaling.min, comp.scaling.max).implicit
-        end
+          if comp.is_sparse?
+            GroupOverride.new([spec]).implicit
+          elsif spec.cartridge.is_external?
+            GroupOverride.new([spec], 0, 0).implicit
+          else
+            GroupOverride.new([spec], comp.scaling.min, comp.scaling.max).implicit
+          end
     end
 
     # Overrides that are implicit to applications of this type
@@ -679,7 +708,11 @@ class Application
       component_instances.each do |ci|
         ci_cart = ci.get_cartridge
         if ci_cart.original_name == cart.original_name
-          raise OpenShift::UserException.new("#{cart.name} cannot co-exist with cartridge #{ci.cartridge_name} in your application", 136, "cartridge")
+          if ci_cart.version == cart.version
+            raise OpenShift::UserException.new("#{cart.name} already exists in your application", 136, "cartridge")
+          else
+            raise OpenShift::UserException.new("#{cart.name} cannot co-exist with cartridge #{ci.cartridge_name} in your application", 136, "cartridge")
+          end
         end
       end
 
@@ -694,6 +727,11 @@ class Application
             ((ssl_endpoint == "force") and not cart_req_ssl_endpoint))
           raise OpenShift::UserException.new("Invalid cartridge '#{cart.name}' conflicts with platform SSL_ENDPOINT setting.", 109, "cartridge")
         end
+      end
+
+      # Validate that we are not trying to create a non-scalable app with carts that need to be scalable
+      if cart.scaling_required? && !self.scalable
+        raise OpenShift::UserException.new("#{cart.name} must be embedded in a scalable app.", 109)
       end
 
       # Validate that the cartridges support scalable if necessary
@@ -724,6 +762,46 @@ class Application
           raise OpenShift::UserException.new("An application with #{cart.name} already exists within the domain. You can only have a single application with #{cart.name} within a domain.", 109, 'cartridge')
         end
       end
+
+      # if there are any downloaded cartridges, validate their manifest
+      if cart.manifest_url.present? and cart.manifest_text.present?
+        begin
+          OpenShift::Runtime::Manifest.new(cart.manifest_text).validate_categories
+        rescue Exception => ex
+          # we are raising a UserException in case of manifest validation failure
+          raise OpenShift::UserException.new("The provided downloadable cartridge '#{cart.manifest_url}' cannot be loaded: #{ex.message}", 109, 'cartridge')
+        end
+      end
+    end
+
+    # validate the group overrides for the cartridges being added 
+    # combine the existing carts with the ones being added to get the full proposed group overrides
+    specs = component_specs_from(cartridges) + self.component_instances.map(&:to_component_spec)
+    specs.each do |spec|
+      spec.cartridge.group_overrides.each do |override|
+        if o = GroupOverride.resolve_from(specs, override)
+          scalable_carts = []
+          o.components.each do |component|
+            cart = CartridgeCache.find_cartridge(component.cartridge_name, self)
+
+            unless cart
+              # check inside specs for the cartridge object,
+              # since d/l carts are not stored in the application yet
+              cart = specs.map {|s| s.cartridge if s.cartridge.name == component.cartridge_name }.compact.first
+            end
+
+            # checking web_framework/service categories is done to ensure that the cart does not have plugin as well as service categories
+            # checking for is_plugin to ensure that the cart has at least one of these categories
+            scalable_carts << cart if cart.has_scalable_categories? or !cart.is_plugin?
+          end
+
+          # multiple independently scaling carts are not allowed to co-locate with each other
+          # ensure that there is only one scaling (non-sparse; non-plugin) cartridge in a group
+          if self.scalable and scalable_carts.size > 1
+            raise OpenShift::UserException.new("Cartridges #{scalable_carts.map {|c| c.name}} cannot be grouped together as they scale individually")
+          end
+        end
+      end
     end
 
     # Only one web_framework is allowed
@@ -736,7 +814,7 @@ class Application
       raise OpenShift::UserException.new("You can only have one proxy cartridge in your application '#{name}'.", 109, 'cartridge')
     end
 
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = AddFeaturesOpGroup.new(
         features: cartridges.map(&:name), # For old data support
         cartridges: cartridges.map(&:specification_hash), # Replaces features
@@ -789,9 +867,9 @@ class Application
         self.cartridges
       else
         component_ids = []
-        explicit = cartridges.map do |cart|
-          cart = CartridgeCache.find_cartridge(cart, self) if cart.is_a? String
-          raise OpenShift::UserException.new("The cartridge '#{cart}' can not be found.", 109) if cart.nil?
+        explicit = cartridges.map do |cart_provided|
+          cart = cart_provided.is_a?(String) ? CartridgeCache.find_cartridge(cart_provided, self) : cart_provided
+          raise OpenShift::UserException.new("The cartridge '#{cart_provided}' can not be found.", 109) if cart.nil?
 
           instances = self.component_instances.where(cartridge_name: cart.name)
           raise OpenShift::UserException.new("'#{cart.name}' cannot be removed", 137) if (cart.is_web_proxy? and self.scalable) or cart.is_web_framework?
@@ -812,7 +890,7 @@ class Application
 
     valid_domain_jobs = ((self.domain.system_ssh_keys.any?{ |k| component_ids.include? k.component_id.to_s }) || (self.domain.env_vars.any?{ |e| component_ids.include? e['component_id'].to_s })) rescue true
 
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = RemoveFeaturesOpGroup.new(features: cartridges.map(&:name), remove_all_features: remove_all_cartridges, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       self.run_jobs(io)
@@ -841,7 +919,7 @@ class Application
         next if self == app
         app.cartridges(true) do |ucart|
           if ucart.is_ci_builder?
-            Application.run_in_application_lock(app) do
+            Lock.run_in_app_lock(app) do
               op_group = RemoveFeaturesOpGroup.new(features: [ucart.name], user_agent: app.user_agent)
               app.pending_op_groups << op_group
               app.run_jobs(cart_io = ResultIO.new)
@@ -888,9 +966,8 @@ class Application
       raise OpenShift::UserException.new("Cannot make the application HA because there is no web cartridge.")
     raise OpenShift::UserException.new("Cannot make the application HA because the web cartridge's max gear limit is '1'") if component_instance.group_instance.group_override.max_gears==1
 
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       pending_op_groups << MakeAppHaOpGroup.new(user_agent: self.user_agent)
-      self.save!
       result_io = ResultIO.new
       self.run_jobs(result_io)
       result_io
@@ -908,18 +985,79 @@ class Application
   def update_component_limits(component_instance, scale_from, scale_to, additional_filesystem_gb, multiplier=nil)
     if additional_filesystem_gb && additional_filesystem_gb != 0
       max_storage = self.domain.owner.max_storage
-      raise OpenShift::UserException.new("You are not allowed to request additional gear storage", 164) if max_storage == 0
+      raise OpenShift::UserException.new("This application is not allowed to have additional gear storage", 164) if max_storage == 0
       raise OpenShift::UserException.new("You have requested more additional gear storage than you are allowed (max: #{max_storage} GB)", 166) if additional_filesystem_gb > max_storage
     end
     raise OpenShift::UserException.new("Cannot set the max gear limit to '1' if the application is HA (highly available)") if self.ha and scale_to==1
-    Application.run_in_application_lock(self) do
+
+    if (scale_from or scale_to) and !(component_instance.has_scalable_categories? or component_instance.is_sparse?)
+      raise OpenShift::UserException.new("You can not set scaling policies for #{component_instance.cartridge_name}. Generally, you can set it only for web_framework or service cartridges.")
+    end
+
+    if component_instance.is_external?
+      raise OpenShift::UserException.new("You can not set the multiplier for an external cartridge.") if multiplier
+      raise OpenShift::UserException.new("You can not add storage for an external cartridge.") if additional_filesystem_gb and additional_filesystem_gb != 0
+    end
+
+    Lock.run_in_app_lock(self) do
       op_group = UpdateCompLimitsOpGroup.new(comp_spec: component_instance.to_component_spec, min: scale_from, max: scale_to, multiplier: multiplier, additional_filesystem_gb: additional_filesystem_gb, user_agent: self.user_agent)
       pending_op_groups << op_group
-      self.save!
       result_io = ResultIO.new
       self.run_jobs(result_io)
       result_io
     end
+  end
+
+  ##
+  # Run a job to recompute usage tracking when the max additional untracked storage for this application changes
+  # @param old_untracked [Integer] previous maximum additional untracked storage amount
+  # @param new_untracked [Integer] new maximum additional untracked storage amount
+  def change_max_untracked_storage(old_untracked, new_untracked)
+    Lock.run_in_app_lock(self) do
+      if group_instances_with_overrides.find {|group| group.additional_filesystem_gb > 0 }
+        pending_op_groups << ChangeMaxUntrackedStorageOpGroup.new(user_agent: self.user_agent, old_untracked: old_untracked, new_untracked: new_untracked)
+        result_io = ResultIO.new
+        self.run_jobs(result_io)
+        result_io
+      end
+    end
+  end
+
+  ##
+  # Return an array of operations to run as a result of changing the maximum additional untracked storage amount for this application
+  def calculate_change_max_untracked_storage_ops(old_untracked, new_untracked)
+    ops = []
+    owner = self.domain.owner
+    group_instances_with_overrides.each do |override|
+      if (fs = override.additional_filesystem_gb) > 0
+        override.instance.gears.each do |gear|
+          ops << TrackUsageOp.new(
+            user_id:                          owner._id,
+            parent_user_id:                   owner.parent_user_id,
+            app_name:                         self.name,
+            gear_id:                          gear._id.to_s,
+            event:                            UsageRecord::EVENTS[:end],
+            usage_type:                       UsageRecord::USAGE_TYPES[:addtl_fs_gb],
+            additional_filesystem_gb:         fs,
+            max_untracked_additional_storage: old_untracked,
+            skip_user_lock:                   true,
+            prereq:                           ops.last ? [ops.last._id.to_s] : [])
+
+          ops << TrackUsageOp.new(
+            user_id:                          owner._id,
+            parent_user_id:                   owner.parent_user_id,
+            app_name:                         self.name,
+            gear_id:                          gear._id.to_s,
+            event:                            UsageRecord::EVENTS[:begin],
+            usage_type:                       UsageRecord::USAGE_TYPES[:addtl_fs_gb],
+            additional_filesystem_gb:         fs,
+            max_untracked_additional_storage: new_untracked,
+            skip_user_lock:                   true,
+            prereq:                           ops.last ? [ops.last._id.to_s] : [])
+        end
+      end
+    end
+    ops
   end
 
   ##
@@ -937,7 +1075,7 @@ class Application
     raise OpenShift::UserException.new("Cannot scale down below gear limit of #{override.min_gears}.", 168) if (current+scale_by) < override.min_gears
     raise OpenShift::UserException.new("Cannot scale up above maximum gear limit of #{override.max_gears}.", 168) if (scale_by > 0) && (current+scale_by) > override.max_gears && override.max_gears != -1
 
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = ScaleOpGroup.new(group_instance_id: group_instance_id, scale_by: scale_by, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       result_io = ResultIO.new
@@ -988,8 +1126,6 @@ class Application
       "Requires" => self.cartridges(true).map(&:name)
     }
 
-    h["Start-Order"] = @start_order if @start_order.present?
-    h["Stop-Order"] = @stop_order if @stop_order.present?
     h["Group-Overrides"] = self.group_overrides unless self.group_overrides.empty?
 
     h
@@ -1007,7 +1143,7 @@ class Application
     else
       op_group = StartFeatureOpGroup.new(feature: feature, user_agent: self.user_agent)
     end
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       self.pending_op_groups << op_group
       self.run_jobs(result_io)
       result_io
@@ -1015,7 +1151,7 @@ class Application
   end
 
   def start_component(component_name, cartridge_name)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       result_io = ResultIO.new
       op_group = StartCompOpGroup.new(comp_spec: ComponentSpec.new(component_name, cartridge_name).to_component_spec, user_agent: self.user_agent)
       self.pending_op_groups << op_group
@@ -1025,7 +1161,7 @@ class Application
   end
 
   def stop(feature=nil, force=false)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       result_io = ResultIO.new
       op_group = nil
       if feature.nil?
@@ -1040,7 +1176,7 @@ class Application
   end
 
   def stop_component(component_name, cartridge_name, force=false)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       result_io = ResultIO.new
       op_group = StopCompOpGroup.new(comp_spec: ComponentSpec.new(component_name, cartridge_name).to_component_spec, force: force, user_agent: self.user_agent)
       self.pending_op_groups << op_group
@@ -1050,7 +1186,7 @@ class Application
   end
 
   def restart(feature=nil)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       result_io = ResultIO.new
       op_group = nil
       if feature.nil?
@@ -1065,7 +1201,7 @@ class Application
   end
 
   def restart_component(component_name, cartridge_name)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       result_io = ResultIO.new
       op_group = RestartCompOpGroup.new(comp_spec: ComponentSpec.new(component_name, cartridge_name).to_component_spec, user_agent: self.user_agent)
       self.pending_op_groups << op_group
@@ -1075,7 +1211,7 @@ class Application
   end
 
   def reload_config(feature=nil)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       result_io = ResultIO.new
       op_group = nil
       if feature.nil?
@@ -1105,7 +1241,7 @@ class Application
   end
 
   def reload_component_config(component_name, cartridge_name)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = ReloadCompConfigOpGroup.new(comp_spec: ComponentSpec.new(component_name, cartridge_name).to_component_spec, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       result_io = ResultIO.new
@@ -1115,7 +1251,7 @@ class Application
   end
 
   def tidy
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       result_io = ResultIO.new
       op_group = TidyAppOpGroup.new(user_agent: self.user_agent)
       self.pending_op_groups << op_group
@@ -1132,7 +1268,7 @@ class Application
   def remove_gear(gear_id)
     raise OpenShift::UserException.new("Application #{self.name} is not scalable") if !self.scalable
     raise OpenShift::UserException.new("Gear for removal not specified") if gear_id.nil?
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = RemoveGearOpGroup.new(gear_id: gear_id, user_agent: self.user_agent)
       self.pending_op_groups << op_group
       result_io = ResultIO.new
@@ -1189,7 +1325,7 @@ class Application
       raise OpenShift::UserException.new("The specified alias is not allowed: '#{fqdn}'", 105, "id")
     validate_certificate(ssl_certificate, private_key, pass_phrase)
 
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       raise OpenShift::UserException.new("Alias #{server_alias} is already registered", 140, "id") if Application.where("aliases.fqdn" => server_alias).count > 0
       op_group = AddAliasOpGroup.new(fqdn: server_alias, user_agent: self.user_agent)
       self.pending_op_groups << op_group
@@ -1228,7 +1364,7 @@ class Application
   def remove_alias(fqdn)
     fqdn = fqdn.downcase if fqdn
     al1as = aliases.find_by(fqdn: fqdn)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       if al1as.has_private_ssl_certificate
          op_group = RemoveSslCertOpGroup.new(fqdn: al1as.fqdn, user_agent: self.user_agent)
          self.pending_op_groups << op_group
@@ -1247,7 +1383,7 @@ class Application
 
     fqdn = fqdn.downcase if fqdn
     old_alias = aliases.find_by(fqdn: fqdn)
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       #remove old certificate
       if old_alias.has_private_ssl_certificate
          op_group = RemoveSslCertOpGroup.new(fqdn: fqdn, user_agent: self.user_agent)
@@ -1357,7 +1493,7 @@ class Application
   end
 
   def run_connection_hooks
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = ExecuteConnectionsOpGroup.new()
       self.pending_op_groups << op_group
 
@@ -1496,8 +1632,8 @@ class Application
     end
   end
 
-  def members_changed(added, removed, changed_roles)
-    op_group = ChangeMembersOpGroup.new(members_added: added.presence, members_removed: removed.presence, roles_changed: changed_roles.presence, user_agent: self.user_agent)
+  def members_changed(added, removed, changed_roles, parent_op)
+    op_group = ChangeMembersOpGroup.new(members_added: added.presence, members_removed: removed.presence, roles_changed: changed_roles.presence, user_agent: self.user_agent, parent_op: parent_op)
     self.pending_op_groups << op_group
   end
 
@@ -1530,6 +1666,7 @@ class Application
         domain_env_vars_to_add.push({"key" => command_item[:args][0], "value" => command_item[:args][1], "component_id" => component_id})
       when "BROKER_KEY_ADD"
         op_group = AddBrokerAuthKeyOpGroup.new(user_agent: self.user_agent)
+        op_group.set_created_at
         Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: op_group.as_document } })
       when "NOTIFY_ENDPOINT_CREATE"
         if gear
@@ -1551,10 +1688,12 @@ class Application
     if add_ssh_keys.length > 0
       keys_attrs = get_updated_ssh_keys(add_ssh_keys)
       op_group = UpdateAppConfigOpGroup.new(add_keys_attrs: keys_attrs, user_agent: self.user_agent)
+      op_group.set_created_at
       Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: op_group.as_document }, "$pushAll" => { app_ssh_keys: keys_attrs }})
     end
     if remove_env_vars.length > 0
       op_group = UpdateAppConfigOpGroup.new(remove_env_vars: remove_env_vars)
+      op_group.set_created_at
       Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: op_group.as_document }})
     end
 
@@ -1574,9 +1713,8 @@ class Application
   #
   # == Returns:
   # True on success or False if no pending jobs.
-  def run_jobs(result_io=nil)
+  def run_jobs(result_io=nil, continue_on_successful_rollback=false)
     result_io = ResultIO.new if result_io.nil?
-    self.reload
     op_group = nil
     while self.pending_op_groups.count > 0
       rollback_pending = false
@@ -1588,6 +1726,9 @@ class Application
 
         if op_group.pending_ops.where(:state => :rolledback).count > 0
           rollback_pending = true
+          # making sure that the rollback_blocked flag is not accidentally set to true
+          # triggering a rollback while blocking the rollback at the same time could result in an infinite loop
+          op_group.set :rollback_blocked, false if op_group.rollback_blocked
           raise Exception.new("Op group is already being rolled back.")
         end
 
@@ -1600,6 +1741,7 @@ class Application
         Rails.logger.debug e_orig.backtrace.inspect unless rollback_pending
 
         #rollback
+        rollback_successful = false
         begin
           # reload the application before a rollback
           self.reload
@@ -1607,6 +1749,8 @@ class Application
           op_group.delete
           num_gears_recovered = op_group.num_gears_added - op_group.num_gears_created + op_group.num_gears_rolled_back + op_group.num_gears_destroyed
           op_group.unreserve_gears(num_gears_recovered, self)
+
+          rollback_successful = true
         rescue Mongoid::Errors::DocumentNotFound
           # ignore if the application is already deleted
         rescue Exception => e_rollback
@@ -1617,10 +1761,13 @@ class Application
           # if the original exception was raised just to trigger a rollback
           # then the rollback exception is the only thing of value and hence return/raise it
           raise e_rollback if rollback_pending
-        end
+        end unless op_group.rollback_blocked
 
         # raise the original exception if it was the actual exception that led to the rollback
-        unless rollback_pending
+        # if not, then we should just continue execution of any remaining op_groups.
+        # The continue_on_successful_rollback flag is used by the oo-admin-clear-pending-ops script
+        # Note: If the rollback was blocked, do not continue as this can lead to an infinite loop
+        unless ( rollback_successful and (continue_on_successful_rollback or rollback_pending) )
           if e_orig.respond_to? 'resultIO' and e_orig.resultIO
             e_orig.resultIO.append result_io unless e_orig.resultIO == result_io
           end
@@ -1644,30 +1791,14 @@ class Application
   end
 
   def with_lock(&block)
-    self.class.run_in_application_lock(self, &block)
+    Lock.run_in_app_lock(self, &block)
   end
 
-  def self.run_in_application_lock(application, &block)
-    got_lock = false
-    num_retries = 10
-    wait = 5
-    while(num_retries > 0 and !got_lock)
-      if(Lock.lock_application(application))
-        got_lock = true
-      else
-        num_retries -= 1
-        sleep(wait)
-      end
-    end
-    if got_lock
-      begin
-        block.arity == 1 ? block.call(application) : yield
-      ensure
-        Lock.unlock_application(application)
-      end
-    else
-      raise OpenShift::LockUnavailableException.new("Unable to perform action. Another operation is already running.", 171)
-    end
+  # Determines if the application's cartridges are colocatable
+  # == Returns:
+  # True if the app is hosted on a single platform, false otherwise
+  def is_collocatable?()
+    self.component_instances.map {|comp| comp.get_cartridge.platform }.uniq.size == 1
   end
 
   def update_requirements(cartridges, replacements, overrides, init_git_url=nil, user_env_vars=nil)
@@ -1733,7 +1864,10 @@ class Application
         app_dns_gear_id = gear_id.to_s
       end
 
-      init_gear_op = InitGearOp.new(group_instance_id: ginst_id, gear_id: gear_id,
+      cartridge = CartridgeCache.find_cartridge(comp_specs.first.cartridge_name, self)
+      platform = cartridge ? cartridge.platform : nil
+
+      init_gear_op = InitGearOp.new(group_instance_id: ginst_id, platform: platform, gear_id: gear_id,
                                     gear_size: gear_size, addtl_fs_gb: additional_filesystem_gb,
                                     comp_specs: gear_comp_specs[gear_id], host_singletons: host_singletons,
                                     app_dns: app_dns, pre_save: (not self.persisted?))
@@ -1787,15 +1921,17 @@ class Application
     user_vars_op_id = nil
     # FIXME this condition should be stronger (only fired when env vars are specified OR other gears already exist)
     if maybe_notify_app_create_op.empty? || user_env_vars.present?
-      op = PatchUserEnvVarsOp.new(user_env_vars: user_env_vars, push_vars: true, prereq: [ops.last._id.to_s])
+      op = PatchUserEnvVarsOp.new(group_instance_id: ginst_id, user_env_vars: user_env_vars, push_vars: true, prereq: [ops.last._id.to_s])
       ops << op
       user_vars_op_id = op._id.to_s
     end
 
     prereq_op_id = prereq_op._id.to_s rescue nil
+    # since this component add operation is part of a new gear creation, we can skip rollback for everything other that gear creation
+    is_gear_creation = true
     add, usage = calculate_add_component_ops(gear_comp_specs, comp_spec_gears, ginst_id, deploy_gear_id, gear_id_prereqs, component_ops,
                                              is_scale_up, (user_vars_op_id || prereq_op_id), init_git_url,
-                                             app_dns_gear_id)
+                                             app_dns_gear_id, is_gear_creation)
     ops.concat(add)
     track_usage_ops.concat(usage)
 
@@ -1839,6 +1975,7 @@ class Application
     end
 
     if deleting_app
+      pending_ops << DeregisterRoutingDnsOp.new(prereq: [pending_ops.last._id.to_s]) if self.ha and Rails.configuration.openshift[:manage_ha_dns]
       pending_ops << NotifyAppDeleteOp.new(prereq: [pending_ops.last._id.to_s])
     end
 
@@ -1919,12 +2056,14 @@ class Application
     false
   end
 
-  def calculate_add_component_ops(gear_comp_specs, comp_spec_gears, group_instance_id, deploy_gear_id, gear_id_prereqs, component_ops, is_scale_up, prereq_id, init_git_url=nil, app_dns_gear_id=nil)
+  def calculate_add_component_ops(gear_comp_specs, comp_spec_gears, group_instance_id, deploy_gear_id, 
+                                  gear_id_prereqs, component_ops, is_scale_up, prereq_id, init_git_url=nil, 
+                                  app_dns_gear_id=nil, is_gear_creation=false)
     ops = []
     usage_ops = []
 
     comp_spec_gears.keys.each do |comp_spec|
-      component_ops[comp_spec] = {new_component: nil, adds: [], post_configures: [], expose_ports: [], add_broker_auth_keys: []} if component_ops[comp_spec].nil?
+      component_ops[comp_spec] = {new_component: nil, adds: [], post_configures: [], add_broker_auth_keys: []} if component_ops[comp_spec].nil?
       cartridge = comp_spec.cartridge
 
       new_component_op_id = []
@@ -1958,20 +2097,27 @@ class Application
         end
 
         git_url = nil
-        git_url = init_git_url if gear_id == deploy_gear_id && cartridge.is_deployable?
-        add_component_op = AddCompOp.new(gear_id: gear_id, comp_spec: comp_spec, init_git_url: git_url, prereq: new_component_op_id + [prereq_id])
+
+        if gear_id == deploy_gear_id and needs_git_url?(cartridge)
+          git_url = init_git_url
+        end
+
+        add_component_op = AddCompOp.new(gear_id: gear_id, comp_spec: comp_spec, init_git_url: git_url, 
+                                         skip_rollback: is_gear_creation, prereq: new_component_op_id + [prereq_id])
         ops << add_component_op
         component_ops[comp_spec][:adds] << add_component_op
         usage_op_prereq = [add_component_op._id.to_s]
 
         # if this is a web_proxy, send any existing alias and SSL cert information to it
         if cartridge.is_web_proxy? and self.aliases.present?
-          resend_aliases_op = ResendAliasesOp.new(gear_id: gear_id, fqdns: self.aliases.map {|app_alias| app_alias.fqdn}, prereq: [add_component_op._id.to_s])
+          resend_aliases_op = ResendAliasesOp.new(gear_id: gear_id, fqdns: self.aliases.map {|app_alias| app_alias.fqdn}, 
+                                                  skip_rollback: is_gear_creation, prereq: [add_component_op._id.to_s])
           ops.push resend_aliases_op
 
           aliases_with_certs = self.aliases.select {|app_alias| app_alias.has_private_ssl_certificate}
           if aliases_with_certs.present?
-            resend_ssl_certs_op = ResendSslCertsOp.new(gear_id: gear_id, ssl_certs: get_ssl_certs(), prereq: [resend_aliases_op._id.to_s])
+            resend_ssl_certs_op = ResendSslCertsOp.new(gear_id: gear_id, ssl_certs: get_ssl_certs(), 
+                                                       skip_rollback: is_gear_creation, prereq: [resend_aliases_op._id.to_s])
             ops.push resend_ssl_certs_op
           end
         end
@@ -1991,18 +2137,6 @@ class Application
           usage_ops << TrackUsageOp.new(user_id: self.domain.owner._id, parent_user_id: self.domain.owner.parent_user_id,
             app_name: self.name, gear_id: gear_id, event: UsageRecord::EVENTS[:begin], cart_name: cartridge.name,
             usage_type: UsageRecord::USAGE_TYPES[:premium_cart], prereq: usage_op_prereq)
-        end
-
-        if self.scalable
-          expose_port_prereq = []
-          if post_configure_op
-            expose_port_prereq << post_configure_op._id.to_s
-          else
-            expose_port_prereq << add_component_op._id.to_s
-          end
-          op = ExposePortOp.new(gear_id: gear_id, comp_spec: comp_spec, prereq: expose_port_prereq + [prereq_id])
-          component_ops[comp_spec][:expose_ports] << op
-          ops << op
         end
       end
     end
@@ -2242,34 +2376,40 @@ class Application
       prereq_ids = []
       prereq_ids += (component_ops[config_order[idx-1]][:add_broker_auth_keys] || []).map{|op| op._id.to_s}
       prereq_ids += (component_ops[config_order[idx-1]][:adds] || []).map{|op| op._id.to_s}
-      prereq_ids += (component_ops[config_order[idx-1]][:post_configures] || []).map{|op| op._id.to_s}
-      prereq_ids += (component_ops[config_order[idx-1]][:expose_ports] || []).map {|op| op._id.to_s }
 
       component_ops[config_order[idx]][:new_component].prereq += prereq_ids unless component_ops[config_order[idx]][:new_component].nil?
       (component_ops[config_order[idx]][:add_broker_auth_keys] || []).each { |op| op.prereq += prereq_ids }
       (component_ops[config_order[idx]][:adds] || []).each { |op| op.prereq += prereq_ids }
-      (component_ops[config_order[idx]][:post_configures] || []).each { |op| op.prereq += prereq_ids }
-      (component_ops[config_order[idx]][:expose_ports] || []).each { |op| op.prereq += prereq_ids }
     end
 
     if pending_ops.present? and !(pending_ops.length == 1 and SetGroupOverridesOp === pending_ops.first)
-      # FIXME: this could be arbitrarily large - would be better to set a condition that this
-      # operation cannot be skipped
-      all_ops_ids = pending_ops.map{ |op| op._id.to_s }
+      # set all ops as the pre-requisite for execute connections except post_configure ops
+      # FIXME: this could be arbitrarily large
+      all_ops_ids = pending_ops.map{ |op| op._id.to_s }.compact
       execute_connection_op = ExecuteConnectionsOp.new(prereq: all_ops_ids)
       pending_ops << execute_connection_op
     end
 
-    # check to see if there are any deployable carts being configured
-    # if so, then make sure that the post-configure op for it is executed at the end
-    # also, it should not be the prerequisite for any other pending_op
-    component_ops.keys.each do |spec|
-      if spec.cartridge.is_deployable?
-        component_ops[spec][:post_configures].each do |pcop|
+    post_config_order = calculate_post_configure_order(component_ops.keys)
+    post_config_order.each_index do |idx|
+      cur_spec = post_config_order[idx]
+
+      # if this is a deployable cart being configured,
+      # then make sure that the post-configure op for it is executed after execute_connections
+      # also, it should not be the prerequisite for any other pending_op
+      if cur_spec.cartridge.is_deployable?
+        component_ops[cur_spec][:post_configures].each do |pcop|
           pcop.prereq += [execute_connection_op._id.to_s]
           pending_ops.each{ |op| op.prereq.delete_if { |prereq_id| prereq_id == pcop._id.to_s } }
         end
       end
+
+      next if idx == 0
+      
+      prev_spec = post_config_order[idx - 1]
+      prereq_ids = []
+      prereq_ids += (component_ops[prev_spec][:post_configures] || []).map{|op| op._id.to_s}
+      (component_ops[cur_spec][:post_configures] || []).each { |op| op.prereq += prereq_ids }
     end
 
     # update-cluster has to run after all deployable carts have been post-configured
@@ -2540,16 +2680,16 @@ class Application
   def enforce_system_order(order, categories)
     web_carts = Array(categories['web_framework'])
     service_carts = Array(categories['service']) - web_carts
-    plugin_carts = Array(categories['plugin']) + Array(categories['ci_builder']) + Array(categories['web_proxy']) - service_carts
+    other_carts = categories.map { |k,v| Array(v) }.flatten - web_carts - service_carts 
 
     web_carts.each do |w|
-      (service_carts+plugin_carts).each do |sp|
-        order.add_component_order([w,sp])
+      (service_carts + other_carts).each do |so|
+        order.add_component_order([w, so])
       end
     end
     service_carts.each do |s|
-      plugin_carts.each do |p|
-        order.add_component_order([s,p])
+      other_carts.each do |o|
+        order.add_component_order([s, o])
       end
     end
   end
@@ -2584,7 +2724,17 @@ class Application
             break
           end
         end
-        raise OpenShift::UserException.new("Cartridge '#{spec.cartridge_name}' can not be added without #{Array(deps).join(' or ')}.", 185) if !match
+
+        # check if any platform cartridge can satisfy the dependency
+        # if so, include them in the message being sent back to the user
+        error_message = "Cartridge '#{spec.cartridge_name}' can not be added without #{Array(deps).join(' or ')}."
+        platform_carts = CartridgeCache.get_all_cartridges
+        Array(deps).each do |name|
+          matching_carts = platform_carts.select { |cart| cart.names.include?(name) || cart.categories.include?(name) }
+          error_message += " The dependency '#{name}' can be satisfied with #{matching_carts.map(&:name).join(' or ')}." if matching_carts.present?
+        end
+
+        raise OpenShift::UserException.new(error_message, 185) if !match
         order << match
       end
       next if order.empty?
@@ -2594,7 +2744,7 @@ class Application
     categories = {}
     specs.each do |spec|
       cats = spec.cartridge.categories
-      ['web_framework', 'plugin', 'service', 'ci_builder', 'web_proxy'].each do |cat|
+      ['web_framework', 'plugin', 'service', 'embedded', 'ci_builder', 'web_proxy', 'external'].each do |cat|
         (categories[cat] ||= []) << spec if cats.include?(cat)
       end
     end
@@ -2615,67 +2765,28 @@ class Application
     computed_configure_order.compact
   end
 
-  # Returns the start/stop order specified in the application descriptor or processes the start and stop
+  def calculate_post_configure_order(specs)
+    configure_order = calculate_configure_order(specs)
+    configure_order.select {|spec| !spec.cartridge.is_web_framework?} + configure_order.select {|spec| spec.cartridge.is_web_framework?}
+  end
+
+  # Returns the start/stop order by processing the start and stop
   # orders for each component and returns the final order (topological sort).
   #
   # == Returns:
   # start_order::
-  #   {ComponentInstance} objects ordered by calculated start order
+  #   {ComponentInstance} objects ordered using post-configure order
   # stop_order::
-  #   {ComponentInstance} objects ordered by calculated stop order
+  #   {ComponentInstance} objects ordered using reverse of post-configure order
   def calculate_component_orders
-    start_order = ComponentOrder.new
-    stop_order = ComponentOrder.new
-    comps = []
-    categories = {}
-
-    #build a map of [categories, features, cart name] => component_instance
-    component_instances.each do |instance|
-      cart = instance.cartridge
-
-      comps << instance
-      [[instance.cartridge_name], cart.categories, cart.provides].flatten.each do |cat|
-        categories[cat] = [] if categories[cat].nil?
-        categories[cat] << instance
-      end
-      start_order.add_component_order([instance])
-      stop_order.add_component_order([instance])
-    end
-
-    #use the map to build DAG for order calculation
-    comps.each do |spec|
-      start_order.add_component_order(spec.cartridge.start_order.map{ |c| categories[c] }.flatten)
-      stop_order.add_component_order(spec.cartridge.stop_order.map{ |c| categories[c] }.flatten)
-    end
-
-    # enforce system order of components (web_framework first etc)
-    enforce_system_order(start_order, categories)
-    enforce_system_order(stop_order, categories)
-
-    #calculate start order using tsort
-    begin
-      computed_start_order = start_order.tsort
-    rescue Exception=>e
-      raise OpenShift::UserException.new("Conflict in calculating start order. Cartridges should adhere to system's order ('web_framework','service','plugin').", 109)
-    end
-
-    #calculate stop order using tsort
-    begin
-      computed_stop_order = stop_order.tsort
-    rescue Exception=>e
-      raise OpenShift::UserException.new("Conflict in calculating start order. Cartridges should adhere to system's order ('web_framework','service','plugin').", 109)
-    end
-
-    # start/stop order can have nil if the component is not present in the application
-    # for eg, php is being stopped and haproxy is not present in a non-scalable application
-    computed_start_order.compact!
-    computed_stop_order.compact!
-
-    [computed_start_order, computed_stop_order]
+    start_order = calculate_post_configure_order(self.component_instances)
+    stop_order = start_order.reverse
+    
+    [start_order, stop_order]
   end
 
   def get_ssl_certs(fqdns=[])
-    # get all the SSL certs from the HAProxy DNS gear 
+    # get all the SSL certs from the HAProxy DNS gear
     haproxy_gears = self.gears.select { |g| g.component_instances.select { |ci| ci.get_cartridge.is_web_proxy? }.present? }
     dns_haproxy_gear = haproxy_gears.select { |g| g.app_dns }.first
     certs = dns_haproxy_gear.get_all_ssl_certs()
@@ -2692,13 +2803,13 @@ class Application
     # if SSL certs are still not received, log this as an error, but continue
     Rails.logger.error "SSL certificate information not received from haproxy gears for application #{application.canonical_name}" if certs.blank?
 
-    # send the SSL certs for the specified aliases to the gear 
+    # send the SSL certs for the specified aliases to the gear
     certs.select { |cert_info| fqdns.blank? or fqdns.include? cert_info[2] }
   end
 
   def get_all_updated_ssh_keys
     ssh_keys = []
-    ssh_keys = self.app_ssh_keys.map {|k| k.serializable_hash } # the app_ssh_keys already have their name "updated"
+    ssh_keys = self.app_ssh_keys.map {|k| k.as_document } # the app_ssh_keys already have their name "updated"
     ssh_keys |= get_updated_ssh_keys(self.domain.system_ssh_keys)
     ssh_keys |= CloudUser.members_of(self){ |m| Ability.has_permission?(m._id, :ssh_to_gears, Application, m.role, self) }.map{ |u| get_updated_ssh_keys(u.ssh_keys) }.flatten(1)
 
@@ -2713,7 +2824,7 @@ class Application
   def get_updated_ssh_keys(keys)
     updated_keys_attrs = []
     keys.flatten.each do |key|
-      key_attrs = key.serializable_hash.deep_dup
+      key_attrs = key.as_document.deep_dup
       case key.class
       when UserSshKey
         key_attrs["name"] = key.cloud_user._id.to_s + "-" + key_attrs["name"]
@@ -2731,18 +2842,7 @@ class Application
   # This method is only to maintain backwards compatibility for rest api version 1.0
   # @return [String]
   def health_check_path
-    web_cart = web_cartridge
-    if web_cart.nil?
-      page = 'health'
-    elsif web_cart.categories.include? 'php'
-      page = 'health_check.php'
-    elsif web_cart.categories.include? 'zend'
-      page = 'health_check.php'
-    elsif web_cart.categories.include? 'perl'
-      page = 'health_check.pl'
-    else
-      page = 'health'
-    end
+    page = 'health'
   end
 
   # Get scaling limits for the application's group instance that has the web framework cartridge
@@ -2825,7 +2925,7 @@ class Application
 
   def deploy(hot_deploy=false, force_clean_build=false, ref=nil, artifact_url=nil)
     result_io = ResultIO.new
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = DeployOpGroup.new(hot_deploy: hot_deploy, force_clean_build: force_clean_build, ref: ref, artifact_url: artifact_url)
       self.pending_op_groups << op_group
       self.run_jobs(result_io)
@@ -2836,7 +2936,7 @@ class Application
   def activate(deployment_id)
     deployment = self.deployments.find_by(deployment_id: deployment_id)
     result_io = ResultIO.new
-    Application.run_in_application_lock(self) do
+    Lock.run_in_app_lock(self) do
       op_group = ActivateOpGroup.new(deployment_id: deployment_id)
       self.pending_op_groups << op_group
       self.run_jobs(result_io)
@@ -2893,5 +2993,12 @@ class Application
         h[ComponentSpec.for_model(f.components.first, f)] = ComponentSpec.for_model(t.components.first, t)
         h
       end
+    end
+
+    def needs_git_url?(cartridge)
+      # we need the template git url for the component if the cartridge is deployable
+      # or if we have a standalone web cartridge
+      is_standalone_web_proxy = (cartridge.is_web_proxy? and !self.is_collocatable?)
+      (cartridge.is_deployable? or is_standalone_web_proxy)
     end
 end

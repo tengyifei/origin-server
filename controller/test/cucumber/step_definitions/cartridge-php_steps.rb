@@ -13,7 +13,7 @@ Then /^the php application will( not)? be aliased$/ do | negate |
   OpenShift::timeout(20) do
     begin
       sleep 1
-      command = "/usr/bin/curl -L -H 'Host: #{@app.name}.#{$alias_domain}' -s http://localhost/health_check.php | /bin/grep -q -e '^1$'"
+      command = "/usr/bin/curl -L -H 'Host: #{@app.name}.#{$alias_domain}' -s http://localhost/health | /bin/grep -q -e '^1$'"
       exit_status = runcon command, $selinux_user, $selinux_role, $selinux_type
     end while exit_status != good_status
   end
@@ -43,15 +43,24 @@ Then /^the php file permissions are correct/ do
     "php" => [gear_uuid, gear_uuid, '40755', se_context],
     "php/" => [gear_uuid, gear_uuid, '40755', se_context],
     "php/conf/" => ['root', gear_uuid, '40755', se_context],
-    "php/configuration/etc/php.ini" => ['root', gear_uuid, '100644', se_context],
     "php/conf/magic" => ['root', 'root', '100644', se_context], # symlink to /etc/httpd/conf/magic
     "php/configuration/etc/" => ['root', gear_uuid, '40755', se_context],
-    "php/configuration/etc/conf.d/openshift.conf" => ['root', gear_uuid, '100644', se_context],
+    "php/configuration/etc/conf/" => ['root', gear_uuid, '100644', se_context],
+    "php/configuration/etc/conf/*" => ['root', gear_uuid, '100644', se_context],
+    "php/configuration/etc/conf.d/" => ['root', gear_uuid, '100644', se_context],
+    "php/configuration/etc/conf.d/php.conf" => ['root', gear_uuid, '100644', se_context],
+    "php/configuration/etc/conf.d/openshift.conf" => [gear_uuid, gear_uuid, '100644', se_context],
+    "php/configuration/etc/conf.d/performance.conf" => [gear_uuid, gear_uuid, '100644', se_context],
+    "php/configuration/etc/conf.d/passenv.conf" => [gear_uuid, gear_uuid, '100644', se_context],
+    "php/configuration/etc/php.d" => ['root', gear_uuid, '100644', se_context],
+    "php/configuration/etc/php.d/apc.ini" => [gear_uuid, gear_uuid, '100644', se_context],
+    "php/configuration/etc/php.d/xdebug.ini" => [gear_uuid, gear_uuid, '100644', se_context],
+    "php/configuration/etc/php.d/locked-*" => ['root', gear_uuid, '100644', se_context],
+    "php/configuration/etc/php.ini" => [gear_uuid, gear_uuid, '100644', se_context],
     "php/logs/" => [gear_uuid, gear_uuid, '40755', se_context],
     "php/phplib/pear/" => [gear_uuid, gear_uuid, '40755', se_context],
     "php/run/" => [gear_uuid, gear_uuid, '40755', se_context],
     "php/run/httpd.pid" => [gear_uuid, gear_uuid, '100644', se_context],
-    "app-root/repo/php/index.php" => [gear_uuid, gear_uuid, '100644', se_context],
     "php/sessions/" => [gear_uuid, gear_uuid, '40755', se_context],
     "php/tmp/" => [gear_uuid, gear_uuid, '40755', se_context],
     "app-root/data/" => [gear_uuid, gear_uuid, '40750', se_context2],
@@ -59,13 +68,39 @@ Then /^the php file permissions are correct/ do
     ".gem" => [gear_uuid, gear_uuid, '40750', se_context], # see https://bugzilla.redhat.com/show_bug.cgi?id=974632
     ".pearrc" => ['root', gear_uuid, '100644', se_context],
   }
-  configure_files.each do | file, permissions |
-    user, group, mode, context = permissions
-    raise "Invalid permissions for #{file}" unless mode?("#{app_home}/#{file}", mode)
-    raise "Invalid context for #{file}" unless context?("#{app_home}/#{file}", context)
-    target_uid = Etc.getpwnam(user).uid.to_i
-    target_gid = Etc.getgrnam(group).gid.to_i
+  configure_files.each do | pattern, permissions |
+    Dir.glob(pattern).each do | file |
+      user, group, mode, context = permissions
+      raise "Invalid permissions for #{file}" unless mode?("#{app_home}/#{file}", mode)
+      raise "Invalid context for #{file}" unless context?("#{app_home}/#{file}", context)
+      target_uid = Etc.getpwnam(user).uid.to_i
+      target_gid = Etc.getgrnam(group).gid.to_i
 
-    raise "Invalid ownership for #{file}" unless owner?("#{app_home}/#{file}", target_uid, target_gid)
+      raise "Invalid ownership for #{file}" unless owner?("#{app_home}/#{file}", target_uid, target_gid)
+    end
   end
+end
+
+When /^I remove all files from repo directory$/ do
+    Dir.chdir(@app.repo) do
+      run("git rm -r *")
+      run("git commit -am 'Test commit - Remove all files'")
+    end
+end
+
+When /^I create ([^ ]*\.php) file in the ([^ ]*) repo directory$/ do | file, directory |
+    Dir.chdir(@app.repo) do
+      run("mkdir -p #{directory}")
+      run("echo '<?php echo \"Welcome to OpenShift\";' > #{directory}/#{file}")
+      run("git add #{directory}/#{file}")
+      run("git commit -am 'Test commit - Create #{directory}/#{file} file'")
+      run("git push >> " + @app.get_log("git_push_php_create_file") + " 2>&1")
+    end
+end
+
+Then /^the (.*) url[s]? should( not)? be accessible$/ do | urls, negate |
+    urls.split.each do | url |
+      http_code = `/usr/bin/curl -s -H 'Host: #{@app.name}-#{@app.namespace}.#{$domain}' -o /dev/null -w '%{http_code}' -s 'http://localhost/#{url}'`
+      raise "Invalid HTTP CODE #{http_code} for #{url}" unless (http_code == "200") ^ negate
+    end
 end

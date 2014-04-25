@@ -593,7 +593,8 @@ class BuildLifecycleTest < OpenShift::NodeTestCase
     template_git_url = 'url'
     manifest = 'manifest'
     @cartridge_model.expects(:configure).with(cart_name, template_git_url, manifest)
-    @container.configure(cart_name, template_git_url, manifest)
+    @container.expects(:create_public_endpoints).with(cart_name)
+    @container.configure(cart_name, template_git_url, manifest, true)
   end
 
   # new gear
@@ -699,7 +700,7 @@ class BuildLifecycleTest < OpenShift::NodeTestCase
 
     @cartridge_model.expects(:post_configure).with(cart_name).returns('')
     pattern = OpenShift::Runtime::Utils::Sdk::CLIENT_OUTPUT_PREFIXES.join('|')
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with("grep -E '#{pattern}' /tmp/initial-build.log",
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with("grep -E '#{pattern}' /tmp/initial-build.log | head -c 10K",
                                                       env:                 gear_env,
                                                       chdir:               @container.container_dir,
                                                       uid:                 @container.uid,
@@ -742,7 +743,7 @@ class BuildLifecycleTest < OpenShift::NodeTestCase
     @cartridge_model.expects(:post_configure).with(cart_name).returns('')
 
     pattern = OpenShift::Runtime::Utils::Sdk::CLIENT_OUTPUT_PREFIXES.join('|')
-    OpenShift::Runtime::Utils.expects(:oo_spawn).with("grep -E '#{pattern}' /tmp/initial-build.log",
+    OpenShift::Runtime::Utils.expects(:oo_spawn).with("grep -E '#{pattern}' /tmp/initial-build.log | head -c 10K",
                                                       env:                 gear_env,
                                                       chdir:               @container.container_dir,
                                                       uid:                 @container.uid,
@@ -1146,6 +1147,7 @@ class BuildLifecycleTest < OpenShift::NodeTestCase
     deployment_metadata = mock()
     @container.expects(:deployment_metadata_for).with(deployment_datetime).returns(deployment_metadata)
     deployment_metadata.expects(:hot_deploy).returns(false)
+    @container.cartridge_model.expects(:standalone_web_proxy?).returns(false)
 
     gear_result1 = { gear_uuid: @container.uuid, status: 'success', errors: [], messages: [] }
     @container.expects(:with_gear_rotation)
@@ -1179,6 +1181,8 @@ class BuildLifecycleTest < OpenShift::NodeTestCase
     deployment_metadata = mock()
     @container.expects(:deployment_metadata_for).with(deployment_datetime).returns(deployment_metadata)
     deployment_metadata.expects(:hot_deploy).returns(false)
+
+    @container.cartridge_model.expects(:standalone_web_proxy?).returns(false)
 
     gear_result1 = { gear_uuid: gear_uuids[0], status: 'success', errors: [], messages: [] }
     gear_result2 = { gear_uuid: gear_uuids[1], status: 'success', errors: [], messages: [] }
@@ -1220,6 +1224,8 @@ class BuildLifecycleTest < OpenShift::NodeTestCase
     deployment_metadata = mock()
     @container.expects(:deployment_metadata_for).with(deployment_datetime).returns(deployment_metadata)
     deployment_metadata.expects(:hot_deploy).returns(false)
+
+    @container.cartridge_model.expects(:standalone_web_proxy?).returns(false)
 
     gear_result1 = { gear_uuid: gear_uuids[0], status: 'success', errors: [], messages: [] }
     gear_result2 = { gear_uuid: gear_uuids[1], status: 'success', errors: [], messages: [] }

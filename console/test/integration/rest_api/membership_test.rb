@@ -89,11 +89,11 @@ class RestApiMembershipTest < ActiveSupport::TestCase
     assert Array(@domain.errors[:members]).any?{ |s| s == 'The domain members could not be updated.' }, @domain.errors.full_messages.join(' ')
 
     assert !@domain.update_members([m = Member.new(:login => '', :role => 'admin')])
-    assert Array(m.errors[:base]).any?{ |s| s =~ /Each member being changed must have an id or a login/ }, m.errors.full_messages.join(' ')
+    assert Array(m.errors[:base]).any?{ |s| s =~ /Each user being changed must have an id or a login/ }, m.errors.full_messages.join(' ')
     assert Array(@domain.errors[:members]).any?{ |s| s == 'The domain members could not be updated.' }, @domain.errors.full_messages.join(' ')
 
     assert !@domain.update_members([m = Member.new(:role => 'admin')])
-    assert Array(m.errors[:base]).any?{ |s| s =~ /Each member being changed must have an id or a login/ }, m.errors.full_messages.join(' ')
+    assert Array(m.errors[:base]).any?{ |s| s =~ /Each user being changed must have an id or a login/ }, m.errors.full_messages.join(' ')
     assert Array(@domain.errors[:members]).any?{ |s| s == 'The domain members could not be updated.' }, @domain.errors.full_messages.join(' ')
   end
 
@@ -242,9 +242,8 @@ class RestApiMembershipTest < ActiveSupport::TestCase
     assert_nil m.explicit_role
     assert_equal 'admin', m.role
 
-    # a second remove is the same - the user no longer has an explicit role still
-    assert owner.destroy
-    assert owner.has_exit_code?(132)
+    # a second remove triggers an error - the user no longer has an explicit role to remove
+    assert_raises(ActiveResource::ResourceInvalid){ owner.destroy }
 
     # remove all members
     assert @domain.reload.delete(:members)

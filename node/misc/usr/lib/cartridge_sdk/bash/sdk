@@ -213,17 +213,15 @@ function wait_for_pid_file {
 # Argument(s):
 #  - process id to wait on
 function wait_for_stop {
-    local pid=$1
-    for i in {1..60}
-    do
-        if `ps --pid $pid > /dev/null 2>&1`
-        then
-            echo "Waiting for stop to finish"
-            sleep .5
-        else
-            break
-        fi
-    done
+  local pid=$1
+  for i in {1..60}; do
+    if ps --no-headers --pid $pid > /dev/null 2>&1; then
+      echo "Waiting for stop to finish"
+      sleep .5
+    else
+      break
+    fi
+  done
 }
 
 # report processing running for given user uid.
@@ -253,7 +251,9 @@ function process_running {
     if [ -f $pidfile ]; then
       local error=$(pgrep -F $pidfile 2>&1)
       # pgrep returns 0 with an invalid pidfile, so we need to check the output
-      [ $? ] && ! [[ "${error}" =~ 'pidfile not valid' ]] && return 0
+      # run it again to get the return code of the pgrep, not the assignment
+      pgrep -F $pidfile >& /dev/null
+      [ $? -eq 0 ] && ! [[ "${error}" =~ 'pidfile not valid' ]] && return 0
     fi
   }
 
@@ -265,7 +265,7 @@ function process_running {
 }
 
 function pid_is_httpd() {
-    ps -p "$1" 2> /dev/null | grep httpd > /dev/null
+    ps --no-headers -p "$1" 2> /dev/null | grep httpd > /dev/null
 }
 
 function killall_matching_httpds() {
@@ -440,6 +440,38 @@ function has_web_proxy() {
     return 1
 }
 
+# Performs a graceful shutdown of an httpd process using SIGWINCH.
+#
+# If the process still exists after a timeout period, a client message
+# is displayed containing an explanation of possible causes.
+#
+# $1 the path to a pidfile for the target httpd parent process
+function shutdown_httpd_graceful {
+  local pidfile=$1
+  local pid=$(cat ${pidfile} 2> /dev/null)
+
+  # if the pid doesn't exist, there's nothing to do
+  if ! process_running 'httpd' $pidfile; then
+    client_message "Warning: HTTPD ($pid) not running. Skipping stop."
+    return
+  fi
+
+  kill -WINCH ${pid}
+  wait_for_stop ${pid}
+
+  if ps --no-headers --pid ${pid} > /dev/null 2>&1; then
+    local msg=$(cat <<EOF
+Warning: Apache has not yet exited in response to a graceful
+shutdown. This usually means Apache is still waiting for
+outstanding requests to complete, and shutdown will proceed
+once those requests finish. To force an immediate shutdown
+and cancel any outstanding requests, use force-stop.
+EOF
+    )
+    client_message "${msg}"
+  fi
+}
+
 
 # Wrapper for the OpenShift Ruby SDK
 #
@@ -461,6 +493,14 @@ function primary_cartridge_private_port_name() {
 
 function app_web_to_proxy_ratio_and_colocated_gears() {
   ruby_sdk 'app_web_to_proxy_ratio_and_colocated_gears'
+}
+
+function get_gear_ld_library_path() {
+  ruby_sdk 'get_path_from_elements "LD_LIBRARY_PATH"'
+}
+
+function get_gear_path() {
+  ruby_sdk 'get_path_from_elements "PATH"'
 }
 
 function hot_deploy_enabled_for_latest_deployment() {
@@ -501,3 +541,194 @@ function random_string {
   echo $(echo "${rnd}" | head -n1)
 
 }
+
+# Compare two numeric version numbers with arbitrary numbers of segments.  For
+# more information see comments for version_in_range on special handling
+# required for usage inside of the upgrade script (or any script that runs with
+# "set -e".
+#
+# Returns:
+# 0 if equal
+# 1 if arg1 is greater than arg2
+# 2 if arg1 is less than arg2
+function version_comp () {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+    # setting the field seperator to . allows us to chop the segments up
+    # easily.
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # Handle the case where ver2 has more segments than ver1 by padding with
+    # zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        # We have to test for a variable that may be unset.  Many scripts that
+        # use this function will have 'set -u' so we need to temporarily undo
+        # that (without using a subshell).
+        [[ $- = *u* ]]; oldu=$?
+        set +u
+
+        # Handle the case where ver1 is has more segments than ver2
+        if [[ -z ${ver2[i]} ]]
+        then
+            ver2[i]=0
+        fi
+
+        # in case 'set -u' wasn't actually set
+        (( $oldu )) || set -u
+
+        # comparing using base 10 turns values like 05 or 005 into just 5
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            return 2
+        fi
+    done
+    return 0
+}
+
+# Compare two versions of arbitrary segment lenth.
+#
+# Returns 0 if arg1 is greater than arg2
+function version_gt() {
+  local greater_than=1
+
+  version_comp $1 $2
+  RESULT=$?
+
+  if [[ $RESULT -eq 1 ]]; then
+    greater_than=0
+  fi
+
+  return $greater_than
+}
+
+# Compare two versions of arbitrary segment lenth.
+#
+# Returns 0 if arg1 is less than arg2
+function version_lt() {
+  local less_than=1
+
+  version_comp $1 $2
+  RESULT=$?
+
+  if [[ $RESULT -eq 2 ]]; then
+    less_than=0
+  fi
+
+  return $less_than
+}
+
+# Test if a given version is within the range of two other versions
+# (inclusively)
+#
+# Argument 1: The version to test
+# Argument 2: The lower bound
+# Argument 3: The upper bound
+#
+# Returns 0 if inside the range
+# Returns 1 if outside the range
+#
+# Note: For use inside of cartridge upgrade scripts special care must be taken
+# since most 'set -e' by default which causes the script to exit if non-zero is
+# returned.  See the bash man page's documentation on the "set" command.  One
+# was to do this with "set -e" is:
+#
+# if version_in_range "0.0.11.5" "0.0.11" "0.1.0"; then
+#   echo "this works"
+# fi
+#
+# In that case bash knows not to abort execution because the non-zero return
+# code is part of a test.
+function version_in_range() {
+  local i=$1
+  local lower_bound=$2
+  local upper_bound=$3
+  local in_range=1
+
+  version_comp $i $lower_bound
+  RESULT=$?
+
+  if [[ $RESULT -eq 0 ]] || [[ $RESULT -eq 1 ]]; then
+    version_comp $i $upper_bound
+    RESULT=$?
+    if [[ $RESULT -eq 0 ]] || [[ $RESULT -eq 2 ]]; then
+      in_range=0
+    fi
+  fi
+
+  return $in_range
+}
+
+function build_path() {
+  local path=""
+  local prim_cart=$(echo $OPENSHIFT_PRIMARY_CARTRIDGE_DIR | awk -F/ '{print toupper($(NF-1))}')
+
+  for f in $(env | grep OPENSHIFT_.*_PATH_ELEMENT | grep -v OPENSHIFT_${prim_cart}_)
+  do
+    element=$(echo $f | sed 's/^.*=\(.*\)$/\1/')
+
+    [[ -z $element ]] && continue
+
+    if [[ $f != OPENSHIFT_*_LD_LIBRARY_PATH_ELEMENT* ]]; then
+      path="${element}:${path}"
+    fi
+
+  done
+
+  for f in $OPENSHIFT_PRIMARY_CARTRIDGE_DIR/env/OPENSHIFT_*_PATH_ELEMENT
+  do
+    if [[ $f != *OPENSHIFT_*_LD_LIBRARY_PATH_ELEMENT ]]; then
+      test -f ${f} && path=$(< $f):$path
+    fi
+  done
+
+  if [ -f /etc/openshift/env/PATH ]
+  then
+    load_env /etc/openshift/env/PATH
+    path="${path}${PATH}"
+  fi
+
+  echo -n $path
+}
+
+function build_ld_library_path() {
+  local ld_path=""
+  local prim_cart=$(echo $OPENSHIFT_PRIMARY_CARTRIDGE_DIR | awk -F/ '{print toupper($(NF-1))}')
+
+  for f in $(env | grep OPENSHIFT_.*_PATH_ELEMENT | grep -v OPENSHIFT_${prim_cart}_)
+  do
+    element=$(echo $f | sed 's/^.*=\(.*\)$/\1/')
+    [[ -z $element ]] && continue
+
+    if [[ $f == OPENSHIFT_*_LD_LIBRARY_PATH_ELEMENT* ]]; then
+      ld_path="${element}:${ld_path}"
+    fi
+
+  done
+
+  for f in $OPENSHIFT_PRIMARY_CARTRIDGE_DIR/env/OPENSHIFT_*_PATH_ELEMENT
+  do
+    if [[ $f == *OPENSHIFT_*_LD_LIBRARY_PATH_ELEMENT ]]; then
+      test -f ${f} && ld_path="${ld_path}$(< $f)"
+    fi
+  done
+
+  if [ -f /etc/openshift/env/LD_LIBRARY_PATH ]
+  then
+    load_env /etc/openshift/env/LD_LIBRARY_PATH
+    ld_path=$ld_path:$LD_LIBRARY_PATH
+  fi
+
+  echo -n $ld_path
+}
+

@@ -49,7 +49,6 @@ Requires:      %{?scl:%scl_prefix}rubygem-passenger
 Requires:      %{?scl:%scl_prefix}rubygem-passenger-native
 Requires:      %{?scl:%scl_prefix}rubygem-passenger-native-libs
 Requires:      %{?scl:%scl_prefix}rubygem-rails
-Requires:      %{?scl:%scl_prefix}rubygem-regin
 Requires:      %{?scl:%scl_prefix}rubygem-rest-client
 Requires:      %{?scl:%scl_prefix}rubygem-systemu
 Requires:      %{?scl:%scl_prefix}rubygem-xml-simple
@@ -86,7 +85,6 @@ Requires:      %{?scl:%scl_prefix}rubygem-rack-test
 Requires:      %{?scl:%scl_prefix}rubygem-rails
 Requires:      %{?scl:%scl_prefix}rubygem-railties
 Requires:      %{?scl:%scl_prefix}rubygem-rdoc
-Requires:      %{?scl:%scl_prefix}rubygem-regin
 Requires:      %{?scl:%scl_prefix}rubygem-sprockets
 Requires:      %{?scl:%scl_prefix}rubygem-state_machine
 Requires:      %{?scl:%scl_prefix}rubygem-stomp
@@ -163,6 +161,9 @@ cp conf/broker.conf %{buildroot}%{_sysconfdir}/openshift/broker-dev.conf
 cp conf/quickstarts.json %{buildroot}%{_sysconfdir}/openshift/quickstarts.json
 cp conf/plugins.d/README %{buildroot}%{_sysconfdir}/openshift/plugins.d/README
 
+mkdir -p %{buildroot}%{_sbindir}
+cp bin/oo-broker %{buildroot}%{_sbindir}/oo-broker
+
 # BZ986300
 rm -f %{buildroot}%{brokerdir}/COPYRIGHT
 rm -f %{buildroot}%{brokerdir}/.gitignore
@@ -203,6 +204,7 @@ sed -i -e '/NON-RUNTIME BEGIN/,/NON-RUNTIME END/d' %{buildroot}%{brokerdir}/Gemf
 %attr(0750,-,-) %{brokerdir}/tmp/pids
 %attr(0750,-,-) %{brokerdir}/tmp/sessions
 %attr(0750,-,-) %{brokerdir}/tmp/sockets
+%attr(0750,root,root) %{_sbindir}/oo-broker
 %dir %attr(0750,-,-) %{brokerdir}/httpd/conf.d
 %{brokerdir}
 %{htmldir}/broker

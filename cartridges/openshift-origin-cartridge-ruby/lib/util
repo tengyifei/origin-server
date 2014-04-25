@@ -1,6 +1,9 @@
 #!/bin/bash
 # Utility functions for use in the cartridge scripts.
 
+# BZ 1030873 - need nodejs context for bundle exec
+source "${OPENSHIFT_RUBY_DIR}/lib/ruby_context"
+
 function ruby_in_development_mode {
   if [ "$RAILS_ENV" == "development" ]; then
     return 0
@@ -102,8 +105,9 @@ function update-configuration {
         echo -n "${GEM_HOME}/bin:" >$OPENSHIFT_RUBY_DIR/env/OPENSHIFT_RUBY_PATH_ELEMENT
         dirname $(scl enable ruby193 "which ruby") >>$OPENSHIFT_RUBY_DIR/env/OPENSHIFT_RUBY_PATH_ELEMENT
 
+        local env_dir="${OPENSHIFT_RUBY_DIR}/env"
         local ld_path=$(LD_LIBRARY_PATH="" scl enable ruby193 "printenv LD_LIBRARY_PATH")
-        path_append $LD_LIBRARY_PATH $ld_path >$OPENSHIFT_RUBY_DIR/env/LD_LIBRARY_PATH
+        set_env_var 'OPENSHIFT_RUBY_LD_LIBRARY_PATH_ELEMENT' $ld_path $env_dir
 
         local man_path=$(MANPATH="" scl enable ruby193 "printenv MANPATH")
         path_append $MANPATH $man_path >$OPENSHIFT_RUBY_DIR/env/MANPATH
@@ -122,8 +126,18 @@ function update_passenger_performance {
   oo-erb ${OPENSHIFT_RUBY_DIR}conf/performance.conf.erb.hidden > $HTTPD_CFG_DIR/performance.conf
 }
 
-function httpd_with_env {
-  ruby_context "RAILS_ENV=${RAILS_ENV:-production} /usr/sbin/httpd $HTTPD_CMD_CONF -k $1"
+# Check for all pre-requires for assets compilation.
+#
+function has_assets {
+  [ -f .openshift/markers/disable_asset_compilation ] && return 1
+
+  [ ! -f Gemfile ] && return 1
+  [ ! -f Rakefile ] && return 1
+  ! grep " rails " Gemfile.lock >/dev/null && return 1
+  ! grep " execjs " Gemfile.lock >/dev/null && return 1
+  ! ruby_with_nodejs_context "bundle exec 'rake -T'" | grep "assets:precompile" >/dev/null && return 1
+
+  return 0
 }
 
 function parse_args {

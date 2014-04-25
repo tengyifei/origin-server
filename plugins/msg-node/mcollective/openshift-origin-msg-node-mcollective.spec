@@ -12,7 +12,7 @@
 
 Summary:       M-Collective agent file for openshift-origin-msg-node-mcollective
 Name:          openshift-origin-msg-node-mcollective
-Version: 1.21.0
+Version: 1.22.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -53,6 +53,31 @@ cp -p facts/update_yaml.rb %{buildroot}%{update_yaml_root}
 %attr(0700,-,-) %config(noreplace) /etc/cron.minutely/openshift-facts
 
 %changelog
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- facter ipaddress does not always return the ip that we would want
+  (bparees@redhat.com)
+- Merge pull request #5153 from jwhonce/bug/1081249
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1081249 - Refactor SELinux module to be SelinuxContext singleton
+  (jhonce@redhat.com)
+- facter ipaddress does not always return the ip that we would want
+  (bparees@redhat.com)
+- Merge pull request #5095 from jwhonce/bug/1081249
+  (dmcphers+openshiftbot@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+- Bug 1081249 - Synchronize access to selinux matchpath context
+  (jhonce@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- auto expose ports upon configure, but only for scalable apps
+  (rchopra@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Use NodeLogger in MCollective agent code (ironcladlou@gmail.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 1.20.3-1
 - Bug 1064580 - Keep gear boosted during create (jhonce@redhat.com)
 

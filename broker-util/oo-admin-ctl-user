@@ -38,6 +38,8 @@ Options:
     Set the maximum additional storage per gear that will be untracked for a user
   --setconsumedgears <number>
     Set the number of gears a user has consumed (use carefully)
+  --setmaxteams <number>
+    Set the maximum number of teams a user is allowed to create
   --listsubaccounts
     List the subaccounts that have been created under this parent account (login)
     Cannot use this option with --quiet
@@ -47,19 +49,21 @@ Options:
   --removesubaccount <subaccount login>
     The sub account to remove from the login parent account
     Cannot use this option when multiple logins are specified
-  --allowsubaccounts (true|false)
+  --allowsubaccounts true|false
     Add / Remove the capability to manage sub accounts
-  --allowplanupgrade (true|false)
+  --allowplanupgrade true|false
     Add / Remove the capability to upgrade plan for this login user
-  --allowprivatesslcertificates (true|false)
+  --allowviewglobalteams true|false
+    Add / Remove the capability to search and view any global team for this login user
+  --allowprivatesslcertificates true|false
     Add / Remove the capability to add private SSL certificates
   --addgearsize <gearsize>
     Add gearsize to the capability for this login user
   --removegearsize <gearsize>
     Remove gearsize from the capability for this login user
-  --inheritgearsizes (true|false)
+  --inheritgearsizes true|false
     Allow / Disallow inheritance of login user gearsizes capability to sub accounts
-  --allowha (true|false)
+  --allowha true|false
     Allow / Disallow High Availability capability to the user
 
   -q|--quiet
@@ -86,182 +90,257 @@ class String
 end
 
 def set_max_domains(user, maxdomains)
-  if user.max_domains == maxdomains
-    puts "User #{user.login} already has max_domains set to #{maxdomains}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.max_domains == maxdomains
+        puts "User #{user.login} already has max_domains set to #{maxdomains}"
+        return
+      end
 
-  print "Setting max_domains to #{maxdomains}... "
-  user.max_domains = maxdomains
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred saving the user #{user.login}."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting max_domains to #{maxdomains}... "
+      user.max_domains = maxdomains
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to set max domains for user #{user.login}, error: #{e.message}"
     exit 6
   end
+  puts "Done."
 end
 
 def set_max_gears(user, maxgears)
-  if user.max_gears == maxgears
-    puts "User #{user.login} already has max_gears set to #{maxgears}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.max_gears == maxgears
+        puts "User #{user.login} already has max_gears set to #{maxgears}"
+        return
+      end
 
-  print "Setting max_gears to #{maxgears}... "
-  user.max_gears = maxgears
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred saving the user #{user.login}."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting max_gears to #{maxgears}... "
+      user.max_gears = maxgears
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to set max gears for user #{user.login}, error: #{e.message}"
     exit 6
   end
+  puts "Done."
 end
 
 def set_max_tracked_storage(user, maxtrackedstorage)
-  if user.max_tracked_additional_storage == maxtrackedstorage
-    puts "User #{user.login} already has max_tracked_additional_storage set to #{maxtrackedstorage}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.max_tracked_additional_storage == maxtrackedstorage
+        puts "User #{user.login} already has max_tracked_additional_storage set to #{maxtrackedstorage}"
+        return
+      end
 
-  print "Setting max_tracked_addtl_storage_per_gear to #{maxtrackedstorage}... "
-  user.max_tracked_additional_storage = maxtrackedstorage
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred saving the user #{user.login}."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting max_tracked_addtl_storage_per_gear to #{maxtrackedstorage}... "
+      user.max_tracked_additional_storage = maxtrackedstorage
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to set max tracked addtional storage for user #{user.login}, error: #{e.message}"
     exit 6
   end
+  puts "Done."
 end
 
 def set_max_untracked_storage(user, maxuntrackedstorage)
-  if user.max_untracked_additional_storage == maxuntrackedstorage
-    puts "User #{user.login} already has max_untracked_additional_storage set to #{maxuntrackedstorage}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user, 1800) do
+      if user.max_untracked_additional_storage == maxuntrackedstorage
+        puts "User #{user.login} already has max_untracked_additional_storage set to #{maxuntrackedstorage}"
+        return
+      end
 
-  print "Setting max_untracked_addtl_storage_per_gear to #{maxuntrackedstorage}... "
-  user.max_untracked_additional_storage = maxuntrackedstorage
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred saving the user #{user.login}."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting max_untracked_addtl_storage_per_gear to #{maxuntrackedstorage}... "
+      old_untracked = user.max_untracked_additional_storage
+      user.max_untracked_additional_storage = maxuntrackedstorage
+      user.save!
+
+      error = nil
+      user.domains.each do |domain|
+        domain.applications.each do |app|
+          begin
+            app.change_max_untracked_storage(old_untracked, maxuntrackedstorage)
+          rescue Exception => e
+            error = e
+            $stderr.puts "An error occurred updating storage tracking for the user #{user.login} for the app #{app.name}."
+            $stderr.puts e.message
+          end
+        end
+      end
+      exit 6 if error
+    end
+  rescue Exception => e
+    $stderr.puts "An error occurred updating storage tracking for the user #{user.login}."
+    $stderr.puts e.message
     exit 6
   end
+  puts "Done."
 end
 
 def set_consumed_gears(user, consumedgears)
-  old_value = user.consumed_gears
-  if user.consumed_gears == consumedgears
-    puts "User #{user.login} already has consumed_gears set to #{user.consumed_gears}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.consumed_gears == consumedgears
+        puts "User #{user.login} already has consumed_gears set to #{user.consumed_gears}"
+        return
+      end
 
-  print "Setting consumed_gears to #{consumedgears}... "
-  result = CloudUser.where(login: user.login, consumed_gears: old_value).find_and_modify({ "$set" => { "consumed_gears" => consumedgears } } )
-  if result.nil?
-    $stderr.puts "User's consumed_gear count changed between read and write, try again."
-    return
+      print "Setting consumed_gears to #{consumedgears}... "
+      user.consumed_gears = consumedgears
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to set consumed gears for user #{user.login}, error: #{e.message}"
+    exit 6
+  end
+  puts "Done."
+end
+
+def set_max_teams(user, maxteams)
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.max_teams == maxteams
+        puts "User #{user.login} already has max_teams set to #{maxteams}"
+        return
+      end
+
+      print "Setting max_teams to #{maxteams}... "
+      user.max_teams = maxteams
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to set max teams for user #{user.login}, error: #{e.message}"
+    exit 6
   end
   puts "Done."
 end
 
 def allow_sub_accounts(user, allow)
-  if user.subaccounts == allow
-    puts "User #{user.login} already has allowsubaccounts set to #{allow}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.subaccounts == allow
+        puts "User #{user.login} already has allowsubaccounts set to #{allow}"
+        return
+      end
 
-  print "Setting subaccounts capability to #{allow} for user #{user.login}... "
-  user.subaccounts = allow
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred modifying the user capabilities."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting subaccounts capability to #{allow} for user #{user.login}... "
+      user.subaccounts = allow
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to allow subaccounts for user #{user.login}, error: #{e.message}"
     exit 6
   end
+  puts "Done."
 end
 
 def allow_private_ssl_certificates(user, allow)
-  if user.private_ssl_certificates == allow
-    puts "User #{user.login} already has allow private_ssl_certificates set to #{allow}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.private_ssl_certificates == allow
+        puts "User #{user.login} already has allow private_ssl_certificates set to #{allow}"
+        return
+      end
 
-  print "Setting private_ssl_certificates capability to #{allow} for user #{user.login}... "
-  user.private_ssl_certificates = allow
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred modifying the user capabilities."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting private_ssl_certificates capability to #{allow} for user #{user.login}... "
+      user.private_ssl_certificates = allow
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to allow private ssl certificates for user #{user.login}, error: #{e.message}"
     exit 6
   end
+  puts "Done."
 end
 
 def allow_plan_upgrade(user, allow)
-  if user.plan_upgrade_enabled == allow
-    puts "User #{user.login} already has plan_upgrade_enabled set to #{allow}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.plan_upgrade_enabled == allow
+        puts "User #{user.login} already has plan_upgrade_enabled set to #{allow}"
+        return
+      end
 
-  print "Setting plan_upgraded_enabled capability to #{allow} for user #{user.login}... "
-  user.plan_upgrade_enabled = allow
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred modifying the user capabilities."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting plan_upgraded_enabled capability to #{allow} for user #{user.login}... "
+      user.plan_upgrade_enabled = allow
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to allow private ssl certificates for user #{user.login}, error: #{e.message}"
     exit 6
   end
+  puts "Done."
+end
+
+def allow_global_teams(user, allow)
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.view_global_teams == allow
+        puts "User #{user.login} already has view_global_teams set to #{allow}"
+        return
+      end
+
+      print "Setting view_global_teams capability to #{allow} for user #{user.login}... "
+      user.view_global_teams = allow
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to allow viewing global teams for user #{user.login}, error: #{e.message}"
+    exit 6
+  end
+  puts "Done."
 end
 
 def add_sub_account(user, subaccount_login)
-  unless user.subaccounts
-    $stderr.puts "User #{user.login} does not have the capability to manage sub accounts"
-    return
-  end
-
   begin
-    child_user = CloudUser::find_by_identity(subaccount_login)
-  rescue Mongoid::Errors::DocumentNotFound
     child_user = nil
-  end
-    
-  if not child_user.nil?
-    if child_user.parent_user_id == user._id
-      $stderr.puts "Error: Subaccount for '#{subaccount_login}' already exists under #{user.login}"
-    elsif not child_user.parent_user_id.nil?
-      parent_user = CloudUser.with(consistency: :eventual).find_by(_id: child_user.parent_user_id)
-      $stderr.puts "Error: Subaccount for '#{subaccount_login}' already exists under #{parent_user.login}"
-    else
-      $stderr.puts "Error: User '#{subaccount_login}' already exists"
+    Lock.run_in_user_lock(user) do
+      unless user.subaccounts
+        $stderr.puts "User #{user.login} does not have the capability to manage sub accounts"
+        return
+      end
+
+      begin
+        child_user = CloudUser::find_by_identity(subaccount_login)
+      rescue Mongoid::Errors::DocumentNotFound
+        child_user = nil
+      end
+
+      if not child_user.nil?
+        if child_user.parent_user_id == user._id
+          $stderr.puts "Error: Subaccount for '#{subaccount_login}' already exists under #{user.login}"
+        elsif not child_user.parent_user_id.nil?
+          parent_user = CloudUser.with(consistency: :eventual).find_by(_id: child_user.parent_user_id)
+          $stderr.puts "Error: Subaccount for '#{subaccount_login}' already exists under #{parent_user.login}"
+        else
+          $stderr.puts "Error: User '#{subaccount_login}' already exists"
+        end
+        exit 5
+      end
+
+      print "Adding subaccount for #{subaccount_login} under #{user.login}... "
+      child_user = CloudUser.new(login: subaccount_login, parent_user_id: user._id)
+      if child_user.save
+        puts "Done."
+      else
+        $stderr.puts "An error occurred adding the sub account #{subaccount_login} under #{user.login}."
+        $stderr.puts "Errors: #{child_user.errors.messages}"
+        exit 6
+      end
     end
-    exit 5
-  end
-    
-  print "Adding subaccount for #{subaccount_login} under #{user.login}... "
-  child_user = CloudUser.new(login: subaccount_login, parent_user_id: user._id)
-  if child_user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred adding the sub account #{subaccount_login} under #{user.login}."
-    $stderr.puts "Errors: #{child_user.errors.messages}"
+    Lock.create_lock(child_user.id)
+  rescue Exception => e
+    $stderr.puts "Failed to add subaccount for user #{user.login}, error: #{e.message}"
     exit 6
   end
-  Lock.create_lock(child_user)
+  puts "Done."
 end
 
 def remove_sub_account(user, subaccount_login)
-  unless user.subaccounts
-    $stderr.puts "User #{user.login} does not have the capability to manage sub accounts"
-    return
-  end
-
   begin
     child_user = CloudUser::find_by_identity(subaccount_login)
   rescue Mongoid::Errors::DocumentNotFound
@@ -288,7 +367,9 @@ def add_gear_size(user, gear_size)
   print "Adding gear size #{gear_size} for user #{user.login}... "
 
   begin
-    user.add_gear_size(gear_size)
+    Lock.run_in_user_lock(user) do
+      user.add_gear_size(gear_size)
+    end
   rescue Exception=>e
     $stderr.puts e.message
     exit 1
@@ -300,7 +381,9 @@ def remove_gear_size(user, gear_size)
   print "Removing gear size #{gear_size} for user #{user.login}... "
 
   begin
-    user.remove_gear_size(gear_size)
+    Lock.run_in_user_lock(user) do
+      user.remove_gear_size(gear_size)
+    end
   rescue Exception => e
     $stderr.puts e.message
     exit 6
@@ -309,25 +392,26 @@ def remove_gear_size(user, gear_size)
 end
 
 def inherit_on_subaccounts(user, allow, capability, cap_name)
-  if user.inherit_on_subaccounts.include?(capability) == allow
-    puts "User #{user.login} already has #{cap_name} inheritance set to #{allow}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.inherit_on_subaccounts.include?(capability) == allow
+        puts "User #{user.login} already has #{cap_name} inheritance set to #{allow}"
+        return
+      end
 
-  print "Setting #{cap_name} inheritance to #{allow} for user #{user.login}... "
-  if allow
-    user.add_capability_inherit_on_subaccounts(capability)
-  else
-    user.remove_capability_inherit_on_subaccounts(capability)
-  end
-    
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred modifying the user capabilities."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting #{cap_name} inheritance to #{allow} for user #{user.login}... "
+      if allow
+        user.add_capability_inherit_on_subaccounts(capability)
+      else
+        user.remove_capability_inherit_on_subaccounts(capability)
+      end
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to allow/disallow subaccount capability inheritance for user #{user.login}, error: #{e.message}"
     exit 6
   end
+  puts "Done."
 end
 
 def allow_ha(user, allow)
@@ -335,20 +419,22 @@ def allow_ha(user, allow)
     $stderr.puts "Error: Platform does not allow HA applications"
     exit 5
   end
-  if user.ha == allow
-    puts "User #{user.login} already has HA set to #{allow}"
-    return
-  end
+  begin
+    Lock.run_in_user_lock(user) do
+      if user.ha == allow
+        puts "User #{user.login} already has HA set to #{allow}"
+        return
+      end
 
-  print "Setting HA capability to #{allow} for user #{user.login}... "
-  user.ha = allow
-  if user.save
-    puts "Done."
-  else
-    $stderr.puts "An error occurred modifying the user capabilities."
-    $stderr.puts "Errors: #{user.errors.messages}"
+      print "Setting HA capability to #{allow} for user #{user.login}... "
+      user.ha = allow
+      user.save!
+    end
+  rescue Exception => e
+    $stderr.puts "Failed to allow/disallow HA capability for user #{user.login}, error: #{e.message}"
     exit 6
   end
+  puts "Done."
 end
 
 opts = GetoptLong.new(
@@ -361,6 +447,7 @@ opts = GetoptLong.new(
     ["--setmaxgears",      GetoptLong::REQUIRED_ARGUMENT],
     ["--setmaxtrackedstorage", GetoptLong::REQUIRED_ARGUMENT],
     ["--setmaxuntrackedstorage", GetoptLong::REQUIRED_ARGUMENT],
+    ["--setmaxteams",      GetoptLong::REQUIRED_ARGUMENT],
     ["--setconsumedgears", GetoptLong::REQUIRED_ARGUMENT],
     ["--listsubaccounts",  GetoptLong::NO_ARGUMENT],
     ["--addsubaccount",    GetoptLong::REQUIRED_ARGUMENT],
@@ -368,6 +455,7 @@ opts = GetoptLong.new(
     ["--allowsubaccounts", GetoptLong::REQUIRED_ARGUMENT],
     ["--allowprivatesslcertificates", GetoptLong::REQUIRED_ARGUMENT],
     ["--allowplanupgrade", GetoptLong::REQUIRED_ARGUMENT],
+    ["--allowviewglobalteams", GetoptLong::REQUIRED_ARGUMENT],
     ["--addgearsize",      GetoptLong::REQUIRED_ARGUMENT],
     ["--removegearsize",   GetoptLong::REQUIRED_ARGUMENT],
     ["--inheritgearsizes", GetoptLong::REQUIRED_ARGUMENT],
@@ -441,6 +529,14 @@ if args["--setmaxuntrackedstorage"]
   maxuntrackedstorage = args["--setmaxuntrackedstorage"].to_i
 end
 
+if args["--setmaxteams"]
+  unless args["--setmaxteams"] =~ /^[0-9]+$/
+    $stderr.puts "ERROR: Max teams must be a positive integer"
+    exit 1
+  end
+  maxteams = args["--setmaxteams"].to_i
+end
+
 if args["--setconsumedgears"]
   unless args["--setconsumedgears"] =~ /^[0-9]+$/
     $stderr.puts "ERROR: Consumed gears must be a positive integer"
@@ -486,7 +582,7 @@ logins.each do |login|
 
     begin
       if args["--create"]
-        user = CloudUser.find_or_create_by_identity(nil, login)
+        user, _ = CloudUser.find_or_create_by_identity(nil, login)
       else
         user = CloudUser.find_by_identity(login)
       end
@@ -513,6 +609,11 @@ logins.each do |login|
       changed_user = true
     end
 
+    unless maxteams.nil?
+      set_max_teams(user, maxteams)
+      changed_user = true
+    end
+
     unless maxuntrackedstorage.nil?
       set_max_untracked_storage(user,maxuntrackedstorage)
       changed_user = true
@@ -530,6 +631,10 @@ logins.each do |login|
 
     unless args["--allowplanupgrade"].nil?
       allow_plan_upgrade(user, args["--allowplanupgrade"].to_b)
+    end
+
+    unless args["--allowviewglobalteams"].nil?
+      allow_global_teams(user, args["--allowviewglobalteams"].to_b)
     end
 
     unless allowprivatesslcertificates.nil?
@@ -584,6 +689,8 @@ logins.each do |login|
     puts "                       max gears: #{user.max_gears}"
     puts "    max tracked storage per gear: #{user.max_tracked_additional_storage}"
     puts "  max untracked storage per gear: #{user.max_untracked_additional_storage}"
+    puts "                       max teams: #{user.max_teams}"
+    puts "viewing all global teams allowed: #{user.view_global_teams}"
     puts "            plan upgrade enabled: #{user.plan_upgrade_enabled}" if user.capabilities.has_key?('plan_upgrade_enabled')
     puts "                      gear sizes: #{user.allowed_gear_sizes.join(', ')}"
     puts "            sub accounts allowed: #{user.subaccounts}"

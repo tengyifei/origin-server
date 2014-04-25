@@ -8,15 +8,10 @@ Description: The Do-It-Yourself (DIY) application type is a blank slate for tryi
 Version: '0.1'
 License: ASL 2.0
 License-Url: http://www.apache.org/licenses/LICENSE-2.0.txt
-Cartridge-Version: 0.0.8
+Cartridge-Version: 0.0.12
 Compatible-Versions:
-- 0.0.1
-- 0.0.2
-- 0.0.3
-- 0.0.4
-- 0.0.5
-- 0.0.6
-- 0.0.7
+- 0.0.10
+- 0.0.11
 Cartridge-Vendor: redhat
 Vendor: redhat
 Categories:
@@ -24,7 +19,7 @@ Categories:
 - experimental
 Website: 
 Help-Topics:
-  Getting Started: https://www.openshift.com/community/videos/getting-started-with-diy-applications-on-openshift
+  Getting Started: https://www.openshift.com/videos/getting-started-with-diy-applications-on-openshift
 Provides:
 - diy-0.1
 - diy
@@ -54,7 +49,7 @@ Endpoints:
     Backend: ''
     Options:
       websocket: true
-  - Frontend: "/health"
+  - Frontend: /health
     Backend: ''
     Options:
       health: true

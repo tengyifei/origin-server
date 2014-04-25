@@ -7,7 +7,7 @@
 
 Summary:       Utility scripts for the OpenShift Origin broker
 Name:          openshift-origin-broker-util
-Version: 1.21.0
+Version: 1.23.7
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -26,10 +26,14 @@ Requires:      mongodb
 Requires:      bind-utils
 # For oo-admin-broker-auth
 Requires:      %{?scl:%scl_prefix}mcollective-client
+Requires:      which
+Requires:      tar
+Requires:      openssh-clients
+Requires:      %{?scl:%scl_prefix}rubygem-net-ldap
 BuildArch:     noarch
 
 %description
-This package contains a set of utility scripts for the openshift broker.  
+This package contains a set of utility scripts for the openshift broker.
 They must be run on a openshift broker instance.
 
 %prep
@@ -73,6 +77,7 @@ cp -p man/*.8 %{buildroot}%{_mandir}/man8/
 %attr(0750,-,-) %{_sbindir}/oo-quarantine
 %attr(0750,-,-) %{_sbindir}/oo-register-dns
 %attr(0750,-,-) %{_sbindir}/oo-stats
+%attr(0750,-,-) %{_sbindir}/oo-admin-ctl-team
 
 %{?scl:%scl_root}%{ruby_libdir}/app_info.rb
 
@@ -100,8 +105,168 @@ cp -p man/*.8 %{buildroot}%{_mandir}/man8/
 %{_mandir}/man8/oo-analytics-export.8.gz
 %{_mandir}/man8/oo-analytics-import.8.gz
 %{_mandir}/man8/oo-quarantine.8.gz
+%{_mandir}/man8/oo-admin-ctl-team.8.gz
 
 %changelog
+* Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.23.7-1
+- Merge pull request #5297 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1088405 - no error message was being given for invalid keys and silently
+  failing (lnader@redhat.com)
+
+* Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.23.6-1
+- Bug 1085297 - fixed error message (lnader@redhat.com)
+
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.5-1
+- ctl-team: allow anonymous or encrypted LDAP access (lmeyer@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.4-1
+- Give better error message in case of connection failures. i.e. authentication
+  failure (lnader@redhat.com)
+- Bug 1087593 (lnader@redhat.com)
+- changed save to save! and fixed typo (lnader@redhat.com)
+- Bug 1085669 and 1085685 (lnader@redhat.com)
+- added oo-admin-ctl-team (lnader@redhat.com)
+
+* Mon Apr 14 2014 Troy Dawson <tdawson@redhat.com> 1.23.3-1
+- Bug 1086263 - oo-analytics-export will include applications 'owner_id' field
+  (rpenta@redhat.com)
+
+* Fri Apr 11 2014 Adam Miller <admiller@redhat.com> 1.23.2-1
+- Merge pull request #5195 from brenton/BZ1085339
+  (dmcphers+openshiftbot@redhat.com)
+- Cleanup (dmcphers@redhat.com)
+- Bug 1085339, Bug 1085365 - cleaning up the remote user auth configs
+  (bleanhar@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- ctl-district: add --available and list-available (lmeyer@redhat.com)
+- ctl-district: act on many nodes with one invocation (lmeyer@redhat.com)
+- Bug 1083663 - Provide better message when upgrade-node is used on a rerun
+  (dmcphers@redhat.com)
+- Bug 1071272 - oo-admin-repair: Only allow node removal from its district when
+  no apps are referencing that node (rpenta@redhat.com)
+- Fix indent, oo-admin-ctl-user usage (jliggitt@redhat.com)
+- Add global_teams capability (jliggitt@redhat.com)
+- Merge pull request #5165 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1084090: Using as_document instead of serializable_hash to add/remove
+  keys (abhgupta@redhat.com)
+- Bug 1071272 - Fix oo-admin-repair Details:  - Delete unresponsive node(s)
+  from the district in the end  - Recover app will satisfy group overrides
+  (rpenta@redhat.com)
+- Merge pull request #5152 from
+  pravisankar/dev/ravi/bugs-1081381-1073342-1008654
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1081381 - Validate --gear option in oo-admin-usage (rpenta@redhat.com)
+- Adding user create tracking event (dmcphers@redhat.com)
+- Merge pull request #5142 from pravisankar/dev/ravi/bug1079293
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1079293 - Fix oo-admin-ctl-region add-zone/remove-zone incorrect warning
+  message (rpenta@redhat.com)
+- removed oo-admin-ctl-team to be done in a separate pull request
+  (lnader@redhat.com)
+- Bug 1081975 (lnader@redhat.com)
+- Removed global flag - using owner_id=nil as indicator for global team
+  (lnader@redhat.com)
+- Bug 1079115 - fixed error message (lnader@redhat.com)
+- Bug 1079117 - Require rubygem-net-ldap (lnader@redhat.com)
+- removed ownership from global teams (lnader@redhat.com)
+- added oo-admin-ctl-team (lnader@redhat.com)
+- Merge pull request #5122 from pravisankar/dev/ravi/fix-clear-pending-ops
+  (dmcphers+openshiftbot@redhat.com)
+- Fix oo-admin-clear-pending-ops : With '--time 0' option, ignore pending_ops
+  or pending_op_groups created_at field and process any pending op or op-groups
+  if it exists (rpenta@redhat.com)
+- Bug 1079293 - Fix warning msg in oo-admin-ctl-region remove-zone
+  (rpenta@redhat.com)
+- Fix formatting (dmcphers@redhat.com)
+- Bug 1081869 - Console needs a oo-admin-console-cache command. Remove the
+  --console flag from the oo-admin-broker-cache command. (jforrest@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.6-1
+- Bug 1081419 - Move oo-upgrade to /var/log (dmcphers@redhat.com)
+
+* Mon Mar 24 2014 Adam Miller <admiller@redhat.com> 1.22.5-1
+- Bug 1079226 - missing open-sshclients and bad IP from facter make oo-admin-
+  move fail (jforrest@redhat.com)
+- Merge pull request #5031 from
+  jwforres/bug_1079276_analytics_needs_tar_installed
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1079276 - Broker util scripts rely on tar and which (jforrest@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Bug 1078120: The value lookup is being done in the wrong hash
+  (abhgupta@redhat.com)
+- oo-accept-broker: handle broker conf errors better (lmeyer@redhat.com)
+- Update tests to not use any installed gems and use source gems only Add
+  environment wrapper for running broker util scripts (jforrest@redhat.com)
+- Merge pull request #5009 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1075480: proper message is output after deleting cartridge type
+  (abhgupta@redhat.com)
+- Bug 1078191: Missed calling the get_available_cartridges method
+  (abhgupta@redhat.com)
+- Checking and fixing stale sshkeys and env_vars  - using oo-admin-chk and oo-
+  admin-repair (abhgupta@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- Bug 1077496 - Fix add subaccount in oo-admin-ctl-user (rpenta@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- oo-accept-broker: improve err handling & more (lmeyer@redhat.com)
+- Added User pending-op-group/pending-op functionality Added pending op groups
+  for user add_ssh_keys/remove_ssh_keys (rpenta@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Merge pull request #4944 from UhuruSoftware/master
+  (dmcphers+openshiftbot@redhat.com)
+- Fix broker extended (dmcphers@redhat.com)
+- Add support for multiple platforms in OpenShift. Changes span both the broker
+  and the node. (vlad.iovanov@uhurusoftware.com)
+- Stop using direct addressing (dmcphers@redhat.com)
+- Bug 1073395: Fixing precedence issue in condition (abhgupta@redhat.com)
+- Merge pull request #4840 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Added max_teams capability (lnader@redhat.com)
+- Use correct map (dmcphers@redhat.com)
+- Multiple fixes for stability  - Adding option to prevent rollback in case of
+  successful execution of a destructive operation that is not reversible
+  (deleting gear or deconfiguring cartridge on the node)  - Checking for the
+  existence of the application after obtaining the lock  - Reloading the
+  application after acquiring the lock to reflect any changes made by the
+  previous operation holding the lock  - Using regular run_jobs code in clear-
+  pending-ops script  - Handling DocumentNotFound exception in clear-pending-
+  ops script if the application is deleted (abhgupta@redhat.com)
+- Adding inactive vs active failure tracking (dmcphers@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- Merge pull request #4876 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Handle empty plans (dmcphers@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- o-a-ctl-district: minor improvements (lmeyer@redhat.com)
+- o-a-ctl-region: minor improvements (lmeyer@redhat.com)
+- List plan ids with failures on upgrade (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Revert "Multiple fixes for stability" (dmcphers@redhat.com)
+- Multiple fixes for stability  - Adding option to prevent rollback in case of
+  successful execution of a destructive operation that is not reversible
+  (deleting gear or deconfiguring cartridge on the node)  - Checking for the
+  existence of the application after obtaining the lock  - Reloading the
+  application after acquiring the lock to reflect any changes made by the
+  previous operation holding the lock  - Using regular run_jobs code in clear-
+  pending-ops script  - Handling DocumentNotFound exception in clear-pending-
+  ops script if the application is deleted (abhgupta@redhat.com)
+- Team object, team membership (jliggitt@redhat.com)
+- Exit if error occurs changing untracked storage (jliggitt@redhat.com)
+- Recalc tracked storage (jliggitt@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Mon Feb 17 2014 Adam Miller <admiller@redhat.com> 1.20.6-1
 - Bug 1065243 - Reload district object after mongo update in oo-admin-repair
   (rpenta@redhat.com)

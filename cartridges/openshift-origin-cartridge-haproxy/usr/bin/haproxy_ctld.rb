@@ -28,7 +28,7 @@
 # haproxy_ctld.rb runs inside the same gear as haproxy does.  Haproxy is our
 # primary load balancing software.  Haproxy and haproxy_ctld.rb are both run
 # as your user inside the gear and both are daemonized.  The default behavior
-# is to have haproxy_ctld.rb watch haproxy via it's unix socket "status" port
+# is to have haproxy_ctld.rb watch haproxy via its unix socket "status" port
 # to obtain basic statistics about haproxy.  When a scale up or down event
 # is required, haproxy_ctld.rb contacts the broker via the standard REST API
 # and issues a scale-up or scale-down event.  Authentication is handled by an
@@ -100,6 +100,9 @@ HAPROXY_CONF_DIR=File.join(ENV['OPENSHIFT_HAPROXY_DIR'], "conf")
 HAPROXY_RUN_DIR=File.join(ENV['OPENSHIFT_HAPROXY_DIR'], "run")
 HAPROXY_CONFIG=File.join(HAPROXY_CONF_DIR, "haproxy.cfg")
 HAPROXY_STATUS_URLS_CONFIG=File.join(HAPROXY_CONF_DIR, "app_haproxy_status_urls.conf")
+PID_FILE=File.join(HAPROXY_RUN_DIR, "haproxy_ctld.pid")
+
+$shutdown = false
 
 class HAProxyAttr
     attr_accessor :pxname,:svname,:qcur,:qmax,:scur,:smax,:slim,:stot,:bin,:bout,:dreq,:dresp,:ereq,:econ,:eresp,:wretr,:wredis,:status,:weight,:act,:bck,:chkfail,:chkremove,:lastchg,:removetime,:qlimit,:pid,:iid,:sid,:throttle,:lbtot,:tracked,:type,:rate,:rate_lim,:rate_max,:check_status,:check_code,:check_duration,:hrsp_1xx,:hrsp_2xx,:hrsp_3xx,:hrsp_4xx,:hrsp_5xx,:hrsp_other,:hanafail,:req_rate,:req_rate_max,:req_tot,:cli_abrt,:srv_abrt
@@ -166,7 +169,10 @@ class Haproxy
         @stats_sock=stats_sock
         @gear_namespace = ENV['OPENSHIFT_GEAR_DNS'].split('.')[0].split('-')[1]
 
-        @log = Logger.new("#{ENV['OPENSHIFT_HAPROXY_LOG_DIR']}/scale_events.log")
+        # don't buffer log output or it may never make it to logshifter
+        STDOUT.sync=true
+        STDERR.sync=true
+        @log = Logger.new(STDOUT)
         if log_debug
           @log.level = Logger::DEBUG
         else
@@ -545,10 +551,6 @@ Manual scaling options:
 Auto scaling options:
   -a|--auto         Enable auto-scale
   --debug           Puts logger into debug mode
-
-Notes:
-1. To start/stop auto scaling in daemon mode run:
-    haproxy_ctld_daemon (start|stop|restart|run|)
 USAGE
     exit! rc
 end
@@ -591,8 +593,16 @@ if opt['up'] || opt['down']
     exit 1
   end
 else
+  trap("TERM") do
+    $shutdown = true
+  end
+
+  File.open(PID_FILE, "w") do |f|
+    f.write(Process.pid)
+  end
+
   ha = nil
-  while true
+  while not $shutdown
     begin
       if ha
         ha.refresh
@@ -604,5 +614,11 @@ else
       # Already logged when the exception was generated
     end
     sleep @check_interval
+  end
+
+  begin
+    File.delete(PID_FILE)
+  rescue
+    # ignore
   end
 end

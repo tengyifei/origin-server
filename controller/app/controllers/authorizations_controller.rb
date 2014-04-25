@@ -41,6 +41,9 @@ class AuthorizationsController < BaseController
       a.user = current_user
       a.scopes = scopes.to_s
     end
+
+    @analytics_tracker.track_user_event("authorization_add", current_user)
+
     render_success(:created, "authorization", RestAuthorization.new(auth, get_url, nolinks), "Create authorization", nil, nil, 'TOKEN' => auth.token, 'SCOPE' => auth.scopes, 'EXPIRES' => auth.expired_time, 'IP' => request.remote_ip)
   end
 
@@ -67,8 +70,15 @@ class AuthorizationsController < BaseController
 
   def destroy_all
     authorize! :destroy_authorization, current_user
-    Authorization.for_owner(current_user).accessible(current_user).delete_all
+    authorizations = Authorization.for_owner(current_user).accessible(current_user)
+    if (s = params[:scope]).present?
+      authorizations.select {|a| a.scopes_list.include?(s) }.map(&:delete)
+      msg = "All authorizations for #{@cloud_user.id} with scope #{s} are revoked."
+    else
+      authorizations.delete_all
+      msg = "All authorizations for #{@cloud_user.id} are revoked."
+    end
     status = requested_api_version <= 1.4 ? :no_content : :ok
-    render_success(status, nil, nil, "All authorizations for #{@cloud_user.id} are revoked.")
+    render_success(status, nil, nil, msg)
   end
 end

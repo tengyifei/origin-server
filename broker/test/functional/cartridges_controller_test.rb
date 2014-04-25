@@ -21,6 +21,7 @@ class CartridgesControllerTest < ActionDispatch::IntegrationTest
     request_via_redirect(:get, "/broker/rest/cartridges/standalone", {}, @headers)
     assert_response :ok
     body1 = JSON.parse(@response.body)
+    supported_api_versions = body1['supported_api_versions']
     cart_count1 = body1["data"].length
     assert cart_count1 > 0
     assert body1['data'].all?{ |c| c['type'] == 'standalone' }
@@ -33,6 +34,13 @@ class CartridgesControllerTest < ActionDispatch::IntegrationTest
     assert cart_count2 > 0
 
     assert body1 == body2
+
+    supported_api_versions.each do |version|
+      @headers["HTTP_ACCEPT"] = "application/xml; version=#{version}"
+      request_via_redirect(:get, "/broker/rest/cartridges/standalone", {}, @headers)
+      assert_response :ok
+    end
+    @headers["HTTP_ACCEPT"] = "application/json"
   end
 
   test "embedded cart list" do
@@ -111,7 +119,7 @@ class CartridgesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'find cartridge by id' do
-    assert cart = CartridgeType.active.first
+    assert cart = CartridgeType.active.provides('php').first
     request_via_redirect(:get, "/broker/rest/cartridge/#{cart._id}", {}, @headers)
     assert_response :ok
     assert (data = JSON.parse(@response.body)["data"]).is_a?(Hash)
@@ -119,7 +127,7 @@ class CartridgesControllerTest < ActionDispatch::IntegrationTest
     assert data['activation_time'].present?
     assert_nil data['requires']
 
-    inactive = CartridgeType.create(CartridgeType.active.first.attributes)
+    inactive = CartridgeType.create(cart.attributes)
     assert !inactive.activated?
     request_via_redirect(:get, "/broker/rest/cartridge/#{inactive._id}", {}, @headers)
     assert_response :ok
@@ -168,6 +176,7 @@ class CartridgesControllerTest < ActionDispatch::IntegrationTest
       request_via_redirect(:get, "/broker/rest/cartridges/redhat-#{php_version}", {}, @headers)
       assert_response :ok, "Getting cartridge for version #{version} failed"
     end
+    @headers["HTTP_ACCEPT"] = "application/json"
   end
 
 end

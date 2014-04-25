@@ -33,7 +33,16 @@ function waitondeployments() {
       client_message "Timed out waiting for management listening port"
       client_message "Could not connect to JBoss management interface, skipping deployment verification"
     else 
-      getscanconfig
+      SCANCONFIG=""
+      c=0
+      while [ "$SCANCONFIG" == "" ] && [ $c -lt 5 ]; do
+        getscanconfig
+        if [ "$SCANCONFIG" != "" ]; then
+          break
+        fi
+        sleep 2
+        let c=c+1
+      done
 
       if [ "$SCANCONFIG" == "" ]; then
         client_message "Could not connect to JBoss management interface, skipping deployment verification"
@@ -165,7 +174,8 @@ function ishttpup() {
         fi
         # if the process failed to start, error out immediately
         # rather than waiting for the timeout on the port being available.
-        if ! ps | grep -v grep | grep $PROCESS_ID > /dev/null; then
+        jbpid=$(cat $JBOSSAS_PID_FILE);
+        if ! ps | grep -v grep | grep $jbpid > /dev/null; then
           return 2
         fi
 
@@ -258,7 +268,7 @@ function build() {
           fi
           popd > /dev/null
       fi
-      
+
       if [ ! -f ${OPENSHIFT_REPO_DIR}pom.xml ]; then
         echo "Skipping Maven build due to absence of pom.xml"      
       fi
@@ -293,10 +303,13 @@ function start() {
   # Check for running app
   if isrunning; then
       echo "Application is already running"
-  else    
-    ${JBOSSAS_BIN_DIR}/standalone.sh > ${OPENSHIFT_TMP_DIR}/${cartridge_type}.log 2>&1 &
-    PROCESS_ID=$!
-    echo "$PROCESS_ID" > ${JBOSSAS_PID_FILE}
+  else
+    LOGPIPE=${OPENSHIFT_HOMEDIR}/app-root/runtime/logshifter-jbossas
+    rm -f $LOGPIPE && mkfifo $LOGPIPE
+
+    /usr/bin/logshifter -tag jbossas < $LOGPIPE &
+    ${JBOSSAS_BIN_DIR}/standalone.sh &> $LOGPIPE &
+    echo $! > ${JBOSSAS_PID_FILE}
 
     rc=0
     ishttpup || rc=$?
@@ -347,9 +360,9 @@ function reload() {
 
 # Clean up any log files
 function tidy() {
-  client_message "Emptying log dir: $OPENSHIFT_JBOSSAS_LOG_DIR"
+  client_message "Emptying jbossas logs in dir: $OPENSHIFT_LOG_DIR"
   shopt -s dotglob
-  rm -rf $OPENSHIFT_JBOSSAS_LOG_DIR/*
+  rm -rf $OPENSHIFT_LOG_DIR/jbossas.log*
   rm -rf $OPENSHIFT_JBOSSAS_DIR/standalone/tmp/*
 }
 
@@ -365,7 +378,7 @@ function threaddump() {
         kill -3 $java_pid
         client_result "Success"
         client_result ""
-        client_result "The thread dump file will be available via: rhc tail $OPENSHIFT_APP_NAME -g $OPENSHIFT_GEAR_UUID -f ${OPENSHIFT_TMP_DIR}${cartridge_type}.log -o '-n 250'"
+        client_result "The thread dump file will be available via: rhc tail $OPENSHIFT_APP_NAME -g $OPENSHIFT_GEAR_UUID -f ${OPENSHIFT_LOG_DIR}${cartridge_type}.log -o '-n 250'"
     else 
         echo "Failed to locate JBOSS PID File"
     fi

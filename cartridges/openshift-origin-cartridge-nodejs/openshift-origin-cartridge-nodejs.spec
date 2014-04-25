@@ -9,7 +9,7 @@
 
 Summary:       Provides Node.js support
 Name:          openshift-origin-cartridge-nodejs
-Version: 1.22.0
+Version: 1.24.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -60,27 +60,58 @@ find versions/ -name .gitkeep -delete
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
 
-%if 0%{?rhel}
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%__mv %{buildroot}%{cartridgedir}/lib/nodejs_context.rhel %{buildroot}%{cartridgedir}/lib/nodejs_context
-%endif
-%if 0%{?fedora}
-%__rm -f %{buildroot}%{cartridgedir}/versions/0.6
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%__mv %{buildroot}%{cartridgedir}/lib/nodejs_context.fedora %{buildroot}%{cartridgedir}/lib/nodejs_context
-%endif
-%__rm -f %{buildroot}%{cartridgedir}/lib/nodejs_context.*
-%__rm -f %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
-
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/env
+%{cartridgedir}/lib
+%{cartridgedir}/logs
+%{cartridgedir}/metadata
+%{cartridgedir}/usr
+%{cartridgedir}/versions
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.24.3-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.24.2-1
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.24.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.23.3-1
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.23.2-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Make nodejs watch just a single file by default instead of REPO_DIR
+  (mfojtik@redhat.com)
+- Removing f19 logic (dmcphers@redhat.com)
+- Bug 1073413 - Fix versions in nodejs upgrade script (mfojtik@redhat.com)
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.22.2-1
+- fix bash regexp in upgrade scripts (vvitek@redhat.com)
+- Fixing typos (dmcphers@redhat.com)
+- Merge pull request #4847 from mfojtik/bugzilla/1071165
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1071165 - npm no longer supports its self-signed certificates
+  (mfojtik@redhat.com)
+- Update nodejs cartridge to support LD_LIBRARY_PATH_ELEMENT
+  (mfojtik@redhat.com)
+- Template cleanup (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Mon Feb 17 2014 Adam Miller <admiller@redhat.com> 1.21.5-1
 - Bug 1065506 - Increase OPENSHIFT_NODEJS_POLL_INTERVAL default value to 10000
   (mfojtik@redhat.com)

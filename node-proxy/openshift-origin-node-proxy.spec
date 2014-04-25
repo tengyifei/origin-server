@@ -8,10 +8,11 @@
   %global webproxymoduledir /opt/rh/nodejs010/root%{nodejs_sitelib}/openshift-node-web-proxy
 %endif
 %{!?scl:%global pkg_name %{name}}
+%global logroot %{_var}/log/openshift/node/node-web-proxy
 
 Summary:       Routing proxy for OpenShift Origin Node
 Name:          openshift-origin-node-proxy
-Version: 1.20.0
+Version: 1.22.3
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -95,24 +96,28 @@ install -D -p -m 644 lib/plugins/* %{buildroot}%{webproxymoduledir}/lib/plugins
 mkdir -p %{buildroot}%{webproxymoduledir}/bin
 install -D -p -m 644 bin/*  %{buildroot}%{webproxymoduledir}/bin
 
-mkdir -p %{buildroot}%{_var}/log/node-web-proxy
-if [ ! -f %{buildroot}%{_var}/log/node-web-proxy/supervisor.log ]; then
-   /bin/touch %{buildroot}%{_var}/log/node-web-proxy/supervisor.log
+mkdir -p %{buildroot}%{logroot}
+if [ ! -f %{buildroot}%{logroot}/supervisor.log ]; then
+   /bin/touch %{buildroot}%{logroot}/supervisor.log
 fi
 
 
 %post
 %if %{with_systemd}
 /bin/systemctl --system daemon-reload
+/bin/systemctl try-restart openshift-node-web-proxy.service
 %else
 /sbin/chkconfig --add openshift-node-web-proxy || :
+/sbin/service openshift-node-web-proxy condrestart || :
 %endif
 
 %preun
 if [ "$1" -eq "0" ]; then
 %if %{with_systemd}
    /bin/systemctl --no-reload disable openshift-node-web-proxy.service
+   /bin/systemctl stop openshift-node-web-proxy.service
 %else
+   /sbin/service openshift-node-web-proxy stop || :
    /sbin/chkconfig --del openshift-node-web-proxy || :
 %endif
 fi
@@ -128,8 +133,8 @@ fi
 %attr(0755,-,-) %{_bindir}/node-find-proxy-route-files
 %attr(0640,-,-) %{_sysconfdir}/openshift/web-proxy-config.json
 %attr(0644,-,-) %{_sysconfdir}/logrotate.d/%{name}
-%ghost %attr(0660,root,root) %{_var}/log/node-web-proxy/supervisor.log
-%dir %attr(0700,apache,apache) %{_var}/log/node-web-proxy
+%ghost %attr(0660,root,root) %{logroot}/supervisor.log
+%dir %attr(0700,apache,apache) %{logroot}
 %dir %attr(0755,-,-) %{webproxymoduledir}
 %{webproxymoduledir}
 
@@ -137,6 +142,42 @@ fi
 %doc README
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.22.3-1
+- Merge pull request #5266 from jwhonce/bug/1077330
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1077330 - Remove unused dependency on facter (jhonce@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Bug 1083730 - Move node-web-proxy logs to /var/log/openshift/node
+  (jhonce@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- facter ipaddress does not always return the ip that we would want
+  (bparees@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- Update tests to not use any installed gems and use source gems only Add
+  environment wrapper for running broker util scripts (jforrest@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Merge pull request #4741 from Miciah/bug-1060274-node-proxy-stop-on-remove-
+  restart-in-upgrade (dmcphers+openshiftbot@redhat.com)
+- node-proxy: Stop on remove, restart in upgrade (miciah.masters@gmail.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Bug 1075221 - Prevent node-web-proxy being restarted by logrotate
+  (mfojtik@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.20.2-1
+- openshift-origin-node-proxy's service script requires facter
+  (bleanhar@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.20.1-1
+- Bug 1070317: Pass original request uri to the backend. (mrunalp@gmail.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Mon Feb 10 2014 Adam Miller <admiller@redhat.com> 1.19.2-1
 - Don't override supervisor log on restart. (mrunalp@gmail.com)
 - Cleaning specs (dmcphers@redhat.com)

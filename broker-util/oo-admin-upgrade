@@ -137,6 +137,8 @@ module OpenShift
     #
     class GearUpgradeResult < UpgradePersistable
       attr_accessor :login,
+                    :plan_id,
+                    :active,
                     :app_name,
                     :gear_uuid,
                     :namespace,
@@ -162,7 +164,7 @@ module OpenShift
 end
 
 class Upgrader
-  WORK_DIR = '/tmp/oo-upgrade'
+  WORK_DIR = '/var/log/openshift/broker/upgrade'
 
   ##
   # The primary upgrade method. Executes cluster-wide upgrades using the following process:
@@ -407,12 +409,12 @@ class Upgrader
                 "name",
                 "gears.uuid",
                 "gears.server_identity",
-                "gears.name"], 
+                "gears.name"],
                :timeout => false}
 
     ret = []
     user_map = {}
-    OpenShift::DataStore.find(:cloud_users, {}, {:fields => ["_id", "uuid", "login"], :timeout => false}) do |hash|
+    OpenShift::DataStore.find(:cloud_users, {}, {:fields => ['_id', 'uuid', 'login'], :timeout => false}) do |hash|
       metadata.logins_count += 1
       user_uuid = hash['uuid']
       user_login = hash['login']
@@ -630,7 +632,7 @@ class Upgrader
       # start the upgrades in a retry loop
       (1..num_tries).each do |i|
         # perform the upgrade
-        result = upgrade_gear(gear.login, gear.app_name, gear.gear_uuid, gear.version, ignore_cartridge_version)
+        result = upgrade_gear(gear.login, gear.app_name, gear.gear_uuid, gear.version, ignore_cartridge_version, gear.active)
 
         # write the results if all is well
         if result.errors.empty?
@@ -704,7 +706,7 @@ class Upgrader
   # NOTE: All exceptions are trapped and added to the +GearUpgradeResult.errors+.
   # This method should always return the hash and should never bubble exceptions.
   #
-  def upgrade_gear(login, app_name, gear_uuid, version, ignore_cartridge_version=false)
+  def upgrade_gear(login, app_name, gear_uuid, version, ignore_cartridge_version=false, active=false)
     gear_result = OpenShift::Upgrader::GearUpgradeResult.new({
       login: login,
       app_name: app_name,
@@ -723,6 +725,8 @@ class Upgrader
 
       raise "User not found: #{login}" unless user
 
+      gear_result.plan_id = user.plan_id
+      gear_result.active = active
       app, gear = Application.find_by_gear_uuid(gear_uuid)
 
       gear_result.warnings << "App '#{app_name}' not found" unless app
@@ -806,6 +810,8 @@ class Upgrader
 
     leftover_gears_per_node = {}
     failed_gears_per_node = {}
+    failed_gears_per_plan = {}
+    failed_gears_per_state = {}
 
     upgrade_result.starting_node_queue.each do |node|
       server_identity = node.server_identity
@@ -818,6 +824,20 @@ class Upgrader
 
       if File.exists?(gear_rerun_queue_file)
         failed_gears_per_node[server_identity] = `wc -l #{gear_rerun_queue_file}`.to_i
+      end
+
+      error_file_path = error_file_path(server_identity)
+      if File.exists? error_file_path
+        failed_gurs = OpenShift::Upgrader::GearUpgradeResult.entries_from_json_array_file(error_file_path)
+        failed_gurs.each do |failed_gur|
+          if failed_gur.plan_id
+            failed_gears_per_plan[failed_gur.plan_id] = 0 unless failed_gears_per_plan[failed_gur.plan_id]
+            failed_gears_per_plan[failed_gur.plan_id] += 1
+          end
+          state = failed_gur.active ? 'Active' : 'Inactive'
+          failed_gears_per_state[state] = 0 unless failed_gears_per_state[state]
+          failed_gears_per_state[state] += 1
+        end
       end
     end
 
@@ -855,6 +875,18 @@ class Upgrader
     buf << "# of users: #{upgrade_result.cluster_metadata.logins_count}"
     buf << "# of gears: #{upgrade_result.gear_count}"
     buf << "# of failures: #{failed_gears_total}"
+    if failed_gears_per_plan.any?
+      buf << "# of failures per plan:"
+      failed_gears_per_plan.each do |plan_id, count|
+        buf << "    #{plan_id}: #{count}"
+      end
+    end
+    if failed_gears_per_state.any?
+      buf << "# of failures per state:"
+      failed_gears_per_state.each do |state, count|
+        buf << "    #{state}: #{count}"
+      end
+    end
     buf << "# of leftovers: #{leftover_gears_total}"
     buf << "Gear counts per thread: #{upgrade_result.gear_counts.pretty_inspect}"
     buf << "Nodes upgraded: #{upgrader_position_nodes.pretty_inspect}" if !upgrader_position_nodes.empty?
@@ -1033,10 +1065,14 @@ class UpgraderCli < Thor
   def upgrade_node
     if (options.num_upgraders && !options.upgrade_position) || (options.upgrade_position && !options.num_upgraders)
       puts "--num-upgraders and --upgrade-position must be specified together"
-      exit 1
+      exit 255
     end
 
     with_upgrader do |upgrader|
+      if options.upgrade_node && File.exists?(upgrader.cluster_metadata_path)
+        puts "--upgrade-node can't be used with existing queues and cluster metadata.  Running the same command without the --upgrade-node option will pick up where the previous upgrade left off."
+        exit 255
+      end
       args = {
         version: options.version,
         ignore_cartridge_version: options.ignore_cartridge_version?,

@@ -48,18 +48,18 @@ module OpenShift
       def initialize(container, deployment_datetime)
         @file = PathUtils.join(container.container_dir, 'app-deployments', deployment_datetime, 'metadata.json')
 
-        empty = File.stat(@file).size == 0
+        empty = File.exists?(@file) && File.stat(@file).size == 0
         container.logger.warn("#{@file} was found empty. Will attempt to write defaults") if empty
 
         if File.exists?(@file) && !empty
           load
         else
           File.new(@file, 'w', 0644)
+          @metadata = defaults
           container.set_rw_permission(@file)
 
-          @metadata = defaults
-
           save
+
         end
       rescue => e
         container.logger.warn("Unable to create or update #{@file}. Gear may be exceeding quota. #{e.message}")
@@ -67,8 +67,9 @@ module OpenShift
       end
 
       def load
-        File.open(@file, "r") do |f|
-          @metadata = HashWithIndifferentAccess.new(JSON.load(f))
+        File.open(@file, 'r') do |f|
+          # JSON.load is not used to prevent class injection. BZ#1086427
+          @metadata = HashWithIndifferentAccess.new(JSON.parse(f.read))
         end
       end
 

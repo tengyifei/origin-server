@@ -6,7 +6,7 @@
 
 Summary:       Provides HA Proxy
 Name:          openshift-origin-cartridge-haproxy
-Version: 1.21.0
+Version: 1.23.5
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -39,12 +39,70 @@ HAProxy cartridge for OpenShift. (Cartridge Format V2)
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}/hooks/
-%{cartridgedir}
+%{cartridgedir}/env
+%{cartridgedir}/metadata
+%{cartridgedir}/usr
+%{cartridgedir}/versions
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.5-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.4-1
+- Merge pull request #5260 from ironcladlou/cart-log-vars
+  (dmcphers+openshiftbot@redhat.com)
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Mon Apr 14 2014 Troy Dawson <tdawson@redhat.com> 1.23.3-1
+- Merge pull request #5237 from ironcladlou/haproxyctld-stop-fix
+  (dmcphers+openshiftbot@redhat.com)
+- Check haproxyctld pid when trying to stop it (ironcladlou@gmail.com)
+- Merge pull request #5236 from bparees/haproxy_tidy
+  (dmcphers+openshiftbot@redhat.com)
+- haproxy_ctld.log not tidy after run the command rhc tidy-app app_name
+  (bparees@redhat.com)
+
+* Fri Apr 11 2014 Adam Miller <admiller@redhat.com> 1.23.2-1
+- Merge pull request #5208 from bparees/haproxy_scale
+  (dmcphers+openshiftbot@redhat.com)
+- Add the ability to adjust when haproxy shutsdown the app cart in the lead
+  gear (bparees@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Use named pipes for logshifter redirection where appropriate
+  (ironcladlou@gmail.com)
+- Bug 1081954 - Prevent killing non-existent haproxy process when force-stopped
+  (mfojtik@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Merge pull request #5086 from VojtechVitek/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+- Merge pull request #5074 from bparees/add_tidy
+  (dmcphers+openshiftbot@redhat.com)
+- cron/mongo logs does not get cleaned via rhc app-tidy (bparees@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- remove old usage reference to haproxy_ctld_daemon (bparees@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.22.2-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Fixing typos (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 1.20.4-1
 - Bug 1065133: Add websocket option to haproxy manifest and sanitize uri
   returned from mod_rewrite. (mrunalp@gmail.com)

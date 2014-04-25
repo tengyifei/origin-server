@@ -11,7 +11,7 @@ class DescriptorsControllerTest < ActionController::TestCase
     @user = CloudUser.new(login: @login)
     @user.private_ssl_certificates = true
     @user.save
-    Lock.create_lock(@user)
+    Lock.create_lock(@user.id)
     register_user(@login, @password)
 
     @request.env['HTTP_AUTHORIZATION'] = "Basic " + Base64.encode64("#{@login}:#{@password}")
@@ -36,6 +36,11 @@ class DescriptorsControllerTest < ActionController::TestCase
   test "show" do
     get :show, {"domain_id" => @domain.namespace, "application_id" => @app.name}
     assert_response :success
+
+    @request.env['HTTP_ACCEPT'] = 'application/xml'
+    get :show, {"domain_id" => @domain.namespace, "application_id" => @app.name}
+    assert_response :success
+    @request.env['HTTP_ACCEPT'] = 'application/json'
   end
 
   test "no app or domain id" do
@@ -55,5 +60,6 @@ class DescriptorsControllerTest < ActionController::TestCase
       get :show, {"domain_id" => @domain.namespace, "application_id" => @app.name}
       assert_response :ok, "Getting descriptor for version #{version} failed"
     end
+    @request.env['HTTP_ACCEPT'] = "application/json"
   end
 end

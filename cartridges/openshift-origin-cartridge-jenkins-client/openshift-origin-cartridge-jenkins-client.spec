@@ -7,7 +7,7 @@
 
 Summary:       Embedded jenkins client support for OpenShift 
 Name:          openshift-origin-cartridge-jenkins-client
-Version: 1.19.0
+Version: 1.19.3
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -42,12 +42,24 @@ Provides plugin jenkins client support. (Cartridge Format V2)
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/configuration
+%{cartridgedir}/metadata
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.19.3-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.19.2-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Show failure in jenkins log but success in STDOUT when jenkins build aerogear
+  app (bparees@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.19.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 1.18.4-1
 - Merge pull request #4744 from mfojtik/latest_versions
   (dmcphers+openshiftbot@redhat.com)

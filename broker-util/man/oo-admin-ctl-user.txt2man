@@ -8,11 +8,13 @@ SYNOPSIS
   [--setmaxdomains max_domains]
   [--setmaxuntrackedstorage max_untracked_storage]
   [--setmaxtrackedstorage max_tracked_storage]
+  [--setmaxteams max_teams]
   [--listsubaccounts] [--addsubaccount subaccount_login]
   [--removesubaccount subaccount_login] [--allowsubaccounts true|false]
   [--addgearsize gear_size] [--removegearsize gear_size]
   [--inheritgearsizes true|false] [--allowha true|false]
   [--allowprivatesslcertificates true|false] [--allowplanupgrade true|false]
+  [--allowviewglobalteams true|false]
 
   oo-admin-ctl-user [-h|--help] 
 
@@ -49,6 +51,9 @@ OPTIONS
 
   --setmaxtrackedstorage max_tracked_storage 
     Set the maximum amount of tracked additional file-system storage.
+    
+  --setmaxteams max_teams  
+    Set the maximum number of teams a user is allowed to create.
  
   --listsubaccounts  
     List the subaccounts that have been created under this parent account.
@@ -75,7 +80,7 @@ OPTIONS
     Allow or Diasllow inheritance of login user gearsizes capability to
     subaccounts.
     
-  --allowha (true|false)
+  --allowha true|false
     Add or Remove High Availability capability for this login user account.
 
   --allowprivatesslcertificates true|false  
@@ -83,6 +88,9 @@ OPTIONS
 
   --allowplanupgrade true|false  
     Add / Remove the capability to upgrade plan for this login user account.
+
+  --allowviewglobalteams true|false
+    Add / Remove the capability to search and view any global team for this login user
 
 EXAMPLE
 

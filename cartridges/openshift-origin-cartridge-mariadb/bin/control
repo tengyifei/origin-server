@@ -33,7 +33,7 @@ function start {
   if ! is_running; then
     echo "Starting MariaDB cartridge"
     oo-erb conf/my.cnf.erb.hidden > conf/my.cnf
-    mysql_context "/usr/bin/mysqld_safe --defaults-file=$OPENSHIFT_MARIADB_DIR/conf/my.cnf" > /dev/null 2>&1 &
+    mysql_context "/usr/bin/mysqld_safe --defaults-file=$OPENSHIFT_MARIADB_DIR/conf/my.cnf --log-error=$OPENSHIFT_MARIADB_DIR/stdout.err" |& /usr/bin/logshifter -tag mariadb &
     wait_for_mysqld_availability
   else
     echo "MariaDB already running" 1>&2
@@ -208,6 +208,7 @@ function post_restore {
     fi
 
     cleanup_dump
+    stop
   else
     echo "MariaDB restore attempted but no dump found!" 1>&2
     echo "$OPENSHIFT_DATA_DIR/mariadb_dump_snapshot.gz does not exist" 1>&2
@@ -221,6 +222,14 @@ function cleanup_dump {
   rm -f $OPENSHIFT_DATA_DIR/mariadb_db_dbname
 }
 
+# Clean up any log files
+
+function tidy() {
+  client_message "Deleting mariadb logs from $OPENSHIFT_LOG_DIR"
+  shopt -s dotglob
+  rm -rf $OPENSHIFT_LOG_DIR/mariadb.log*
+}
+  
 case "$1" in
   start)
     start
@@ -247,5 +256,6 @@ case "$1" in
   post-restore)
     post_restore
   ;;
+  tidy)          tidy ;;
 esac
 

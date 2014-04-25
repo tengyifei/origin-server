@@ -9,7 +9,7 @@
 
 Summary:       Provides embedded PostgreSQL support
 Name:          openshift-origin-cartridge-postgresql
-Version: 1.21.0
+Version: 1.23.3
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -79,29 +79,81 @@ Provides PostgreSQL cartridge support to OpenShift. (Cartridge Format V2)
 %install
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
-%if 0%{?fedora}%{?rhel} <= 6
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%__mv %{buildroot}%{cartridgedir}/lib/util.rhel %{buildroot}%{cartridgedir}/lib/util
-%__rm %{buildroot}%{cartridgedir}/lib/util.f19
-%endif
-%if 0%{?fedora} == 19
-%__rm -rf %{buildroot}%{cartridgedir}/versions/8.4
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.f19 %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%__mv %{buildroot}%{cartridgedir}/lib/util.f19 %{buildroot}%{cartridgedir}/lib/util
-%__rm %{buildroot}%{cartridgedir}/lib/util.rhel
-%endif
-%__rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
+
 
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}/hooks/
-%{cartridgedir}
+%{cartridgedir}/env
+%{cartridgedir}/lib
+%{cartridgedir}/metadata
+%{cartridgedir}/template
+%{cartridgedir}/versions
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.3-1
+- Merge pull request #5283 from bparees/latest_versions (dmcphers@redhat.com)
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+- "postgresql/data/pg_log/postgresql-Mon.log" should not exist on gear
+  (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.2-1
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Bug 1084379 - Added ensure_httpd_restart_succeed() back into ruby/phpmyadmin
+  (mfojtik@redhat.com)
+- Revert "Revert "Card origin_cartridge_133 - Maintain application state across
+  snapshot/restore"" (bparees@redhat.com)
+- Merge pull request #5144 from bparees/psql_migrate_restart
+  (dmcphers+openshiftbot@redhat.com)
+- Revert "Updated cartridges to stop after post_restore" (bparees@redhat.com)
+- fix is_running check to properly treat empty pidfile as not running
+  (bparees@redhat.com)
+- Bug 1082937 - Check if the PID is non-empty for postgresql cartridge
+  (mfojtik@redhat.com)
+- Postgresql still can be accessed via DB driver after postgresql stop for
+  jboss app (bparees@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Merge pull request #5086 from VojtechVitek/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5079 from bparees/postgres_wrong_log
+  (dmcphers+openshiftbot@redhat.com)
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+- Postgresql log still goes to old path after migration (bparees@redhat.com)
+- Empty postgres.pid file is still existing in gear after stop
+  (bparees@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- Merge pull request #5041 from ironcladlou/logshifter/carts
+  (dmcphers+openshiftbot@redhat.com)
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+- Card origin_cartridge_157 - Add support for setting MAX_CONNECTION and
+  SHARED_BUFFERS (mfojtik@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Updated cartridges to stop after post_restore (mfojtik@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Removing f19 logic (dmcphers@redhat.com)
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Update postgresql cartridge to support LD_LIBRARY_PATH_ELEMENT
+  (mfojtik@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Bug 1066945 - Fixing urls (dmcphers@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 1.20.4-1
 - Merge pull request #4744 from mfojtik/latest_versions
   (dmcphers+openshiftbot@redhat.com)

@@ -2,7 +2,7 @@
 
 Summary:       Mock cartridge for V2 Cartridge SDK
 Name:          openshift-origin-cartridge-mock
-Version: 1.17.0
+Version: 1.18.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -30,12 +30,33 @@ test platform functionality. (Cartridge Format V2)
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/conf
+%{cartridgedir}/conf.d
+%{cartridgedir}/env
+%{cartridgedir}/metadata
+%{cartridgedir}/template
+%{cartridgedir}/usr
+%{cartridgedir}/mock.conf
+%{cartridgedir}/.mock_hidden.erb
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Thu Apr 10 2014 Adam Miller <admiller@redhat.com> 1.18.2-1
+- Merge pull request #5200 from ncdc/metrics (dmcphers+openshiftbot@redhat.com)
+- Metrics (andy.goldstein@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.18.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.17.2-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.17.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Tue Feb 11 2014 Adam Miller <admiller@redhat.com> 1.16.3-1
 - Merge pull request #4712 from tdawson/2014-02/tdawson/cartridge-deps
   (dmcphers+openshiftbot@redhat.com)

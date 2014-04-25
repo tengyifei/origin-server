@@ -21,7 +21,7 @@
 #     <git-url>ssh://5124897d6892dfe819000005@testapp-localns.example.com/~/git/testapp.git/</git-url>
 #     <app-url>http://testapp-localns.example.com/</app-url>
 #     <ssh-url>ssh://5124897d6892dfe819000005@testapp-localns.example.com</ssh-url>
-#     <health-check-path>health_check.php</health-check-path>
+#     <health-check-path>health</health-check-path>
 #     <building-with nil="true"/>
 #     <building-app nil="true"/>
 #     <build-job-url nil="true"/>
@@ -109,7 +109,7 @@ class RestApplication15 < OpenShift::Model
     self.build_job_url = nil
     self.initial_git_url = app.init_git_url
 
-    self.members = app.members.map{ |m| RestMember.new(m, app.owner_id == m._id, url, nolinks) }
+    self.members = app.members.map{ |m| RestMember.new(m, app.owner_id == m._id, url, app, nolinks) }
 
     self.auto_deploy = app.config['auto_deploy']
     self.deployment_branch = app.config['deployment_branch']

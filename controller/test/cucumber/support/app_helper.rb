@@ -147,10 +147,10 @@ jenkins_build    = #{@jenkins_build}
 
     def get_index_file
       case @type.gsub(/-.*/,'')
-        when "php"      then "php/index.php"
+        when "php"      then "index.php"
         when "ruby"     then "config.ru"
-        when "python"   then "wsgi/application"
-        when "perl"     then "perl/index.pl"
+        when "python"   then "wsgi.py"
+        when "perl"     then "index.pl"
         when "jbossas"  then "src/main/webapp/index.html"
         when "jbosseap" then "src/main/webapp/index.html"
         when "jbossews" then "src/main/webapp/index.html"
@@ -197,9 +197,9 @@ jenkins_build    = #{@jenkins_build}
         url = "https://#{url[7..-1]}"
         response_code = curl_head(url, host)
       end
-      return response_code.to_i == http_code 
+      return response_code.to_i == http_code
     end
-    
+
     def curl_head(url, host=nil)
       auth = "--user #{@jenkins_user}:#{@jenkins_password}" if @jenkins_user
       host = "-H 'Host: #{host}'" if host

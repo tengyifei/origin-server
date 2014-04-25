@@ -36,6 +36,10 @@ module OpenShift
       categories.include?('ci_builder')
     end
 
+    def has_scalable_categories?
+      is_web_framework? || is_service?
+    end
+
     alias_method :is_deployable?, :is_web_framework?
     alias_method :is_buildable?, :is_web_framework?
   end
@@ -93,11 +97,10 @@ module OpenShift
                   :provides, :requires, :conflicts, :suggests, :native_requires,
                   :path, :license_url, :categories, :website, :suggests_feature,
                   :help_topics, :cart_data_def, :additional_control_actions, :versions, :cartridge_vendor,
-                  :endpoints, :cartridge_version, :obsolete
+                  :endpoints, :cartridge_version, :obsolete, :platform
 
     # Profile information
-    attr_accessor :components, :group_overrides,
-                  :connections, :start_order, :stop_order, :configure_order
+    attr_accessor :components, :group_overrides, :connections, :configure_order
 
     # Available for downloadable cartridges
     attr_accessor :manifest_text, :manifest_url
@@ -148,6 +151,10 @@ module OpenShift
       @components.each {|comp| @_component_name_map[comp.name] = comp }
     end
 
+    def scaling_required?
+      @components.any? { |comp| comp.scaling.required }
+    end
+
     def get_component(comp_name)
       @_component_name_map[comp_name]
     end
@@ -179,6 +186,7 @@ module OpenShift
       self.cart_data_def = spec_hash["Cart-Data"] || {}
       self.additional_control_actions = spec_hash["Additional-Control-Actions"] || []
       self.cartridge_version = spec_hash["Cartridge-Version"] || "0.0.0"
+      self.platform = (spec_hash["Platform"] || "linux").downcase
 
       self.provides = [self.provides] if self.provides.class == String
       self.requires = [self.requires] if self.requires.class == String
@@ -192,14 +200,10 @@ module OpenShift
         end
       end
 
-      self.start_order = spec_hash["Start-Order"] || []
-      self.stop_order = spec_hash["Stop-Order"] || []
       self.configure_order = spec_hash["Configure-Order"] || []
 
-      #fixup user data. provides, start_order, start_order, configure_order bust be arrays
+      #fixup user data. provides, configure_order must be arrays
       self.provides = [self.provides] if self.provides.class == String
-      self.start_order = [self.start_order] if self.start_order.class == String
-      self.stop_order = [self.stop_order] if self.stop_order.class == String
       self.configure_order = [self.configure_order] if self.configure_order.class == String
 
       if (components = spec_hash["Components"]).is_a? Hash
@@ -278,13 +282,12 @@ module OpenShift
       h["Vendor"] = self.vendor if self.vendor and !self.vendor.empty? and self.vendor != "unknown"
       h["Cartridge-Vendor"] = self.cartridge_vendor if self.cartridge_vendor and !self.cartridge_vendor.empty? and self.cartridge_vendor != "unknown"
       h["Obsolete"] = self.obsolete if !self.obsolete.nil? and self.obsolete
+      h["Platform"] = self.platform if !self.platform.nil? and self.platform
 
       if self.endpoints.present?
         h["Endpoints"] = self.endpoints.map(&:to_descriptor)
       end
 
-      h["Start-Order"] = @start_order unless @start_order.nil? || @start_order.empty?
-      h["Stop-Order"] = @stop_order unless @stop_order.nil? || @stop_order.empty?
       h["Configure-Order"] = @configure_order unless @configure_order.nil? || @configure_order.empty?
 
       if self.components.length == 1 && self.components.first.generated

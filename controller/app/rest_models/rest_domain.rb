@@ -21,21 +21,25 @@
 # @!attribute [r] suffix
 #   @return [String] DNS suffix under which the application is created. Eg: rhcloud.com
 class RestDomain < OpenShift::Model
-  attr_accessor :id, :name, :suffix, :members, :allowed_gear_sizes, :creation_time, :links
+  attr_accessor :id, :name, :suffix, :members, :allowed_gear_sizes, :creation_time, :links, :available_gears, :max_storage_per_gear, :usage_rates, :private_ssl_certificates
 
   def initialize(domain, url, nolinks=false)
     self.id = domain._id
     self.name = domain.namespace
     self.suffix = Rails.application.config.openshift[:domain_suffix]
     self.creation_time = domain.created_at
-    self.members = domain.members.map{ |m| RestMember.new(m, domain.owner_id == m._id, url, nolinks) }
-    self.allowed_gear_sizes = (domain.allowed_gear_sizes & domain.owner.allowed_gear_sizes)
+    self.members = domain.members.map{ |m| RestMember.new(m, domain.owner_id == m._id, url, domain, nolinks) }
 
-    if not domain.application_count.nil?
+    # Capabilities
+    self.allowed_gear_sizes = (domain.allowed_gear_sizes & domain.owner.allowed_gear_sizes)
+    self.available_gears = domain.available_gears
+    self.max_storage_per_gear = domain.max_storage_per_gear
+    self.usage_rates = domain.usage_rates
+    self.private_ssl_certificates = domain.private_ssl_certificates
+
+    unless domain.application_count.nil?
       @application_count = domain.application_count
       @gear_counts = domain.gear_counts || {}
-      @available_gears = domain.available_gears
-      @max_storage_per_gear = domain.max_storage_per_gear
     end
 
     unless nolinks
@@ -57,9 +61,11 @@ class RestDomain < OpenShift::Model
         "LIST_APPLICATIONS" => Link.new("List applications for a domain", "GET", URI::join(url, "domain/#{name}/applications")),
         "LIST_MEMBERS" => Link.new("List members of this domain", "GET", URI::join(url, "domain/#{name}/members")),
         "UPDATE_MEMBERS" => Link.new("Add or remove one or more members to this domain.", "PATCH", URI::join(url, "domain/#{name}/members"),
-          [Param.new("role", "string", "The role the user should have on the domain", Role.all)],
-          [OptionalParam.new("id", "string", "Unique identifier of the user"),
-          OptionalParam.new("login", "string", "The user's login attribute")]
+          [Param.new("role", "string", "The role the member should have on the domain", Role.all)],
+          [OptionalParam.new("type", "string", "The member's type. i.e. user or team", ["user", "team"], "user"),
+          OptionalParam.new("id", "string", "Unique identifier of the member for the given member type (user or team ID)"),
+          OptionalParam.new("login", "string", "The user's login attribute"),
+          OptionalParam.new("members", "Array", "An array of members to add with corresponding type and role. e.g. {'members': [{'login': 'foo', 'type': 'user', 'role': 'view'}, {'id': '5326534e2046fde9d3000001', 'type': 'team', 'role': 'none'}]}")]
         ),
         "LEAVE" => Link.new("Remove yourself as a member of the domain", "DELETE", URI::join(url, "domain/#{name}/members/self")),
         "UPDATE" => Link.new("Update domain", "PUT", URI::join(url, "domain/#{name}"),

@@ -281,7 +281,7 @@ module OpenShift
           FileUtils.mkpath(directory) unless File.directory?(directory)
 
           if (Dir.entries(directory).size - 2 + variables.size) > USER_VARIABLE_MAX_COUNT
-            return 127, "CLIENT_ERROR: User Variables maximum of #{USER_VARIABLE_MAX_COUNT} exceeded"
+            return 255, "CLIENT_ERROR: User Variables maximum of #{USER_VARIABLE_MAX_COUNT} exceeded\n"
           end
 
           variables.each_pair do |name, value|
@@ -290,14 +290,14 @@ module OpenShift
             if !ALLOWED_OVERRIDES.include?(name) && (File.exists?(path) ||
                 name =~ /\AOPENSHIFT_.*_IDENT\Z/ ||
                 RESERVED_VARIABLE_NAMES.include?(name))
-              return 127, "CLIENT_ERROR: #{name} cannot be overridden"
+              return 255, "CLIENT_ERROR: #{name} cannot be overridden"
             end
 
             if name.to_s.length > USER_VARIABLE_NAME_MAX_SIZE
-              return 127, "CLIENT_ERROR: Name '#{name}' exceeds maximum size of #{USER_VARIABLE_NAME_MAX_SIZE}b"
+              return 255, "CLIENT_ERROR: Name '#{name}' exceeds maximum size of #{USER_VARIABLE_NAME_MAX_SIZE}b\n"
             end
             if value.to_s.length > USER_VARIABLE_VALUE_MAX_SIZE
-              return 127, "CLIENT_ERROR: '#{name}' value exceeds maximum size of #{USER_VARIABLE_VALUE_MAX_SIZE}b"
+              return 255, "CLIENT_ERROR: '#{name}' value exceeds maximum size of #{USER_VARIABLE_VALUE_MAX_SIZE}b\n"
             end
           end
 
@@ -316,13 +316,22 @@ module OpenShift
         # Remove user environment variable(s)
         def user_var_remove(variables, gears = [])
           directory = PathUtils.join(@container_dir, '.env', 'user_vars')
+          output = ''
           variables.each do |name|
             path = PathUtils.join(directory, name)
-            FileUtils.rm_f(path)
+            if File.exists?(path)
+              FileUtils.rm_f(path)
+            else
+              output << "CLIENT_MESSAGE: User environment variable not found: #{name}\n"
+            end
           end
 
-          return user_var_push(gears) unless gears.empty?
-          return 0, ''
+          exit_code = 0
+          unless gears.empty?
+            exit_code, push_output = user_var_push(gears)
+            output = push_output + output if push_output
+          end
+          return exit_code, output
         end
 
         # update user environment variable(s) on other gears
@@ -354,7 +363,7 @@ module OpenShift
             end
           rescue Exception => e
             logger.error("Failed to update #{gear_dns} from #{@container_dir}/#{source}. #{e.message}")
-            return 127, "CLIENT_ERROR: #{e.message}"
+            return 1, "CLIENT_ERROR: #{e.message}"
           ensure
             loop do
               threads.each_pair do |id, thread|
@@ -380,7 +389,7 @@ module OpenShift
             end
           end
 
-          return output.empty? ? 0 : 127, output
+          return output.empty? ? 0 : 1, output
         end
 
         # Retrieve user environment variable(s)

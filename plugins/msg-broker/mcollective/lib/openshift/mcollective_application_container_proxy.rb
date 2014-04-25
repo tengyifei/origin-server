@@ -87,18 +87,18 @@ module OpenShift
       # * node_profile: characteristics for node filtering
       #
       # RETURNS:
-      # * a list of server_info arrays
+      # * One server info
       #
       # NOTES:
       # * Uses rpc_find_one() method
-      def self.find_one_impl(node_profile=nil)
-        current_server = rpc_find_one(node_profile)
+      def self.find_one_impl(node_profile=nil, platform='linux')
+        current_server = rpc_find_one(node_profile, platform)
 
         if current_server
           Rails.logger.debug "DEBUG: find_one_impl: current_server: #{current_server}"
           return current_server
         else
-          server_infos = find_all_available_impl(:node_profile => node_profile)
+          server_infos = find_all_available_impl({:node_profile => node_profile, :platform => platform})
           Rails.logger.debug "DEBUG: find_one_impl: Returning #{server_infos[0][0]} from a list of #{server_infos.length} servers"
           # we are returning the server for the first server_info
           return server_infos[0][0]
@@ -202,14 +202,8 @@ module OpenShift
       # * storage_in_gb: integer
       # * inodes: integer
       #
-      # RETURNS
-      # * Not sure, mcoll_result? a string?
-      #
       # RAISES:
       # * OpenShift::NodeException
-      #
-      # NOTES:
-      # * a pair of attribute setters on a Gear object
       #
       def set_quota(gear, storage_in_gb, inodes)
         args = Hash.new
@@ -317,6 +311,7 @@ module OpenShift
         args = Hash.new
         args['--with-app-uuid'] = app.uuid
         args['--with-app-name'] = app.name
+        args['--with-expose-ports'] = app.scalable
         args['--with-container-uuid'] = gear.uuid
         args['--with-container-name'] = gear.name
         args['--with-quota-blocks'] = quota_blocks if quota_blocks
@@ -347,7 +342,7 @@ module OpenShift
       # * quota_files: Integer - max files count
       #
       # RETURNS:
-      # * MCollective "result", stdout and exit code
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
@@ -410,7 +405,7 @@ module OpenShift
       # * skip_hooks: boolean
       #
       # RETURNS:
-      # * STDOUT from the remote command
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
@@ -444,7 +439,8 @@ module OpenShift
       # * server_alias: String - the name of the server which will offer this key
       # * passphrase: String - the private key passphrase or '' if its unencrypted.
       #
-      # RETURNS: a parsed MCollective result
+      # RETURNS:
+      # * ResultIO
       #
       # NOTES:
       # * calls node script oo-ssl-cert-add
@@ -466,7 +462,8 @@ module OpenShift
       # * gear: a Gear object
       # * server_alias: String - the name of the server which will offer this key
       #
-      # RETURNS: a parsed MCollective result
+      # RETURNS:
+      # * ResultIO
       #
       # NOTES:
       # * calls node script oo-ssl-cert-remove
@@ -505,12 +502,11 @@ module OpenShift
       # * value: String - environment variable value
       #
       # RETURNS:
-      # * MCollective result string: STDOUT from a command.
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
       # * calls oo-env-var-add on the node
-      # * Should be a method on Gear?
       #
       def add_env_var(gear, key, value)
         args = build_base_gear_args(gear)
@@ -528,7 +524,7 @@ module OpenShift
       # * key: String - environment variable name
       #
       # RETURNS:
-      # * MCollective result string: STDOUT from a command.
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
@@ -551,7 +547,7 @@ module OpenShift
       # * token: String - a broker auth key
       #
       # RETURNS:
-      # * mcollective parsed result string (stdout)
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
@@ -573,7 +569,7 @@ module OpenShift
       # * gear: a Gear object
       #
       # RETURNS:
-      # * mcollective parsed result string (stdout)
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
@@ -593,7 +589,7 @@ module OpenShift
       # * gear: Gear Object
       #
       # RETURNS:
-      # * mcollective result string (stdout)
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
@@ -688,7 +684,7 @@ module OpenShift
       # * calls rpc_get_fact_direct
       #
       def get_ip_address
-        rpc_get_fact_direct('ipaddress')
+        rpc_get_fact_direct('ipaddress_eth0')
       end
 
       # <<accessor>>
@@ -773,7 +769,7 @@ module OpenShift
       # * cart: string representing cartridge name
       #
       # RETURNS:
-      # * Array [ResultIO, String]
+      # * ResultIO
       #
       # RAISES:
       # * Exception
@@ -817,7 +813,7 @@ module OpenShift
       # * template_git_url: a url of a git repo containing a cart overlay
       #
       # RETURNS
-      # ResultIO: the result of running post-configure on the cartridge
+      # * ResultIO
       #
       def post_configure_component(gear, component, template_git_url=nil)
         result_io = ResultIO.new
@@ -848,7 +844,7 @@ module OpenShift
       # * artifact_url: the url of the artifacts to deploy
       #
       # RETURNS
-      # ResultIO: the result of running post-configure on the cartridge
+      # * ResultIO
       #
       def deploy(gear, hot_deploy=false, force_clean_build=false, ref=nil, artifact_url=nil)
         result_io = ResultIO.new
@@ -857,8 +853,8 @@ module OpenShift
 
         args['--with-hot-deploy'] = hot_deploy
         args['--with-force-clean-build'] = force_clean_build
-        args['--with-ref'] = ref
-        args['--with-artifact-url'] = artifact_url
+        args['--with-ref'] = ref if ref.present?
+        args['--with-artifact-url'] = artifact_url if artifact_url.present?
 
         result_io = run_cartridge_command(@@C_CONTROLLER, gear, "deploy", args)
         return result_io
@@ -872,7 +868,7 @@ module OpenShift
       # * deployment_id: a deployment id
       #
       # RETURNS
-      # ResultIO: the result of running post-configure on the cartridge
+      # * ResultIO
       #
       def activate(gear, deployment_id)
         result_io = ResultIO.new
@@ -893,10 +889,7 @@ module OpenShift
       # * component: String: a component name
       #
       # RETURNS:
-      # * ResultIO? String?
-      #
-      # NOTES
-      # * method on gear?
+      # * ResultIO
       #
       def remove_component(gear, component)
         app = gear.application
@@ -910,7 +903,7 @@ module OpenShift
         begin
           resultIO = run_cartridge_command(cart, gear, 'deconfigure', args)
         rescue OpenShift::NodeException => e
-          if has_app_cartridge?(app.uuid, gear.uuid, cart)
+          if has_app_cartridge?(app.uuid, gear.uuid, component.cartridge.send(:short_name))
             raise
           else
             Rails.logger.debug "DEBUG: Cartridge '#{cart}' not found on within application '#{app.name}/#{gear.uuid}'.  Continuing with deconfigure."
@@ -927,12 +920,11 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * a ResultIO of undetermined state
+      # * ResultIO
       #
       # NOTES:
       # * uses run_cartridge_command
       # * uses start_component
-      # * should be a method on Gear?
       #
       def start(gear, component)
         args = build_base_gear_args(gear)
@@ -956,13 +948,12 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * a ResultIO of undetermined state
+      # * ResultIO
       #
       # NOTES:
       # * uses run_cartridge_command
       # * uses stop_component
       # * uses start_component
-      # * should be a method on Gear?
       #
       def stop(gear, component)
         args = build_base_gear_args(gear)
@@ -983,17 +974,16 @@ module OpenShift
       #
       # INPUTS:
       # * gear: Gear object
-      # * cart: Cartridge object
       #
       # RETURNS:
-      # * result string from STDOUT
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
       # * calls force-stop
       # * method on Node?
       #
-      def force_stop(gear, cart)
+      def force_stop(gear)
         args = build_base_gear_args(gear)
         result = execute_direct(@@C_CONTROLLER, 'force-stop', args)
         parse_result(result)
@@ -1013,12 +1003,11 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * a ResultIO of undefined content
+      # * ResultIO
       #
       # NOTES:
       # * uses run_cartridge_command
       # * uses restart_component
-      # * method on Gear?
       #
       def restart(gear, component)
         args = build_base_gear_args(gear)
@@ -1045,12 +1034,11 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * a ResultIO of undefined content
+      # * ResultIO
       #
       # NOTES:
       # * uses run_cartridge_command
       # * uses restart_component
-      # * method on Gear?
       #
       def reload(gear, component)
         args = build_base_gear_args(gear)
@@ -1074,7 +1062,7 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * A ResultIO object of undetermined content
+      # * ResultIO
       #
       # NOTES:
       # * method on gear or cartridge?
@@ -1096,7 +1084,7 @@ module OpenShift
       # * gear: a Gear object
       #
       # RETURNS:
-      # * String: stdout from a command
+      # * ResultIO
       #
       # NOTES
       # * calls the 'tidy' hook on a Gear
@@ -1121,7 +1109,7 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * a ResultIO of undetermined content
+      # * ResultIO
       #
       # NOTES:
       # * calls run_cartridge_command
@@ -1149,7 +1137,7 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * a ResultIO of undetermined content
+      # * ResultIO
       #
       # NOTES:
       # * calls run_cartridge_command
@@ -1189,7 +1177,7 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * a ResultIO of undetermined content
+      # * ResultIO
       #
       # NOTES:
       # * calls run_cartridge_command
@@ -1212,7 +1200,7 @@ module OpenShift
       # * cart: a Cartridge object
       #
       # RETURNS:
-      # * a ResultIO of undetermined content
+      # * ResultIO
       #
       # NOTES:
       # * calls run_cartridge_command
@@ -1232,7 +1220,7 @@ module OpenShift
       # * server_alias: String - a new FQDN for the gear
       #
       # RETURNS:
-      # * String: stdout from a command
+      # * ResultIO
       #
       # NOTES:
       # * calls execute_direct
@@ -1254,7 +1242,7 @@ module OpenShift
       # * server_alias: String - a new FQDN for the gear
       #
       # RETURNS:
-      # * String: stdout from a command
+      # * ResultIO
       #
       # NOTES:
       # * calls execute_direct
@@ -1276,7 +1264,7 @@ module OpenShift
       # * server_aliases: Array - a list of FQDN for the gear
       #
       # RETURNS:
-      # * String: stdout from a command
+      # * ResultIO
       #
       # NOTES:
       # * calls execute_direct
@@ -1297,7 +1285,7 @@ module OpenShift
       # * server_aliases: Array - a list of FQDN for the gear
       #
       # RETURNS:
-      # * String: stdout from a command
+      # * ResultIO
       #
       # NOTES:
       # * calls execute_direct
@@ -1318,7 +1306,7 @@ module OpenShift
       # * gears_ssh_endpoint: list of ssh gear endpoints
       #
       # RETURNS:
-      # * String: stdout from a command
+      # * ResultIO
       #
       # NOTES:
       # * calls execute_direct
@@ -1341,7 +1329,7 @@ module OpenShift
       # * gears_ssh_endpoint: list of ssh gear endpoints
       #
       # RETURNS:
-      # * String: stdout from a command
+      # * ResultIO
       #
       # NOTES:
       # * calls execute_direct
@@ -1363,7 +1351,7 @@ module OpenShift
       # * env_var_names: List of environment variable names, e.g.:['FOO', 'BAR']
       #
       # RETURNS:
-      # * String: stdout from a command
+      # * ResultIO
       #
       # NOTES:
       # * calls execute_direct
@@ -1430,7 +1418,7 @@ module OpenShift
       # * backup: string which was previously returned by frontend_backup
       #
       # RETURNS:
-      # * String - "parsed result" of an MCollective reply
+      # * ResultIO
       #
       # NOTES:
       # * uses execute_direct
@@ -1588,7 +1576,7 @@ module OpenShift
       end
 
       #
-      # Create a job to execute a connector hook ??
+      # Create a job to execute a connector hook
       #
       # INPUTS:
       # * gear: a Gear object
@@ -1736,7 +1724,7 @@ module OpenShift
 
           proxy_args = []
           options[:proxy_gears].each do |gear|
-            proxy_args << "#{gear.uuid},#{gear.name},#{gear.application.domain_namespace},#{gear.public_hostname}"
+            proxy_args << "#{gear.uuid},#{gear.name},#{gear.application.domain_namespace},#{gear.public_hostname},#{gear.group_instance.platform}"
           end
 
           args['--proxy-gears'] = proxy_args.join(' ')
@@ -1747,7 +1735,7 @@ module OpenShift
             first_port_interface = gear.port_interfaces.select { |pi| pi.type.include? "web_framework" }.first
 
             # uuid, name, namespace, proxy_hostname, proxy port
-            web_args << "#{gear.uuid},#{gear.name},#{gear.application.domain_namespace},#{gear.public_hostname},#{first_port_interface.external_port}"
+            web_args << "#{gear.uuid},#{gear.name},#{gear.application.domain_namespace},#{gear.public_hostname},#{first_port_interface.external_port},#{gear.group_instance.platform}"
           end
 
           args['--web-gears'] = web_args.join(' ')
@@ -1786,7 +1774,7 @@ module OpenShift
       # INPUTS:
       # * gear: a Gear object
       # * destination_container: an ApplicationContainerProxy object?
-      # * state_map: ??
+      # * state_map: Hash
       #
       # RETURNS:
       # * ResultIO
@@ -1803,7 +1791,7 @@ module OpenShift
         start_order, stop_order = app.calculate_component_orders
         source_container = gear.get_proxy
         start_order.each do |cinst|
-          next unless gear_components.include? cinst 
+          next unless gear_components.include? cinst
           cart = cinst.cartridge_name
           idle, leave_stopped = state_map[cart]
           unless leave_stopped
@@ -1817,7 +1805,14 @@ module OpenShift
         log_debug "DEBUG: Fixing DNS and mongo for gear '#{gear.name}' after move"
         log_debug "DEBUG: Changing server identity of '#{gear.name}' from '#{source_container.id}' to '#{destination_container.id}'"
         gear.server_identity = destination_container.id
+        # Persist server identity for gear in mongo
+        res = Application.where({"_id" => app.id, "gears.uuid" => gear.uuid}).update({"$set" => {"gears.$.server_identity" => gear.server_identity}})
+        raise OpenShift::OOException.new("Could not set gear server_identity to #{gear.server_identity}") if res.nil? or !res["updatedExisting"]
+
         gear.group_instance.gear_size = destination_container.get_node_profile
+        # Persist gear size for current group instance in mongo
+        res = Application.where({"_id" => app.id, "group_instances._id" => gear.group_instance.id}).update({"$set" => {"group_instances.$.gear_size" => gear.group_instance.gear_size}})
+        raise OpenShift::OOException.new("Could not set group instance gear_size to #{gear.group_instance.gear_size}") if res.nil? or !res["updatedExisting"]
         begin
           dns = OpenShift::DnsService.instance
           public_hostname = destination_container.get_public_hostname
@@ -1834,7 +1829,7 @@ module OpenShift
       #
       # INPUTS:
       # * gear: A Gear object
-      # * state_map: ??
+      # * state_map: Hash
       #
       # RETURNS:
       # * a ResultIO object
@@ -1853,8 +1848,9 @@ module OpenShift
 
         app.update_proxy_status(action: :disable, gear_uuid: gear.uuid) if app.scalable
 
+        do_force_stop = false
         stop_order.each do |cinst|
-          next unless gear_comps.include? cinst 
+          next unless gear_comps.include? cinst
           cart = cinst.cartridge_name
           idle, leave_stopped = state_map[cart]
           # stop the cartridge if it needs to
@@ -1870,12 +1866,13 @@ module OpenShift
                 raise e
               end
             end
-            if cinst.cartridge.is_web_framework?
-              log_debug "DEBUG: Force stopping existing app cartridge '#{cart}' before moving"
-              do_with_retry('force-stop') do
-                reply.append source_container.force_stop(gear, cinst)
-              end
-            end
+            do_force_stop = true if cinst.cartridge.is_web_framework?
+          end
+        end
+        if do_force_stop
+          log_debug "DEBUG: Force stopping existing app before moving"
+          do_with_retry('force-stop') do
+            reply.append source_container.force_stop(gear)
           end
         end
         reply
@@ -1907,8 +1904,10 @@ module OpenShift
       #
       def move_gear_secure(gear, destination_container, destination_district_uuid, change_district, node_profile)
         app = gear.application
-        Application.run_in_application_lock(app) do
-          move_gear(gear, destination_container, destination_district_uuid, change_district, node_profile)
+        Lock.run_in_app_lock(app) do
+          # run_in_app_lock() will reload the app object and any references to its fields need to be recomputed
+          current_gear = app.gears.select {|g| g.uuid == gear.uuid }.first
+          move_gear(current_gear, destination_container, destination_district_uuid, change_district, node_profile)
         end
       end
 
@@ -1917,21 +1916,25 @@ module OpenShift
         reply = ResultIO.new
         state_map = {}
 
+        unless gear.uid
+          gear.uid = get_gear_uid(gear.uuid)
+          raise OpenShift::OOException.new("Could not fetch gear uid for gear #{gear.uuid}, app #{app.name}") if gear.uid == -1
+          res = Application.where({"_id" => app.id, "gears.uuid" => gear.uuid}).update({"$set" => {"gears.$.uid" => gear.uid}})
+          raise OpenShift::OOException.new("Could not set gear uid to #{gear.uid}") if res.nil? or !res["updatedExisting"]
+        end
+
         # resolve destination_container according to district
         destination_container, destination_district_uuid, district_changed = resolve_destination(gear, destination_container, destination_district_uuid, change_district, node_profile)
 
         source_container = gear.get_proxy
-
         if source_container.id == destination_container.id
           log_debug "Cannot move a gear within the same node. The source container and destination container are the same."
           raise OpenShift::UserException.new("Error moving gear. Destination container same as source container.", 1)
         end
 
-        # Only allow gear move between districted nodes
-        # Move from districted to non-districted nodes and vice versa not allowed: gear uids on non-districted nodes may not be in the range of uids supported by the district
-        # Move between non-districted nodes not allowed:: gear uids are not set in mongo and we can not guarantee same uid for both source and destination
-        if [source_container.get_district_uuid, destination_container.get_district_uuid].include?('NONE')
-          raise OpenShift::UserException.new("Error moving gear. Move gear only allowed between districted nodes.")
+        # Move from districted/non-districted to non-districted nodes not allowed: we can not guarantee source uid on the destination
+        if destination_container.get_district_uuid == 'NONE'
+          raise OpenShift::UserException.new("Error moving gear. Move gear only allowed from non-districted/districted node to districted node.")
         end
 
         destination_node_profile = destination_container.get_node_profile
@@ -1984,7 +1987,7 @@ module OpenShift
             reply.append move_gear_post(gear, destination_container, state_map)
             # app.elaborate_descriptor
 
-            # if app has multiple proxy gears and if this gear resides on a node 
+            # if app has multiple proxy gears and if this gear resides on a node
             # where another proxy gear is living, then we need to reconnect the frontend of the other gear
             # because this gear may have overridden the aliases/app-dns
             if app.scalable and app.ha and gear.component_instances.any? { |ci| ci.cartridge.is_web_proxy? }
@@ -2016,18 +2019,22 @@ module OpenShift
           rescue Exception => e
             # if the gear server_identity was updated, revert it back along with the dns
             if gear.server_identity == destination_container.id
-              gear.set :server_identity, source_container.id
+              gear.server_identity = source_container.id
+              res = Application.where({"_id" => app.id, "gears.uuid" => gear.uuid}).update({"$set" => {"gears.$.server_identity" => gear.server_identity}})
+              raise OpenShift::OOException.new("Could not set gear server_identity to #{gear.server_identity}") if res.nil? or !res["updatedExisting"]
               begin
                 dns = OpenShift::DnsService.instance
                 public_hostname = source_container.get_public_hostname
                 dns.modify_application(gear.name, app.domain_namespace, public_hostname)
                 dns.publish
               ensure
-                dns.close
+                dns.close if dns
               end
             end
 
             gear.group_instance.gear_size = source_container.get_node_profile
+            res = Application.where({"_id" => app.id, "group_instances._id" => gear.group_instance.id}).update({"$set" => {"group_instances.$.gear_size" => gear.group_instance.gear_size}})
+            raise OpenShift::OOException.new("Could not set group instance gear_size to #{gear.group_instance.gear_size}") if res.nil? or !res["updatedExisting"]
             # destroy destination
             log_debug "DEBUG: Moving failed.  Rolling back gear '#{gear.name}' in '#{app.name}' with delete on '#{destination_container.id}'"
             reply.append destination_container.destroy(gear, !district_changed, nil, true)
@@ -2067,12 +2074,12 @@ module OpenShift
       #
       # INPUTS:
       # * gear: a Gear object
-      # * source_container: ??
-      # * destination_container ??
+      # * source_container: ApplicationContainerProxy
+      # * destination_container ApplicationContainerProxy
       # * district_changed: boolean
       #
       # RETURNS:
-      # * a ResultIO object
+      # * ResultIO
       #
       # CATCHES:
       # * Exception
@@ -2097,7 +2104,7 @@ module OpenShift
       #
       # INPUTS:
       # * gear: a Gear object
-      # * destination_container: ??
+      # * destination_container: ApplicationContainerProxy
       # * destination_district_uuid: String
       # * change_district: Boolean
       # * node_profile: String
@@ -2109,7 +2116,7 @@ module OpenShift
       # * OpenShift::UserException
       #
       # NOTES:
-      # * uses MCollectiveApplicationContainerProxy.find_all_available_impl
+      # * uses ApplicationContainerProxy.find_available
       #
       def resolve_destination(gear, destination_container, destination_district_uuid, change_district, node_profile)
         gear_exists_in_district = false
@@ -2138,7 +2145,9 @@ module OpenShift
           least_preferred_servers = [source_container.id]
           opts = { :node_profile => destination_gear_size, :district_uuid => destination_district_uuid,
                    :gear => gear, :gear_exists_in_district => gear_exists_in_district, :required_uid => required_uid }
-          destination_container = MCollectiveApplicationContainerProxy.find_all_available_impl(opts)
+
+          # the ApplicationContainerProxy method is used so that the node selector plugin can be invoked
+          destination_container = ApplicationContainerProxy.find_available(opts)
           log_debug "DEBUG: Destination container: #{destination_container.id}"
           destination_district_uuid = destination_container.get_district_uuid
         else
@@ -2160,7 +2169,7 @@ module OpenShift
         dest_server = District.find_server(destination_container.id)
         if source_server && dest_server && (source_server.region_id != dest_server.region_id)
           raise OpenShift::UserException.new("Error moving gear. Old and new servers must belong to the same region, source region: #{source_server.region_name} destination region: #{dest_server.region_name}")
-        end 
+        end
 
         return [destination_container, destination_district_uuid, district_changed]
       end
@@ -2321,8 +2330,8 @@ module OpenShift
       # If a server is supplied, only execute for that server.
       #
       # INPUTS:
-      # * agent: ??
-      # * servers: String|Array
+      # * agent: String
+      # * servers: String
       # * force_rediscovery: Boolean
       # * options: Hash
       #
@@ -2337,27 +2346,21 @@ module OpenShift
       # * uses MCollective::RPC::Client
       # * THIS IS THE MEAT!
       #
-      def self.rpc_exec(agent, servers=nil, force_rediscovery=false, options=rpc_options)
-
-        if servers
-          servers = Array(servers)
-        else
-          servers = []
-        end
+      def self.rpc_exec(agent, server, force_rediscovery=false, options=rpc_options)
 
         # Setup the rpc client
         rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client(agent, options)
 
-        if !servers.empty?
-          Rails.logger.debug("DEBUG: rpc_exec: Filtering rpc_exec to servers #{servers.pretty_inspect}")
-          rpc_client.discover :nodes => servers
-        end
+        #if !servers.empty?
+        #  Rails.logger.debug("DEBUG: rpc_exec: Filtering rpc_exec to servers #{servers.pretty_inspect}")
+        #  rpc_client.discover :nodes => servers
+        #end
 
         # Filter to the specified server
-        #if server
-        #  Rails.logger.debug("DEBUG: rpc_exec: Filtering rpc_exec to server #{server}")
-        #  rpc_client.identity_filter(server)
-        #end
+        if server
+          Rails.logger.debug("DEBUG: rpc_exec: Filtering rpc_exec to server #{server}")
+          rpc_client.identity_filter(server)
+        end
 
         if force_rediscovery
           rpc_client.reset
@@ -2386,7 +2389,7 @@ module OpenShift
       # * max_uid: Integer
       #
       # RETURNS:
-      # * ResultIO?
+      # * ResultIO
       #
       # NOTES:
       # * uses MCollective::RPC::Client
@@ -2420,7 +2423,7 @@ module OpenShift
       # * max_uid: Integer
       #
       # RETURNS:
-      # * ResultIO?
+      # * ResultIO
       #
       # NOTES:
       # * uses MCollective::RPC::Client
@@ -2472,9 +2475,6 @@ module OpenShift
       # * action: Block: a code block or method with no arguments
       # * num_tries: Integer
       #
-      # RETURNS:
-      # * unknown: the result of the action
-      #
       # RAISES:
       # * Exception
       #
@@ -2508,10 +2508,7 @@ module OpenShift
       # * component: String: a component name
       #
       # RETURNS:
-      # * ResultIO?
-      #
-      # NOTES
-      # * method on gear?
+      # * ResultIO
       #
       def start_component(gear, component)
         args = build_base_gear_args(gear)
@@ -2529,10 +2526,7 @@ module OpenShift
       # * component: String: a component name
       #
       # RETURNS:
-      # * ResultIO?
-      #
-      # NOTES
-      # * method on gear?
+      # * ResultIO
       #
       def stop_component(gear, component)
         args = build_base_gear_args(gear)
@@ -2550,10 +2544,7 @@ module OpenShift
       # * component: String: a component name
       #
       # RETURNS:
-      # * ResultIO?
-      #
-      # NOTES
-      # * method on gear?
+      # * ResultIO
       #
       def restart_component(gear, component)
         args = build_base_gear_args(gear)
@@ -2571,10 +2562,7 @@ module OpenShift
       # * component: String: a component name
       #
       # RETURNS:
-      # * ResultIO?
-      #
-      # NOTES
-      # * method on gear?
+      # * ResultIO
       #
       def reload_component(gear, component)
         args = build_base_gear_args(gear)
@@ -2592,10 +2580,7 @@ module OpenShift
       # * component: String: a component name
       #
       # RETURNS:
-      # * ResultIO?
-      #
-      # NOTES
-      # * method on gear?
+      # * ResultIO
       #
       def component_status(gear, component)
         args = build_base_gear_args(gear)
@@ -2800,6 +2785,29 @@ module OpenShift
         end
       end
 
+      # Returns the integer uid as represented in the node (of the given gear's uuid)
+      #
+      # INPUTS:
+      # * gear_uuid: String
+      #
+      # RETURNS:
+      # * Integer
+      #
+      # NOTES:
+      # * uses rpc_exec
+      #
+      def get_gear_uid(gear_uuid = nil)
+        # a non-numeric string is converted to 0 with to_i (which is the uid for root)
+        return -1 if gear_uuid.nil? 
+        MCollectiveApplicationContainerProxy.rpc_exec('openshift', @id) do |client|
+          client.get_gear_uid(:gear_uuid => gear_uuid) do |response|
+            output = response[:body][:data][:output]
+            return output
+          end
+        end
+        return -1
+      end
+
       #
       # Returns whether this server has already reserved the specified uid as a uid or gid
       #
@@ -2852,7 +2860,7 @@ module OpenShift
       # * framework:
       # * gear: a Gear object
       # * command: the hook command to run on the node?
-      # * arg: ??
+      # * arguments: Hash
       # * allow_move: Boolean
       #
       # RETURNS:
@@ -2912,20 +2920,20 @@ module OpenShift
       #
       def self.known_server_identities(force_rediscovery=false, rpc_opts=nil)
         server_identities = nil
-        server_identities = Rails.cache.read('known_server_identities') unless force_rediscovery
+        #server_identities = Rails.cache.read('known_server_identities') unless force_rediscovery
         unless server_identities
           server_identities = []
-          rpc_get_fact('active_capacity', nil, true, force_rediscovery, nil, rpc_opts) do |server, capacity|
+          rpc_get_fact('active_capacity', nil, force_rediscovery, nil, rpc_opts) do |server, capacity|
             #Rails.logger.debug "Next server: #{server} active capacity: #{capacity}"
             server_identities << server
           end
-          Rails.cache.write('known_server_identities', server_identities, {:expires_in => 1.hour}) unless server_identities.empty?
+          #Rails.cache.write('known_server_identities', server_identities, {:expires_in => 1.hour}) unless server_identities.empty?
         end
         server_identities
       end
 
       #
-      # ???
+      # Returns available servers
       #
       # INPUTS:
       # * node_profile: String identifier for a set of node characteristics
@@ -2951,6 +2959,7 @@ module OpenShift
         gear_exists_in_district = false
 
         node_profile = opts[:node_profile]
+        platform = opts[:platform]
         district_uuid = opts[:disrict_uuid]
         least_preferred_servers = opts[:least_preferred_servers]
         restricted_servers = opts[:restricted_servers]
@@ -2989,7 +2998,10 @@ module OpenShift
         # the nodes within a district with a lot of space.
         additional_filters = [{:fact => "active_capacity",
                                :value => '100',
-                               :operator => "<"}]
+                               :operator => "<"},
+                              {:fact => "kernel",
+                               :value => "(?i:#{platform})",
+                               :operator => "=~"}]
 
         if require_specific_district || require_district
           additional_filters.push({:fact => "district_active",
@@ -3103,7 +3115,7 @@ module OpenShift
 
               if least_preferred_zone_ids.present?
                 available_zone_ids = zones_consumed_capacity.keys
-                # Consider least preferred zones only when we have no available zone that's not in least preferred zones. 
+                # Consider least preferred zones only when we have no available zone that's not in least preferred zones.
                 unless (available_zone_ids - least_preferred_zone_ids).empty?
                   # Remove least preferred zones from the list, ensuring there is at least one server remaining
                   server_infos.delete_if { |server_info| (server_infos.length > 1) && least_preferred_zone_ids.include?(server_info.zone_id) }
@@ -3114,7 +3126,7 @@ module OpenShift
               # Distribute zones evenly, pick zones that are least consumed/have max available capacity
               min_consumed_capacity = zones_consumed_capacity.values.min
               preferred_zones = zones_consumed_capacity.select { |zone_id, capacity| capacity <= min_consumed_capacity }.keys
- 
+
               # Remove the servers from the list that does not belong to preferred zones
               server_infos.delete_if { |server_info| (server_infos.length > 1) && !preferred_zones.include?(server_info.zone_id) }
             end
@@ -3122,30 +3134,6 @@ module OpenShift
 
           # Remove the least preferred servers from the list, ensuring there is at least one server remaining
           server_infos.delete_if { |server_info| (server_infos.length > 1) && least_preferred_servers.include?(server_info.name) } if least_preferred_servers.present?
-
-          # Remove any non districted nodes if you prefer districts
-          if prefer_district && !require_district && !districts.empty?
-            has_districted_node = false
-            server_infos.each do |server_info|
-              if server_info.district_id
-                has_districted_node = true
-                break
-              end
-            end
-            server_infos.delete_if { |server_info| !server_info.district_id } if has_districted_node
-          end
-
-          # Prefer zone nodes over non zone nodes when zone is not requested
-          unless require_zone
-            has_zone_node = false
-            server_infos.each do |server_info|
-              if server_info.zone_id
-                has_zone_node = true
-                break
-              end
-            end
-            server_infos.delete_if { |server_info| !server_info.zone_id } if has_zone_node
-          end
         end
 
         return server_infos
@@ -3158,7 +3146,7 @@ module OpenShift
       # * node_profile: Object?
       #
       # RETURNS:
-      # * String: server name?
+      # * String: server_identity
       #
       # RAISES:
       # * OpenShift::NodeUnavailableException
@@ -3167,9 +3155,13 @@ module OpenShift
       # * Query facters from every node and filter on server side
       # * uses MCollective::RPC::Client
       #
-      def self.rpc_find_one(node_profile=nil)
+      def self.rpc_find_one(node_profile=nil, platform='linux')
         current_server = nil
         additional_filters = []
+
+        additional_filters.push({:fact => "kernel",
+                                 :value => "(?i:#{platform})",
+                                 :operator => "=~"})
 
         if Rails.configuration.msg_broker[:node_profile_enabled]
           if node_profile
@@ -3183,9 +3175,9 @@ module OpenShift
         options[:filter]['fact'] = options[:filter]['fact'] + additional_filters
         options[:mcollective_limit_targets] = "1"
 
-        rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('rpcutil', options)
+        rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('openshift', options)
         begin
-          rpc_client.get_fact(:fact => 'public_hostname') do |response|
+          rpc_client.get_facts(:facts => ['public_hostname']) do |response|
             raise OpenShift::NodeUnavailableException.new("No nodes available", 140) unless Integer(response[:body][:statuscode]) == 0
             current_server = response[:senderid]
           end
@@ -3196,6 +3188,26 @@ module OpenShift
       end
 
       def self.select_best_fit_node_impl(server_infos)
+        # Remove any non-districted nodes when districted nodes are available
+        has_districted_node = false
+        server_infos.each do |server_info|
+          if server_info.district_id
+            has_districted_node = true
+            break
+          end
+        end
+        server_infos.delete_if { |server_info| !server_info.district_id } if has_districted_node
+
+        # Remove any non-zone nodes when zone nodes are available
+        has_zone_node = false
+        server_infos.each do |server_info|
+          if server_info.zone_id
+            has_zone_node = true
+            break
+          end
+        end
+        server_infos.delete_if { |server_info| !server_info.zone_id } if has_zone_node
+
         # Sort by node active capacity (consumed capacity) and take the best half
         server_infos = server_infos.sort_by { |server_info| server_info.node_consumed_capacity }
         # consider the top half and no less than min(4, the actual number of available)
@@ -3204,7 +3216,7 @@ module OpenShift
         # Sort by district available capacity and take the best half
         server_infos = server_infos.sort_by { |server_info| (server_info.district_available_capacity ? server_info.district_available_capacity : 1) }
         # consider the top half and no less than min(4, the actual number of available)
-        server_infos = server_infos.last([4, (server_infos.length / 2).to_i].max) 
+        server_infos = server_infos.last([4, (server_infos.length / 2).to_i].max)
 
         server_info = nil
         unless server_infos.empty?
@@ -3293,27 +3305,30 @@ module OpenShift
       # NOTES:
       # * uses rpc_exec
       #
-
       def self.rpc_get_fact(fact, servers=nil, force_rediscovery=false, additional_filters=nil, custom_rpc_opts=nil)
-        result = nil
+        fact_value = nil
         options = custom_rpc_opts ? custom_rpc_opts : MCollectiveApplicationContainerProxy.rpc_options
         options[:filter]['fact'] = options[:filter]['fact'] + additional_filters if additional_filters
         options[:timeout] = Rails.configuration.msg_broker[:fact_timeout]
 
         Rails.logger.debug("DEBUG: rpc_get_fact: fact=#{fact}")
-        rpc_exec('rpcutil', servers, force_rediscovery, options) do |client|
+
+        rpc_exec('openshift', servers, force_rediscovery, options) do |client|
           begin
             # in some cases, the get_fact mcollective call gets stuck and never returns
-            # to handle these situations, we are using the ruby Timeout moddule as a safety net
+            # to handle these situations, we are using the ruby Timeout module as a safety net
             # and setting the timer duration as a reasonable multiple of the mcollective timeout value
             failsafe_timeout = Rails.configuration.msg_broker[:fact_timeout] * 3
             Timeout::timeout(failsafe_timeout) do
-              client.get_fact(:fact => fact) do |response|
+              client.get_facts(:facts => Array(fact)) do |response|
                 next unless Integer(response[:body][:statuscode]) == 0
 
+                fact_map = response[:body][:data][:output]
+                fact_value = fact_map[fact.to_sym]
+                sender = response[:senderid]
+
                 # Yield the sender and the value to the block
-                result = rvalue(response)
-                yield response[:senderid], result if result
+                yield sender, fact_value if fact_value
               end
             end
           rescue Timeout::Error
@@ -3321,13 +3336,16 @@ module OpenShift
           end
         end
 
-        result
+        fact_value
       end
 
       #
       # Given a known fact and node, get a single fact directly.
       # This is significantly faster then the get_facts method
       # If multiple nodes of the same name exist, it will pick just one
+      #
+      # Deprecated
+      # This method is deprecated - use rpc_get_facts_direct instead
       #
       # INPUTS:
       # * fact: String
@@ -3343,22 +3361,8 @@ module OpenShift
       # * uses MCollective::RPC::Client
       #
       def rpc_get_fact_direct(fact)
-          options = MCollectiveApplicationContainerProxy.rpc_options
-          options[:timeout] = Rails.configuration.msg_broker[:fact_timeout]
-
-          rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('rpcutil', options)
-          begin
-            result = rpc_client.custom_request('get_fact', {:fact => fact}, @id, {'identity' => @id})[0]
-            if (result && (defined? result.results) && result.results.has_key?(:data))
-              value = result.results[:data][:value]
-            else
-              raise OpenShift::NodeException.new("Node execution failure (error getting fact).", 143)
-            end
-          ensure
-            rpc_client.disconnect
-          end
-
-          return value
+        fact_map = rpc_get_facts_direct(Array(fact))
+        fact_map[fact.to_sym]
       end
 
       #
@@ -3380,22 +3384,22 @@ module OpenShift
       # * uses MCollective::RPC::Client
       #
       def rpc_get_facts_direct(facts)
-          options = MCollectiveApplicationContainerProxy.rpc_options
-          options[:timeout] = Rails.configuration.msg_broker[:fact_timeout]
+        options = MCollectiveApplicationContainerProxy.rpc_options
+        options[:timeout] = Rails.configuration.msg_broker[:fact_timeout]
 
-          rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('openshift', options)
-          begin
-            result = rpc_client.custom_request('get_facts', {:facts => facts}, @id, {'identity' => @id})[0]
-            if (result && (defined? result.results) && result.results.has_key?(:data))
-              value = result.results[:data][:output]
-            else
-              raise OpenShift::NodeException.new("Node execution failure (error getting facts).", 143)
-            end
-          ensure
-            rpc_client.disconnect
+        rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('openshift', options)
+        begin
+          result = rpc_client.custom_request('get_facts', {:facts => facts}, @id, {'identity' => @id})[0]
+          if (result && (defined? result.results) && result.results.has_key?(:data))
+            value = result.results[:data][:output]
+          else
+            raise OpenShift::NodeException.new("Node execution failure (error getting facts).", 143)
           end
+        ensure
+          rpc_client.disconnect
+        end
 
-          return value
+        return value
       end
 
       #
@@ -3437,7 +3441,7 @@ module OpenShift
       # to NodeException.
       #
       # INPUTS:
-      # * agent: String (??)
+      # * agent: String
       # * options: Hash
       #
       # RETURNS:
@@ -3453,12 +3457,12 @@ module OpenShift
         flags = { :options => options, :exit_on_failure => false }
         begin
           rpc_client = rpcclient(agent, flags)
+          return rpc_client
         rescue Exception => e
           Rails.logger.error "Exception raised by rpcclient:#{e.message}"
           Rails.logger.error (e.backtrace)
-          raise OpenShift::NodeException.new(e)
+          raise OpenShift::NodeUnavailableException.new(e)
         end
-        return rpc_client
       end
 
       #
@@ -3520,7 +3524,7 @@ module OpenShift
       # NOTES:
       # * should be class method on Node? or Broker?
       # * uses MCollective::RPC::Client rpc_exec
-      # * uses MCollective::RPC::Client.missing_method ??
+      # * uses MCollective::RPC::Client.missing_method
       #
       def self.get_all_active_gears_impl
         active_gears_map = {}
@@ -3571,10 +3575,7 @@ module OpenShift
       # Execute a set of operations on a node in parallel
       #
       # INPUTS:
-      # * handle: Hash ???
-      #
-      # RETURNS:
-      # * ???
+      # * handle: Hash
       #
       # NOTES:
       # * uses MCollectiveApplicationContainerProxy.sanitize_result
@@ -3591,9 +3592,9 @@ module OpenShift
         return unless handle.present?
 
         start_time = Time.new
+        options = MCollectiveApplicationContainerProxy.rpc_options.merge(custom_options)
+        rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('openshift', options)
         begin
-          options = MCollectiveApplicationContainerProxy.rpc_options.merge(custom_options)
-          rpc_client = MCollectiveApplicationContainerProxy.get_rpc_client('openshift', options)
           identities = handle.keys
           rpc_client.custom_request('execute_parallel', mc_args, identities, {'identity' => identities}).each { |mcoll_reply|
             if mcoll_reply.results[:statuscode] == 0

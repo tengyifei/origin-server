@@ -15,10 +15,12 @@ class Domain < RestApi::Base
     integer :application_count
     integer :available_gears
     integer :max_storage_per_gear
+    boolean :private_ssl_certificates
   end
 
   has_many :allowed_gear_sizes, :class_name => String
   has_one :gear_counts, :class_name => as_indifferent_hash
+  has_one :usage_rates, :class_name => as_indifferent_hash
 
   has_members :as => Domain::Member
 
@@ -56,20 +58,25 @@ class Domain < RestApi::Base
     { :domain_id => id }
   end
 
-  def capabilities
-    # TODO: replace with a real class
-    consumed_gears = gear_counts.values.sum
+  class Capabilities < OpenStruct
+  end
 
-    OpenStruct.new({
+  def capabilities
+    Domain::Capabilities.new({
       :allowed_gear_sizes => allowed_gear_sizes,
-      :max_gears => available_gears + consumed_gears,
-      :consumed_gears => consumed_gears,
+      :max_gears => nil,
+      :consumed_gears => nil,
       :gears_free => available_gears,
       :gears_free? => available_gears > 0,
-      :max_storage_per_gear => max_storage_per_gear
-    })
+      :max_storage_per_gear => max_storage_per_gear,
+      :private_ssl_certificates => !!private_ssl_certificates
+    }).tap do |c|
+      if !gear_counts.nil?
+        c.consumed_gears = gear_counts.values.sum
+        c.max_gears      = available_gears + c.consumed_gears
+      end
+    end
   rescue
-    # Unavailable if domain wasn't loaded with {:include => 'application_info'}
     nil
   end
 

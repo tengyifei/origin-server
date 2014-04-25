@@ -2,7 +2,7 @@
 
 Summary:       Embedded 10gen MMS agent for performance monitoring of MondoDB
 Name:          openshift-origin-cartridge-10gen-mms-agent
-Version: 1.31.0
+Version: 1.32.4
 Release:       1%{?dist}
 Group:         Applications/Internet
 License:       ASL 2.0
@@ -31,13 +31,59 @@ Provides 10gen MMS agent cartridge support. (Cartridge Format V2)
 
 %files
 %dir %{cartridgedir}
-%{cartridgedir}
+%{cartridgedir}/metadata
 %attr(0755,-,-) %{cartridgedir}/bin/
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.32.4-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Mon Apr 14 2014 Troy Dawson <tdawson@redhat.com> 1.32.3-1
+- 10gen-mms-agent version bump, due to the failed migration
+  (jhadvig@redhat.com)
+
+* Thu Apr 10 2014 Adam Miller <admiller@redhat.com> 1.32.2-1
+- Bug 1085128 - Bad grep parameter fix (jhadvig@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.32.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Merge pull request #5201 from ironcladlou/logshifter-pipes
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1085128 - Add warning message for the unsupported legacy version of the
+  mms-agent (jhadvig@redhat.com)
+- Use named pipes for logshifter redirection where appropriate
+  (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.31.6-1
+- Merge pull request #5086 from VojtechVitek/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+- cron/mongo logs does not get cleaned via rhc app-tidy (bparees@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.31.5-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.31.4-1
+- correct typo of depricated to deprecated (bparees@redhat.com)
+- Merge pull request #5025 from jhadvig/10gen_typo
+  (dmcphers+openshiftbot@redhat.com)
+- Fixing typo (jhadvig@redhat.com)
+- Fixing inconsistency with displaying 10gen cartridge status
+  (jhadvig@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.31.3-1
+- 10gen cartridge update (jhadvig@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.31.2-1
+- Remove unused teardowns (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.31.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Thu Feb 13 2014 Adam Miller <admiller@redhat.com> 1.30.5-1
 - Merge pull request #4753 from
   smarterclayton/make_configure_order_define_requires

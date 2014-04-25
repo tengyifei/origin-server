@@ -13,7 +13,7 @@ class ApplicationControllerTest < ActionController::TestCase
     @user.private_ssl_certificates = true
     @user.capabilities["gear_sizes"] = ['small', 'medium', 'large']
     @user.save
-    Lock.create_lock(@user)
+    Lock.create_lock(@user.id)
     register_user(@login, @password)
 
     @request.env['HTTP_AUTHORIZATION'] = "Basic " + Base64.encode64("#{@login}:#{@password}")
@@ -70,20 +70,36 @@ class ApplicationControllerTest < ActionController::TestCase
     assert_response :created
     assert app = assigns(:application)
     assert_equal 1, app.gears.length
-
-    get :show, {"id" => @app_name, "domain_id" => @domain.namespace, "include" => "cartridges"}
-    assert_response :success
     assert json = JSON.parse(response.body)
-    assert link = json['data']['links']['ADD_CARTRIDGE']
-    assert_equal Rails.configuration.openshift[:download_cartridges_enabled], link['optional_params'].one?{ |p| p['name'] == 'url' }
+    assert supported_api_versions = json['supported_api_versions']
+    supported_api_versions.each do |version|
+      @request.env['HTTP_ACCEPT'] = "application/json; version=#{version}"
 
-    assert_equal [@domain.namespace, @app_name, false, 1, 'small', 'https://github.com/foobar/test.git'], json['data'].values_at('domain_id', 'name', 'scalable', 'gear_count', 'gear_profile', 'initial_git_url'), json['data'].inspect
+      get :show, {"id" => @app_name, "domain_id" => @domain.namespace, "include" => "cartridges"}
+      assert_response :success
+      assert json = JSON.parse(response.body)
+      assert link = json['data']['links']['ADD_CARTRIDGE']
+      assert_equal Rails.configuration.openshift[:download_cartridges_enabled], link['optional_params'].one?{ |p| p['name'] == 'url' } if version >= 1.5
 
-    assert_equal 1, (members = json['data']['members']).length
-    assert_equal [@login, true, 'admin', nil, @user._id.to_s, 'user'], members[0].values_at('login', 'owner', 'role', 'explicit_role', 'id', 'type'), members[0].inspect
+      assert_equal [@domain.namespace, @app_name, false, 1, 'small', 'https://github.com/foobar/test.git'], json['data'].values_at('domain_id', 'name', 'scalable', 'gear_count', 'gear_profile', 'initial_git_url'), json['data'].inspect if version >= 1.5
 
-    assert_equal 1, (carts = json['data']['cartridges']).length
-    assert_equal [1, 1, 1, 1, 1, 0], carts[0].values_at('scales_from', 'scales_to', 'supported_scales_to', 'supported_scales_from', 'base_gear_storage', 'additional_gear_storage'), carts[0].inspect
+      assert_equal 1, (members = json['data']['members']).length if version >= 1.6
+      assert_equal [@login, true, 'admin', nil, @user._id.to_s, 'user'], members[0].values_at('login', 'owner', 'role', 'explicit_role', 'id', 'type'), members[0].inspect if version >= 1.6
+
+      assert_equal 1, (carts = json['data']['cartridges']).length if version >= 1.3
+      assert_equal [1, 1, 1, 1, 1, 0], carts[0].values_at('scales_from', 'scales_to', 'supported_scales_to', 'supported_scales_from', 'base_gear_storage', 'additional_gear_storage'), carts[0].inspect if version >= 1.5
+
+      Domain.any_instance.stubs(:env_vars).returns([{'key' => 'JENKINS_URL'}])
+      OpenShift::Cartridge.any_instance.stubs(:is_ci_server?).returns(true)
+      get :show, {"id" => @app_name, "domain_id" => @domain.namespace, "include" => "cartridges"}
+      assert_response :success
+
+      @request.env['HTTP_ACCEPT'] = "application/xml; version=#{version}"
+      get :show, {"id" => @app_name, "domain_id" => @domain.namespace, "include" => "cartridges"}
+      assert_response :success
+    end
+
+    @request.env['HTTP_ACCEPT'] = "application/json"
 
     get :index, {"domain_id" => @domain.namespace}
     assert_response :success
@@ -128,6 +144,8 @@ class ApplicationControllerTest < ActionController::TestCase
 
   test "app create scalable with different gear types" do
     @app_name = "app#{@random}"
+    @user.max_untracked_additional_storage = 5
+    @user.save!
 
     post :create, {"name" => @app_name, "cartridges" => [
       {"name" => php_version, "gear_size" => "medium", "scales_from" => 2, "scales_to" => 3},
@@ -498,19 +516,6 @@ class ApplicationControllerTest < ActionController::TestCase
     end
   end
 
-  test "get application in all version" do
-    @app_name = "app#{@random}"
-    post :create, {"name" => @app_name, "cartridge" => php_version, "domain_id" => @domain.namespace}
-    assert_response :created
-    assert json = JSON.parse(response.body)
-    assert supported_api_versions = json['supported_api_versions']
-    supported_api_versions.each do |version|
-      @request.env['HTTP_ACCEPT'] = "application/json; version=#{version}"
-      get :show, {"id" => @app_name, "domain_id" => @domain.namespace}
-      assert_response :ok, "Getting application for version #{version} failed"
-    end
-  end
-
   test "attempt to create an application with obsolete cartridge" do
     os = Rails.configuration.openshift
     Rails.configuration.stubs(:openshift).returns(os.merge(:allow_obsolete_cartridges => false))
@@ -553,6 +558,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cartridge 0.1
       Description: A mock cartridge for development use only.
       Version: '0.1'
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
@@ -565,6 +571,10 @@ class ApplicationControllerTest < ActionController::TestCase
     CartridgeCache.expects(:download_from_url).with("manifest://test", "cartridge").returns(<<-MANIFEST.strip_heredoc)
       ---
       Cartridge-Short-Name: MOCK
+      Source-Url: manifest://test.zip
+      Categories:
+      - mock
+      - web_framework
       MANIFEST
     messages = assert_invalid_manifest
     assert messages.one?{ |m| m['text'] =~ %r(The provided downloadable cartridge 'manifest://test' cannot be loaded.+Version is a required element) }, messages.inspect
@@ -575,6 +585,9 @@ class ApplicationControllerTest < ActionController::TestCase
       ---
       Version: '0.1'
       Cartridge-Short-Name: MOCK
+      Categories:
+      - mock
+      - web_framework
       MANIFEST
     messages = assert_invalid_manifest
     assert messages.one?{ |m| m['text'] =~ %r(The provided downloadable cartridge 'manifest://test' cannot be loaded.+Name is a required element) }, messages.inspect
@@ -587,6 +600,10 @@ class ApplicationControllerTest < ActionController::TestCase
       Version: '0.1'
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: redhat
+      Source-Url: manifest://test.zip
+      Categories:
+      - mock
+      - web_framework
       MANIFEST
     messages = assert_invalid_manifest
     assert messages.one?{ |m| m['text'] =~ %r(The provided downloadable cartridge 'manifest://test' cannot be loaded.+Name 'git' is reserved\.) }, messages.inspect
@@ -599,9 +616,27 @@ class ApplicationControllerTest < ActionController::TestCase
       Version: '0.1'
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       MANIFEST
     messages = assert_invalid_manifest
     assert messages.one?{ |m| m['text'] =~ %r(None of the specified cartridges is a web cartridge) }, messages.inspect
+  end
+
+  test "add downloadable cart without categories" do
+    CartridgeCache.expects(:download_from_url).with("manifest://test", "cartridge").returns(<<-MANIFEST.strip_heredoc)
+      ---
+      Name: mock
+      Version: '0.1'
+      Cartridge-Short-Name: MOCK
+      Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
+      MANIFEST
+
+    post :create, {"name" => "app#{@random}", "cartridge" => [php_version, {"url" => "manifest://test"}], "domain_id" => @domain.namespace}
+    assert_response :unprocessable_entity
+    assert json = JSON.parse(response.body)
+    assert messages = json['messages']
+    assert messages.one?{ |m| m['text'] =~ %r(The provided downloadable cartridge 'manifest://test' cannot be loaded: Categories is a required element) }, messages.inspect
   end
 
   test "create downloadable cart stored as cartridge type" do
@@ -611,6 +646,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Version: '0.1'
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: testcasemock
+      Source-Url: manifest://test.zip
       Categories:
       - web_framework
       MANIFEST
@@ -643,6 +679,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
       Obsolete: true
+      Source-Url: manifest://test.zip
       Categories:
       - web_framework
       MANIFEST
@@ -661,6 +698,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
       Obsolete: true
+      Source-Url: manifest://test.zip
       Categories:
       - web_framework
       MANIFEST
@@ -681,6 +719,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Version: '0.1'
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - web_framework
       Components:
@@ -703,6 +742,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Version: '0.1'
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - web_framework
       Scaling:
@@ -749,15 +789,34 @@ class ApplicationControllerTest < ActionController::TestCase
       Version: '0.1'
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Group-Overrides:
       - components:
         - web_framework
         - web_proxy
       Provides:
       - web_proxy
+      Components:
+        web_proxy:
+          Scaling:
+            Min: 1
+            Max: 1
+            Multiplier: -1
       Categories:
       - web_proxy
       MANIFEST
+
+    php_cart = CartridgeCache.find_cartridge(php_version)
+
+    mock_cart = mock
+    mock_component = mock
+    mock_cart.expects(:platform).at_least_once.with.returns('linux')
+    mock_cart.expects(:has_scalable_categories?).at_least_once.with.returns(false)
+    mock_cart.expects(:is_plugin?).at_least_once.with.returns(true)
+
+    CartridgeCache.expects(:find_cartridge).at_least_once.with('mock-mock-0.1', anything).returns(mock_cart)
+    CartridgeCache.expects(:find_cartridge).at_least_once.with(php_version, anything).returns(php_cart)
+
     @app_name = "app#{@random}"
     post :create, {"name" => @app_name, "cartridge" => [php_version, {"url" => "manifest://test"}], "domain_id" => @domain.namespace, "scale" => true}
     assert_response :success
@@ -779,11 +838,13 @@ class ApplicationControllerTest < ActionController::TestCase
       Version: '0.1'
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Provides:
       - web_proxy
       Categories:
       - web_proxy
       MANIFEST
+
     @app_name = "app#{@random}"
     post :create, {"name" => @app_name, "cartridge" => [php_version, haproxy_version, {"url" => "manifest://test"}], "domain_id" => @domain.namespace, "scale" => true}
     assert_response :unprocessable_entity
@@ -798,6 +859,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
       Obsolete: true
+      Source-Url: manifest://test.zip
       Categories:
       - web_framework
       MANIFEST
@@ -816,11 +878,14 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cart
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
       MANIFEST
     @app_name = "app#{@random}"
+    @user.max_untracked_additional_storage = 5
+    @user.save!
     post :create, {"name" => @app_name, "cartridge" => [{"url" => "manifest://test", "additional_gear_storage" => 2}], "domain_id" => @domain.namespace, "include" => "cartridges"}
     assert_response :created
 
@@ -873,6 +938,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cart
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
@@ -934,6 +1000,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cart
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: redhat
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
@@ -957,6 +1024,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cart
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
@@ -988,6 +1056,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cart
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
@@ -1011,6 +1080,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cart
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
@@ -1039,6 +1109,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cart
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
@@ -1066,6 +1137,7 @@ class ApplicationControllerTest < ActionController::TestCase
       Display-Name: Mock Cart
       Cartridge-Short-Name: MOCK
       Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
       Categories:
       - mock
       - web_framework
@@ -1086,4 +1158,90 @@ class ApplicationControllerTest < ActionController::TestCase
     assert_equal ['mock', 'web_framework'], cart.categories.sort
     assert_equal 'Mock Cart', cart.display_name
   end
+
+  test "colocation validation with independently scaling carts" do
+    CartridgeCache.expects(:download_from_url).with("manifest://test", "cartridge").returns(<<-MANIFEST.strip_heredoc)
+      ---
+      Name: mock
+      Version: '0.1'
+      Cartridge-Short-Name: MOCK
+      Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
+      Group-Overrides:
+      - components:
+        - web_framework
+        - mysql
+      Provides:
+      - mysql
+      Categories:
+      - service
+      Scaling:
+        Min: 1
+        Max: -1
+      MANIFEST
+
+    @app_name = "app#{@random}"
+    post :create, {"name" => @app_name, "cartridge" => [php_version, {"url" => "manifest://test"}], "domain_id" => @domain.namespace, "scale" => true}
+    assert_response :unprocessable_entity
+    assert json = JSON.parse(response.body)
+    assert messages = json['messages']
+    assert messages.one?{ |m| m['text'] == "Cartridges [\"mock-mock-0.1\", \"#{php_version}\"] cannot be grouped together as they scale individually" }, messages.inspect
+  end
+
+  test "colocation validation with plugin and service cart" do
+    CartridgeCache.expects(:download_from_url).with("manifest://test", "cartridge").returns(<<-MANIFEST.strip_heredoc)
+      ---
+      Name: mock
+      Version: '0.1'
+      Cartridge-Short-Name: MOCK
+      Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
+      Group-Overrides:
+      - components:
+        - web_framework
+        - myplugin
+      Provides:
+      - myplugin
+      Categories:
+      - plugin
+      - service
+      Scaling:
+        Min: 1
+        Max: -1
+      MANIFEST
+
+    @app_name = "app#{@random}"
+    post :create, {"name" => @app_name, "cartridge" => [php_version, {"url" => "manifest://test"}], "domain_id" => @domain.namespace, "scale" => true}
+    assert_response :unprocessable_entity
+    assert json = JSON.parse(response.body)
+    assert messages = json['messages']
+    assert messages.one?{ |m| m['text'] == "Cartridges [\"mock-mock-0.1\", \"#{php_version}\"] cannot be grouped together as they scale individually" }, messages.inspect
+  end
+
+  test "colocation validation with plugin only cart" do
+    CartridgeCache.expects(:download_from_url).with("manifest://test", "cartridge").returns(<<-MANIFEST.strip_heredoc)
+      ---
+      Name: mock
+      Version: '0.1'
+      Cartridge-Short-Name: MOCK
+      Cartridge-Vendor: mock
+      Source-Url: manifest://test.zip
+      Group-Overrides:
+      - components:
+        - web_framework
+        - myplugin
+      Provides:
+      - myplugin
+      Categories:
+      - plugin
+      Scaling:
+        Min: 1
+        Max: -1
+      MANIFEST
+
+    @app_name = "app#{@random}"
+    post :create, {"name" => @app_name, "cartridge" => [php_version, {"url" => "manifest://test"}], "domain_id" => @domain.namespace, "scale" => true}
+    assert_response :success
+  end
+
 end

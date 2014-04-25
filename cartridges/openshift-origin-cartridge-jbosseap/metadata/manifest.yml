@@ -9,11 +9,9 @@ Version: '6'
 License: LGPL
 License-Url: http://www.gnu.org/copyleft/lesser.txt
 Vendor: Red Hat
-Cartridge-Version: 0.0.11
+Cartridge-Version: 0.0.15
 Compatible-Versions:
-- 0.0.8
-- 0.0.9
-- 0.0.10
+- 0.0.14
 Cartridge-Vendor: redhat
 Categories:
 - service
@@ -21,6 +19,7 @@ Categories:
 - java
 - jboss
 - java_ee_6
+- xpaas
 Website: http://www.redhat.com/products/jbossenterprisemiddleware/application-platform/
 Help-Topics:
   Developer Center: https://www.openshift.com/developers
@@ -64,7 +63,7 @@ Endpoints:
     Backend: ''
     Options:
       websocket: true
-  - Frontend: "/health"
+  - Frontend: /health
     Backend: ''
     Options:
       health: true

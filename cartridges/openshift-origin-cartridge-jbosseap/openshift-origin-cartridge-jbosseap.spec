@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossEAP6.0 support
 Name:          openshift-origin-cartridge-jbosseap
-Version: 2.14.0
+Version: 2.16.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -15,6 +15,18 @@ Requires:      openshift-origin-node-util
 Requires:      lsof
 Requires:      java-1.7.0-openjdk
 Requires:      java-1.7.0-openjdk-devel
+Requires:      jbossas-appclient
+Requires:      jbossas-bundles
+Requires:      jbossas-core
+Requires:      jbossas-domain
+Requires:      jbossas-hornetq-native
+Requires:      jbossas-jbossweb-native
+Requires:      jbossas-modules-eap
+Requires:      jbossas-product-eap
+Requires:      jbossas-standalone
+Requires:      jbossas-welcome-content-eap
+Requires:      jboss-eap6-modules
+Requires:      jboss-eap6-index
 Requires:      bc
 %if 0%{?rhel}
 Requires:      maven3
@@ -73,12 +85,76 @@ cp -p %{cartridgedir}/versions/shared/modules/mysql_module.xml /etc/alternatives
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}/versions/shared/bin/
 %attr(0755,-,-) %{cartridgedir}/hooks/
-%{cartridgedir}
+%{cartridgedir}/env
+%{cartridgedir}/metadata
+%{cartridgedir}/versions
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 2.16.3-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 2.16.2-1
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 2.16.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Use named pipes for logshifter redirection where appropriate
+  (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 2.15.5-1
+- Merge pull request #5086 from VojtechVitek/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+- Use consistent log format across jboss carts (ironcladlou@gmail.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 2.15.4-1
+- Merge pull request #5041 from ironcladlou/logshifter/carts
+  (dmcphers+openshiftbot@redhat.com)
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Mon Mar 24 2014 Adam Miller <admiller@redhat.com> 2.15.3-1
+- Add messaging throughput configuration to EAP (bparees@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 2.15.2-1
+- Remove unused teardowns (dmcphers@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 2.15.1-1
+- Bug 916758 - Give better message on config failure (dmcphers@redhat.com)
+- add xpaas tag to eap cartridge (bparees@redhat.com)
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 2.14.4-1
+- These jboss packages are _not_ optional for the JBoss cartridge.
+  (bleanhar@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 2.14.3-1
+- Merge pull request #4864 from bparees/jb_cleanup
+  (dmcphers+openshiftbot@redhat.com)
+- minor cleanup of jboss config scripts (bparees@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 2.14.2-1
+- Bug 1071123 - Fix template symlink (dmcphers@redhat.com)
+- Template cleanup (dmcphers@redhat.com)
+- Merge pull request #4825 from bparees/jboss_config
+  (dmcphers+openshiftbot@redhat.com)
+- allow users to prevent overwrite of local jboss config from repository
+  (bparees@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 2.14.1-1
+- change mirror1.ops to mirror.ops, which is load balanced between servers
+  (tdawson@redhat.com)
+- add retry logic for deployment scan check (bparees@redhat.com)
+- Merge pull request #4787 from developercorey/fix_mysql_ds
+  (dmcphers+openshiftbot@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+- updatin MysqlDS to be MySQLDS to fall in line with ExampleDS and PostgreSQLDS
+  data source names (cdaley@redhat.com)
+
 * Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 2.13.4-1
 - Merge pull request #4744 from mfojtik/latest_versions
   (dmcphers+openshiftbot@redhat.com)

@@ -13,6 +13,8 @@ module ActionDispatch::Routing
       def openshift_console_routes
         id_regex = /[^\/]+/
 
+        match 'oauth/authorize' => 'oauth#authorize', :via => :get
+
         match 'help' => 'console_index#help', :via => :get, :as => 'console_help'
         match 'unauthorized' => 'console_index#unauthorized', :via => :get, :as => 'unauthorized'
         match 'server_unavailable' => 'console_index#server_unavailable', :via => :get, :as => 'server_unavailable'
@@ -63,6 +65,9 @@ module ActionDispatch::Routing
           match 'members' => 'members#update', :via => :put
           match 'leave' => 'members#leave', :via => [:get, :post]
         end
+
+        resources :teams, :id => id_regex, :only => :index, :singular_resource => true
+        
         resources :keys, :id => id_regex, :only => [:new, :create, :destroy], :singular_resource => true
 
         resources :authorizations, :id => id_regex, :except => :index, :singular_resource => true

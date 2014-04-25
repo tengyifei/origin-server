@@ -20,10 +20,10 @@ class FunctionalApi
     'nodejs-0.6'   => 'index.html',
     'nodejs-0.10'   => 'index.html',
     'perl-5.10'    => 'perl/index.pl',
-    'php-5.3'      => 'php/index.php',
-    'python-2.6'   => 'wsgi/application',
-    'python-2.7'   => 'wsgi/application',
-    'python-3.3'   => 'wsgi/application',
+    'php-5.3'      => 'index.php',
+    'python-2.6'   => 'wsgi.py',
+    'python-2.7'   => 'wsgi.py',
+    'python-3.3'   => 'wsgi.py',
     'ruby-1.8'     => 'config.ru',
     'ruby-1.9'     => 'config.ru',
     'zend-5.6'     => 'php/index.php',
@@ -186,14 +186,14 @@ EOFZ
     end
   end
 
-  def up_gears
+  def up_gears(num=5)
     logger.info "Upping gears for #{@login}"
-    logger.info `oo-admin-ctl-user -l #{@login} --setmaxgears 5`
+    logger.info `oo-broker --non-interactive oo-admin-ctl-user -l #{@login} --setmaxgears #{num}`
   end
 
   def enable_ha
     logger.info "Enabling HA for test user #{@login}"
-    logger.info `oo-admin-ctl-user -l #{@login} --allowha true`
+    logger.info `oo-broker --non-interactive oo-admin-ctl-user -l #{@login} --allowha true`
   end
 
   def make_ha(app_name)
@@ -347,7 +347,7 @@ EOFZ
         gear_name = target_gear.dns.split('-')[0]
         names = [ "gear-#{gear_name}-#{target_gear.namespace}" ]
         gear_name = proxy.dns.split('-')[0]
-        names << "gear-#{gear_name}-#{target_gear.namespace}" 
+        names << "gear-#{gear_name}-#{target_gear.namespace}"
       end
 
       proxy_status_csv.split("\n").each do |line|

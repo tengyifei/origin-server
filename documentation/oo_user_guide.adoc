@@ -280,10 +280,11 @@ Action hooks are scripts that are executed directly so can be written in Python,
 [options="header"]
 |===
 | Action Hook | Description
+| pre_build   | Executed on your CI system if available. Otherwise, executed before the build step
 | build       | Executed on your CI system if available. Otherwise, executed before the deploy step
+| prepare     | Executed just prior to a deployment ID being calculated and before the deployment is ready to use
 | deploy      | Executed after dependencies are resolved but before application has started
 | post_deploy | Executed after application has been deployed and started
-| pre_build   | Executed on your CI system if available. Otherwise, executed before the build step
 |===
 
 Note: On Windows, the execute permissions of an action hook files will be lost during
@@ -313,7 +314,6 @@ The misc directory is a location provided to the developer to store any applicat
 ==== The php directory
 The php directory is where all of the application code that the developer writes should be created. By default, two files are created in this directory:
 
-* health_check.php - A simple file to determine if the application is responding to requests
 * index.php - The OpenShift template that we saw after application creation in the web browser.
 
 === Environment Variables
@@ -464,7 +464,13 @@ To use these hooks in your application create a file in:
 <repository>/.openshift/action_hooks
 ----
 
-with the same name as the event you want to trigger. All the hooks listed below are available to application developers as well cartridge developers. The order of execution will be first the platform/cartridge script and then the application developers.
+with the same name as the event you want to trigger.
+
+NOTE: Cartridge-scoped action hooks are special in that they are sourced in into the
+same shell environment used to execute the action they surround. This allows cartridge
+hooks to modify the environment the action executes within.
+
+All the hooks listed below are available to application developers as well cartridge developers. The order of execution will be first the platform/cartridge script and then the application developers.
 
 The following is a list of all possible action hooks executed in association with a single cartridge control action. For each control action, a set of `pre` and `post` action hooks surround the control action. In the action hook names, `{Name}` refers to the `Name` cartridge manifest element.
 
@@ -536,7 +542,7 @@ firstphp stopped
 Verify that your application has been stopped with the following _curl_ command:
 
 ----
-$ curl http://firstphp-<yourdomain>.example.com/health_check.php
+$ curl http://firstphp-<yourdomain>.example.com/health
 
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
 <html><head>
@@ -797,6 +803,7 @@ Success
 After the command successfully finishes you will see a file named firstphp.tar.gz in the directory where you executed the command. The default filename for the snapshot is $Application_Name.tar.gz. You can override this path and filename with the -f or --filepath option.
 
 NOTE: This command will stop your application for the duration of the backup process.
+NOTE: The application original state will be preserved, so if your application was stopped before doing snapshot, it will remain stopped after the snapshot is completed.
 
 === Delete an Application
 You can delete an OpenShift Origin application by executing the _rhc app delete_ command. This command deletes your application and all of its data on the OpenShift Origin server but leaves your local directory intact. This operation can not be undone so use it with caution.
@@ -832,6 +839,7 @@ $ rhc snapshot restore -a firstphp -f firstphp.tar.gz
 ----
 
 NOTE: This command will stop your application for the duration of the restore process.
+NOTE: This command will preserve the state of your application as it was before restore. If your application was stopped, before this command it will remain stopped after restore
 
 *Verify that the application has been restored* +
 Open up a web browser and point to the following URL:
@@ -840,7 +848,7 @@ Open up a web browser and point to the following URL:
 http://firstphp-<yourdomain>.example.com
 ----
 
-If the restore process worked correctly, you should see the restored application running just as it was before the link:#delete-an-application[delete] operation.
+If the restore process worked correctly, you should see the restored application just as it was before the link:#delete-an-application[delete] operation.
 
 === View a Thread Dump
 This can be performed on Ruby and JBoss EAP / JBoss EWS application types.

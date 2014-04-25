@@ -2,7 +2,7 @@
 %global httpdconfdir /etc/openshift/cart.conf.d/httpd/perl
 
 Name:          openshift-origin-cartridge-perl
-Version: 1.20.0
+Version: 1.22.5
 Release:       1%{?dist}
 Summary:       Perl cartridge
 Group:         Development/Languages
@@ -14,6 +14,8 @@ Requires:      openshift-origin-node-util
 Requires:      mod_perl
 Requires:      perl-App-cpanminus
 Requires:      perl-IO-Socket-SSL
+# required for bin/build's usage of /usr/lib/rpm/perl.req
+Requires:      rpm-build
 Provides:      openshift-origin-cartridge-perl-5.10 = 2.0.0
 Obsoletes:     openshift-origin-cartridge-perl-5.10 <= 1.99.9
 BuildArch:     noarch
@@ -34,20 +36,16 @@ Perl cartridge for OpenShift. (Cartridge Format V2)
 %__cp -r * %{buildroot}%{cartridgedir}
 %__mkdir -p %{buildroot}%{httpdconfdir}
 
-%if 0%{?fedora}%{?rhel} <= 6
-rm -rf %{buildroot}%{cartridgedir}/versions/5.16
-mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%endif
-%if 0%{?fedora} == 19
-rm -rf %{buildroot}%{cartridgedir}/versions/5.10
-mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.f19 %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%endif
-rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/env
+%{cartridgedir}/logs
+%{cartridgedir}/metadata
+%{cartridgedir}/run
+%{cartridgedir}/usr
+%{cartridgedir}/versions
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
@@ -56,6 +54,78 @@ rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
 
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.22.5-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.22.4-1
+- Merge pull request #5260 from ironcladlou/cart-log-vars
+  (dmcphers+openshiftbot@redhat.com)
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Mon Apr 14 2014 Troy Dawson <tdawson@redhat.com> 1.22.3-1
+- Perl cartridge version bump (jhadvig@redhat.com)
+
+* Fri Apr 11 2014 Adam Miller <admiller@redhat.com> 1.22.2-1
+- Bug 1086609 - Adding $OPENSHIFT_REPO_DIR/libs back into $PERL5LIB for
+  backward compatibility (jhadvig@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Bug 1084379 - Added ensure_httpd_restart_succeed() back into ruby/phpmyadmin
+  (mfojtik@redhat.com)
+- Force httpd into its own pgroup (ironcladlou@gmail.com)
+- Fix graceful shutdown logic (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.21.7-1
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.21.6-1
+- Bug 1080381 - Fixed problem with httpd based carts restart after force-stop
+  (mfojtik@redhat.com)
+- Report lingering httpd procs following graceful shutdown
+  (ironcladlou@gmail.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.21.5-1
+- Replace the client_message with echo (jhadvig@redhat.com)
+- Merge pull request #5041 from ironcladlou/logshifter/carts
+  (dmcphers+openshiftbot@redhat.com)
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Mon Mar 24 2014 Adam Miller <admiller@redhat.com> 1.21.4-1
+- Changing the deplist.txt to cpan.txt in the module checking message
+  (jhadvig@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- Bug 1077501 - Source Bash SDK (jhadvig@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.21.2-1
+- Remove unused teardowns (dmcphers@redhat.com)
+- Make dep handling consistent (dmcphers@redhat.com)
+- Merge pull request #4924 from jhadvig/perl_deps
+  (dmcphers+openshiftbot@redhat.com)
+- cpanfila and Makefile.PL support (jhadvig@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Removing f19 logic (dmcphers@redhat.com)
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.20.3-1
+- rpm-build is required for the perl cartridge's build script
+  (bleanhar@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.20.2-1
+- Template cleanup (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.20.1-1
+- Perl repository layout changes (jhadvig@redhat.com)
+- Fix Bug 1070059 - Incorrect git command info listed in perl default home page
+  added \ before $ (sgoodwin@redhat.com)
+- change mirror1.ops to mirror.ops, which is load balanced between servers
+  (tdawson@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 1.19.5-1
 - httpd cartridges: OVERRIDE with custom httpd conf (lmeyer@redhat.com)
 

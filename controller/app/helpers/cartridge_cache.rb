@@ -21,7 +21,7 @@ class CartridgeCache
   end
 
   #
-  # Returns an Array of web framework cartridge names.
+  # Returns an Array of names of non web framework cartridges.
   #
   def self.other_names
     Rails.cache.fetch("other_cartridge_names", :expires_in => DURATION) do
@@ -304,6 +304,11 @@ class CartridgeCache
     client.connect_timeout =        cartridge_conf[:connect_timeout] || 2
     client.receive_timeout =        cartridge_conf[:max_download_time] || 10
     client.follow_redirect_count =  cartridge_conf[:max_download_redirects] || 2
+
+    # Fix the case when SSL certificate does not support SSLv3 which is default
+    # for HTTPClient.
+    #
+    client.ssl_config.ssl_version = 'SSLv23'
 
     manifest = ""
 

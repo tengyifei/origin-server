@@ -20,6 +20,7 @@ class PendingAppOpGroup
   field :num_gears_destroyed, type: Integer, default: 0
   field :num_gears_rolled_back, type: Integer, default: 0
   field :user_agent, type: String, default: ""
+  field :rollback_blocked, type: Boolean, default: false
 
   def initialize(attrs = nil, options = nil)
     parent_opid = nil
@@ -105,9 +106,9 @@ class PendingAppOpGroup
             if result_io.exitcode != 0
               op.set_state(:failed)
               if result_io.hasUserActionableError
-                raise OpenShift::UserException.new("Unable to execute #{self.to_log_s}", result_io.exitcode, nil, result_io) 
+                raise OpenShift::UserException.new("Unable to execute #{op.to_log_s}", result_io.exitcode, nil, result_io) 
               else
-                raise OpenShift::NodeException.new("Unable to execute #{self.to_log_s}", result_io.exitcode, result_io)
+                raise OpenShift::NodeException.new("Unable to execute #{op.to_log_s}", result_io.exitcode, result_io)
               end
             else
               op.set_state(:completed)
@@ -119,26 +120,8 @@ class PendingAppOpGroup
           RemoteJob.execute_parallel_jobs(handle)
           failed_ops = []
           RemoteJob.get_parallel_run_results(handle) do |tag, gear_id, output, status|
-            if tag.has_key?("expose-ports") and status == 0
-              result = ResultIO.new(status, output, gear_id)
-              component_instance_id = tag["expose-ports"]
-              component_instance = application.component_instances.find(component_instance_id)
-              component_instance.process_properties(result)
-              process_gear = nil
-              application.group_instances.each do |gi|
-                gi.gears.each do |g|
-                  if g.uuid.to_s == gear_id
-                    process_gear = g
-                    break
-                  end
-                end
-                break if process_gear
-              end
-              application.process_commands(result, component_instance, process_gear)
-            else
-              result_io.append ResultIO.new(status, output, gear_id)
-              failed_ops << tag["op_id"] if status != 0
-            end
+            result_io.append ResultIO.new(status, output, gear_id)
+            failed_ops << tag["op_id"] if status != 0
           end
           parallel_job_ops.each do |op|
             if failed_ops.include? op._id.to_s
@@ -212,11 +195,7 @@ class PendingAppOpGroup
   #   @see {PendingAppOps}
   def try_reserve_gears(num_gears_added, num_gears_removed, app, ops)
     owner = app.domain.owner
-    begin
-      until Lock.lock_user(owner, app)
-        sleep 1
-      end
-      owner.reload
+    Lock.run_in_app_user_lock(owner, app) do
       if owner.consumed_gears + num_gears_added > owner.max_gears and num_gears_added > 0
         raise OpenShift::GearLimitReachedException.new("#{owner.login} is currently using #{owner.consumed_gears} out of #{owner.max_gears} limit and this application requires #{num_gears_added} additional gears.")
       end
@@ -226,23 +205,15 @@ class PendingAppOpGroup
       self.pending_ops.concat(ops)
       self.save! if app.persisted?
       owner.save!
-    ensure
-      Lock.unlock_user(owner, app)
     end
   end
 
   def unreserve_gears(num_gears_removed, app)
     return if num_gears_removed == 0
     owner = app.domain.owner
-    begin
-      until Lock.lock_user(owner, app)
-        sleep 1
-      end
-      owner.reload
+    Lock.run_in_app_user_lock(owner, app) do
       owner.consumed_gears -= num_gears_removed
       owner.save!
-    ensure
-      Lock.unlock_user(owner, app)
     end
   end
 

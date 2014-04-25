@@ -7,7 +7,7 @@ class DeploymentTest < ActiveSupport::TestCase
     @login = "user#{@random}"
     @user = CloudUser.new(login: @login)
     @user.save
-    Lock.create_lock(@user)
+    Lock.create_lock(@user.id)
     stubber
     @namespace = "ns#{@random}"
     @domain = Domain.new(namespace: @namespace, owner:@user)
@@ -43,7 +43,7 @@ class DeploymentTest < ActiveSupport::TestCase
 
     # git ref length
     assert Deployment.new(ref: "0" * 257, sha1: "1234", deployment_id: "1234", created_at: Time.now, activations: [Time.now.to_f, Time.now.to_f]).invalid?
-    
+
     # See git-check-ref-format man page for rules
     invalid_values = ["abc.lock", "abc/.xyz", "abc..xyz", "/abc", "abc/", "abc//xyz", "abc.", "abc@{xyz}"]
     invalid_chars = ["^", "~", ":", "?", "*", "\\", " ", "[", ";"]

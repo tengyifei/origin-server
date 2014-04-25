@@ -15,18 +15,7 @@ def register_user(login=nil, password=nil, prod_env=false)
         pid, stdin, stdout, stderr = Open4::popen4(cmd)
         stdin.close
         ignored, status = Process::waitpid2 pid
-#       exitcode = status.exitstatus
-      end
-    elsif File.exists?("/etc/openshift/plugins.d/openshift-origin-auth-mongo.conf")
-      if prod_env
-        `oo-register-user -l admin -p admin --username #{login} --userpass #{password}`
-      else # dev/test env
-        uri = "/accounts"
-        credentials = Base64.encode64("admin:admin")
-        headers = {}
-        headers["HTTP_ACCEPT"] = "application/json"
-        headers["HTTP_AUTHORIZATION"] = "Basic #{credentials}"
-        request_via_redirect(:post, "/broker/rest" + uri, {"username" => login, "password" => password}, headers)
+        #exitcode = status.exitstatus
       end
     else
       #ignore

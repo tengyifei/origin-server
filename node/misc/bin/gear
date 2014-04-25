@@ -286,8 +286,9 @@ command :prepare do |c|
 
   c.description = "Prepare a binary deployment artifact for distribution and activation"
   c.action do |args, options|
-    # TODO make sure there is a file arg
     do_command(c, options) do
+      raise UsageException.new("You must specify a deployment artifact file to prepare") if args.count == 0
+      raise UsageException.new("File '#{args[0]}' does not exist") unless File.exist?(args[0])
       deployment_datetime = @container.create_deployment_dir
       @container.prepare(out: $stdout, err: $stderr, deployment_datetime: deployment_datetime, file: args[0])
     end
@@ -299,8 +300,13 @@ command :distribute do |c|
 
   c.description = "Distribute a build"
   c.action do |args, options|
-    # TODO make sure there is a deployment id arg
     do_command(c, options) do
+      raise UsageException.new("You must specify a deployment id") if args.count == 0
+
+      unless @container.deployment_exists?(args[0])
+        raise "Deployment id #{args[0]} is invalid"
+      end
+
       @container.distribute(out: $stdout, err: $stderr, deployment_id: args[0])
     end
   end
@@ -316,8 +322,8 @@ command :activate do |c|
   c.option "--[no-]rotation", "Rotate gears out/in (defaults to true)"
 
   c.action do |args, options|
-    # TODO make sure there is a deployment id arg
     do_command(c, options) do
+      raise UsageException.new("You must specify a deployment id") if args.count == 0
 
       unless @container.deployment_exists?(args[0])
         raise "Deployment id #{args[0]} is invalid"
@@ -508,13 +514,13 @@ command :restart do |c|
   c.option "--cart CART", "The cart to restart"
   c.option "--all", "Restart all instances of the specified cartridge for all gears for this application"
   c.option "--as-json", "Render the results as JSON to stdout"
-
+  c.option "--all-cartridges", "Restart all cartridges in the gear"
   c.description = "Restart a cart"
   c.action do |args, options|
     # TODO: Should we be able to restart the gear via stop_gear / start_gear calls
     # in addition to individual cart restarts?
     do_command(c, options) do
-      options.cart ||= choose("Cart to restart?", *gear_cartridge_names)
+      options.all_cartridges || options.cart ||= choose("Cart to restart?", *gear_cartridge_names)
       out = nil
       err = nil
       if !options.as_json

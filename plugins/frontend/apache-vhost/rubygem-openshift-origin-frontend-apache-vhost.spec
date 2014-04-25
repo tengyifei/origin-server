@@ -9,7 +9,7 @@
 
 Summary:       OpenShift Apache Virtual Hosts frontend plugin
 Name:          rubygem-%{gem_name}
-Version: 0.4.0
+Version: 0.5.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -94,6 +94,7 @@ mkdir -p %{buildroot}/etc/httpd/conf.d/openshift
 mv httpd/000001_openshift_origin_frontend_vhost.conf %{buildroot}/etc/httpd/conf.d/
 mv httpd/frontend-vhost-https-template.erb %{buildroot}/etc/httpd/conf.d/openshift/
 mv httpd/frontend-vhost-http-template.erb %{buildroot}/etc/httpd/conf.d/openshift/
+mv httpd/openshift-vhost-logconf.include %{buildroot}/etc/httpd/conf.d/
 
 
 %files
@@ -104,9 +105,31 @@ mv httpd/frontend-vhost-http-template.erb %{buildroot}/etc/httpd/conf.d/openshif
 %config(noreplace) /etc/httpd/conf.d/000001_openshift_origin_frontend_vhost.conf
 %config(noreplace) /etc/httpd/conf.d/openshift/frontend-vhost-http-template.erb
 %config(noreplace) /etc/httpd/conf.d/openshift/frontend-vhost-https-template.erb
+%config(noreplace) /etc/httpd/conf.d/openshift-vhost-logconf.include
 /etc/openshift/node-plugins.d/
 
 %changelog
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 0.5.2-1
+- httpd conf: set better defaults (lmeyer@redhat.com)
+- apache frontends: refactor logging conf, includes (lmeyer@redhat.com)
+- apache frontends: move directives to global conf (lmeyer@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 0.5.1-1
+- Merge pull request #4850 from vbatts/408-3-rewrite_to_proxypass
+  (dmcphers+openshiftbot@redhat.com)
+- vhost-plugin: remove keepalive=On for now (vbatts@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+- vhost-plugin: switch from rewrite back to proxypass (vbatts@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 0.4.2-1
+- Merge pull request #4797 from bparees/jenkins_rproxy
+  (dmcphers+openshiftbot@redhat.com)
+- add proper reverse proxy config for jenkins (bparees@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 0.4.1-1
+- frontend logging: keep openshift_log (bug 1069837) (lmeyer@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Mon Feb 10 2014 Adam Miller <admiller@redhat.com> 0.3.3-1
 - Cleaning specs (dmcphers@redhat.com)
 - Merge pull request #4666 from ncdc/dev/node-access-log-gear-info

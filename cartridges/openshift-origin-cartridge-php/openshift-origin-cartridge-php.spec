@@ -3,7 +3,7 @@
 %global httpdconfdir /etc/openshift/cart.conf.d/httpd/php
 
 Name:          openshift-origin-cartridge-php
-Version: 1.21.0
+Version: 1.23.3
 Release:       1%{?dist}
 Summary:       Php cartridge
 Group:         Development/Languages
@@ -36,34 +36,100 @@ PHP cartridge for openshift. (Cartridge Format V2)
 %setup -q
 
 %build
+%__rm %{name}.spec
 
 %install
 %__mkdir -p %{buildroot}%{cartridgedir}
 %__cp -r * %{buildroot}%{cartridgedir}
-%__mkdir -p %{buildroot}%{cartridgedir}/versions/shared/configuration/etc/conf/
 %__mkdir -p %{buildroot}%{httpdconfdir}
-
-%if 0%{?fedora}%{?rhel} <= 6
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel6 %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%__mv %{buildroot}%{cartridgedir}/usr/lib/php_context.rhel6 %{buildroot}%{cartridgedir}/usr/lib/php_context
-%__mv %{buildroot}%{cartridgedir}/versions/5.4-scl %{buildroot}%{cartridgedir}/versions/5.4
-%endif
-%if 0%{?fedora} >= 18
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.fedora %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%__mv %{buildroot}%{cartridgedir}/usr/lib/php_context.fedora %{buildroot}%{cartridgedir}/usr/lib/php_context
-%endif
-%__rm %{buildroot}%{cartridgedir}/metadata/manifest.yml.* || :
-%__rm %{buildroot}%{cartridgedir}/usr/lib/php_context.* || :
 
 %files
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/metadata
+%{cartridgedir}/usr
+%{cartridgedir}/env
 %doc %{cartridgedir}/README.md
+%doc %{cartridgedir}/COPYRIGHT
+%doc %{cartridgedir}/LICENSE
 %dir %{httpdconfdir}
 %attr(0755,-,-) %{httpdconfdir}
 
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.3-1
+- Merge pull request #5286 from bparees/bug_1088230
+  (dmcphers+openshiftbot@redhat.com)
+- rename locked-memcache.ini to locked-memcached.ini for consistency
+  (bparees@redhat.com)
+- Bug 1088230 - Fix php-pecl-memcache extension (vvitek@redhat.com)
+- Merge pull request #5283 from bparees/latest_versions (dmcphers@redhat.com)
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+- Fix PHP migration (vvitek@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.2-1
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Merge pull request #5205 from danmcp/master (dmcphers@redhat.com)
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- php cartridge: fix php-mcrypt module ini filename (jolamb@redhat.com)
+- Bug 1084379 - Added ensure_httpd_restart_succeed() back into ruby/phpmyadmin
+  (mfojtik@redhat.com)
+- Force httpd into its own pgroup (ironcladlou@gmail.com)
+- Fix graceful shutdown logic (ironcladlou@gmail.com)
+- Fix PHP 5.4 apc.stat logic (vvitek@redhat.com)
+- PHP - Development/Production mode (vvitek@redhat.com)
+- PHP APC configurable per gear size / env var (vvitek@redhat.com)
+- PHP - Remove duplicated files on gears & Leverage use of usr/ shared dir
+  (vvitek@redhat.com)
+- Enable mcrypt for PHP 5.4 (vvitek@redhat.com)
+- Copy PHP extensions INI files to the cartridge code for maintainability
+  (vvitek@redhat.com)
+- Make restarts resilient to missing/corrupt pidfiles (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.5-1
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Merge pull request #5061 from ironcladlou/graceful-shutdown
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5056 from VojtechVitek/bug_1079780
+  (dmcphers+openshiftbot@redhat.com)
+- Report lingering httpd procs following graceful shutdown
+  (ironcladlou@gmail.com)
+- Merge pull request #5046 from VojtechVitek/bug_1039849
+  (dmcphers+openshiftbot@redhat.com)
+- Replace the client_message with echo (vvitek@redhat.com)
+- Fix PHP MySQL default socket (vvitek@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Remove unused teardowns (dmcphers@redhat.com)
+- Make dep handling consistent (dmcphers@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Removing f19 logic (dmcphers@redhat.com)
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- supress pear info warnings (vvitek@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- fix bash regexp in upgrade scripts (vvitek@redhat.com)
+- Template cleanup (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- fix php upgrade version (vvitek@redhat.com)
+- fix php erb processing bug (vvitek@redhat.com)
+- PHP - DocumentRoot logic (optional php/ dir, simplify template repo)
+  (vvitek@redhat.com)
+- Bug 1066850 - Fixing urls (dmcphers@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 1.20.5-1
 - httpd cartridges: OVERRIDE with custom httpd conf (lmeyer@redhat.com)
 

@@ -17,6 +17,9 @@ class District
   index({:gear_size => 1})
   create_indexes
 
+  validates :name, presence: true
+  validates :gear_size, presence: true
+
   DISTRICT_NAME_REGEX = /\A[\w\.\-]+\z/
   def self.check_name!(name)
     if name.blank? or name !~ DISTRICT_NAME_REGEX
@@ -29,11 +32,10 @@ class District
     unless Rails.configuration.msg_broker[:districts][:enabled]
       raise OpenShift::OOException.new("District creation disabled by the platform.")
     end
-    profile = gear_size ? gear_size : Rails.application.config.openshift[:default_gear_size]
     if District.where(name: District.check_name!(name)).exists?
       raise OpenShift::OOException.new("District by name #{name} already exists")
     end
-    dist = District.new(name: name, gear_size: profile)
+    dist = District.new(name: name, gear_size: gear_size)
   end
 
   def self.find_by_name(name)
@@ -74,6 +76,7 @@ class District
     self.max_uid = first_uid + num_uids - 1
     self.max_capacity = num_uids
     self.active_servers_size = 0
+    self.gear_size = Rails.application.config.openshift[:default_gear_size] unless self.gear_size
     save!
   end
 
@@ -152,15 +155,19 @@ class District
       raise OpenShift::OOException.new("Node with server identity: #{server_identity} from district: #{uuid} must be deactivated before it can be removed")
     end
     begin
+      if Application.where({"gears.server_identity" => server_identity}).exists?
+        raise OpenShift::OOException.new("Node with server identity: #{server_identity} could not be removed from district: #{uuid} " \
+                                         "because some apps in mongo are still using it.")
+      end
       unless server.unresponsive
         container = OpenShift::ApplicationContainerProxy.instance(server_identity)
         raise OpenShift::OOException.new("Node with server identity: #{server_identity} could not be removed " \
               "from district: #{uuid} because it still has apps on it") if container.get_capacity > 0
         container.set_district('NONE', false, first_uid, max_uid)
       end
-    rescue Exception => ex
+    rescue OpenShift::NodeException => ex
       Rails.logger.error ex.backtrace.inspect
-      raise OpenShift::OOException.new("Node with server identity: #{server_identity} might be unresponsive, run oo-admin-repair --removed-nodes and retry the current operation.")
+      raise OpenShift::OOException.new("Error: #{ex.message}. Node with server identity: #{server_identity} might be unresponsive, run oo-admin-repair --removed-nodes and retry the current operation.")
     end
     res = District.where(:uuid => self.uuid).update({"$pull" => {"servers" => server.as_document}})
     raise OpenShift::OOException.new("Could not remove node #{server_identity}") if res.nil? or !res["updatedExisting"]

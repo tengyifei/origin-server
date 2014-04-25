@@ -15,7 +15,7 @@
 
 Summary:       OpenShift Apache mod_rewrite frontend plugin
 Name:          rubygem-%{gem_name}
-Version: 0.4.0
+Version: 0.5.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -109,6 +109,7 @@ done
 mkdir -p %{buildroot}/etc/httpd/conf.d
 mv httpd/000001_openshift_origin_node.conf %{buildroot}/etc/httpd/conf.d/
 mv httpd/openshift_route.include %{buildroot}/etc/httpd/conf.d/
+mv httpd/openshift_route_logconf.include %{buildroot}/etc/httpd/conf.d/
 
 mv httpd/frontend-mod-rewrite-https-template.erb %{buildroot}%{appdir}/.httpd.d/frontend-mod-rewrite-https-template.erb
 
@@ -117,8 +118,9 @@ mv httpd/frontend-mod-rewrite-https-template.erb %{buildroot}%{appdir}/.httpd.d/
 %{gem_instdir}
 %{gem_spec}
 %{gem_cache}
+%config /etc/httpd/conf.d/openshift_route.include
+%config(noreplace) /etc/httpd/conf.d/openshift_route_logconf.include
 %config(noreplace) /etc/httpd/conf.d/000001_openshift_origin_node.conf
-%config(noreplace) /etc/httpd/conf.d/openshift_route.include
 %attr(0644,root,root)   %config(noreplace) %{appdir}/.httpd.d/frontend-mod-rewrite-https-template.erb
 %attr(0640,root,apache) %config(noreplace) %{appdir}/.httpd.d/nodes.txt
 %attr(0640,root,apache) %config(noreplace) %{appdir}/.httpd.d/aliases.txt
@@ -131,6 +133,32 @@ mv httpd/frontend-mod-rewrite-https-template.erb %{buildroot}%{appdir}/.httpd.d/
 /etc/openshift/node-plugins.d/
 
 %changelog
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 0.5.2-1
+- httpd conf: set better defaults (lmeyer@redhat.com)
+- apache frontends: refactor logging conf, includes (lmeyer@redhat.com)
+- apache frontends: move directives to global conf (lmeyer@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 0.5.1-1
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 0.4.4-1
+- bz1072616 - split out log config from mod_rewrite definitions
+  (admiller@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 0.4.3-1
+- Move rev_proxy_host environment setting higher in the rules
+  (bparees@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 0.4.2-1
+- Merge pull request #4797 from bparees/jenkins_rproxy
+  (dmcphers+openshiftbot@redhat.com)
+- add proper reverse proxy config for jenkins (bparees@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 0.4.1-1
+- frontend logging: keep openshift_log (bug 1069837) (lmeyer@redhat.com)
+- Fix output from decode_connections (andy.goldstein@gmail.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 0.3.4-1
 - Bug 1065133: Add websocket option to haproxy manifest and sanitize uri
   returned from mod_rewrite. (mrunalp@gmail.com)

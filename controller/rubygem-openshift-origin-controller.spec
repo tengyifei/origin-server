@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Controller
 Name:          rubygem-%{gem_name}
-Version: 1.21.0
+Version: 1.23.9
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -85,6 +85,437 @@ mkdir -p %{buildroot}/etc/openshift/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.23.9-1
+- Bug 1088845: Blocking external carts from adding storage and setting
+  multiplier (abhgupta@redhat.com)
+- Merge pull request #5262 from
+  liggitt/bug_1083544_reentrant_membership_change_ops
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1083544: Make member change ops re-entrant (jliggitt@redhat.com)
+- Allow setting parent op for member changes (jliggitt@redhat.com)
+
+* Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.23.8-1
+- Bug 1088941: Exclude non-member global teams from index (jliggitt@redhat.com)
+- Merge pull request #5290 from liggitt/bug_1086920_check_domain_ssl_capability
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1086920: Check ssl certificate capability on domain, not on user
+  (jliggitt@redhat.com)
+
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.7-1
+- Merge pull request #5287 from abhgupta/abhgupta-scheduler
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5253 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Adding a config flag in the broker to selectively manage HA DNS entries
+  (abhgupta@redhat.com)
+- Merge pull request #5192 from liggitt/user_email
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1086094: Multiple changes for cartridge colocation We are:  - taking into
+  account the app's complete group overrides  - allowing only plugin carts to
+  colocate with web/service carts  - blocking plugin (except sparse) carts from
+  responding to scaling min/max changes (abhgupta@redhat.com)
+- Merge pull request #5284 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Adding test coverage for to_xml (dmcphers@redhat.com)
+- Add email field to CloudUser (jliggitt@redhat.com)
+
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.6-1
+- Fix formatting (dmcphers@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.5-1
+- Bug 1087710: Removing explicit role with implicit role present leaves higher
+  role in place (jliggitt@redhat.com)
+- added oo-admin-ctl-team (lnader@redhat.com)
+
+* Mon Apr 14 2014 Troy Dawson <tdawson@redhat.com> 1.23.4-1
+- Bug 1086567: Handle implicit members leaving (jliggitt@redhat.com)
+- BZ1083475 - HA scalable application DNS is not deleted after app is destroyed
+  (calfonso@redhat.com)
+- Merge pull request #5229 from liggitt/bug_1086115_change_explicit_role
+  (dmcphers+openshiftbot@redhat.com)
+- Add test for elevating and lowering the explicit role of a member who also
+  has an implicit grant (jliggitt@redhat.com)
+
+* Fri Apr 11 2014 Adam Miller <admiller@redhat.com> 1.23.3-1
+- Merge pull request #5226 from abhgupta/abhgupta-scheduler
+  (dmcphers+openshiftbot@redhat.com)
+- Setting domain op state to completed after updating capabilities
+  (abhgupta@redhat.com)
+- Add domain to analytics tracking (dmcphers@redhat.com)
+- Merge pull request #5218 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5217 from liggitt/team_remove
+  (dmcphers+openshiftbot@redhat.com)
+- Removing Start-Order and Stop-Order from the manifest (abhgupta@redhat.com)
+- Bug 1086370: removing one team removes all explicit members
+  (jliggitt@redhat.com)
+
+* Thu Apr 10 2014 Adam Miller <admiller@redhat.com> 1.23.2-1
+- Add support for SSLv2 when downloading cartridges (mfojtik@redhat.com)
+- Merge pull request #5206 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5187 from pravisankar/dev/ravi/fix-testcases
+  (dmcphers+openshiftbot@redhat.com)
+- Add validations to district model and move gear_size initialization from
+  create_district() to initialize(). (rpenta@redhat.com)
+- Fix cucumber test platform-oo-admin.feature: Need to look at exit code and
+  not the output for errors, output can have warning messages
+  (rpenta@redhat.com)
+- Bug 1084542: Fixing Start/Stop order for components  - Start now follows
+  post-configure order  - Stop now follows the reverse of the start order  -
+  post-configure order follows the configure order with the one exception that
+  the web_framework is at the end (abhgupta@redhat.com)
+- Bug 1082464 - do not show member links for update and delete if team in
+  global (lnader@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Use consistent naming on alias_add and more detail on cartridge scale
+  (dmcphers@redhat.com)
+- Fixing error message around submodule repo (dmcphers@redhat.com)
+- Merge pull request #5184 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1071393 - Fix DNSLoginException (rpenta@redhat.com)
+- Bug 1071272 - oo-admin-repair: Only allow node removal from its district when
+  no apps are referencing that node (rpenta@redhat.com)
+- separate scaling and storage tracking events (dmcphers@redhat.com)
+- Use mock cart for testing (dmcphers@redhat.com)
+- Bug 1084054: Check for external cartridge for group instance without gears
+  (abhgupta@redhat.com)
+- Use configured default (jliggitt@redhat.com)
+- Add global_teams capability (jliggitt@redhat.com)
+- Bug 1084419 - Fix tracking for update alias (dmcphers@redhat.com)
+- Merge pull request #5167 from bparees/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5166 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5165 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- remove duplicate test check line (bparees@redhat.com)
+- Formatting fixes (dmcphers@redhat.com)
+- Bug 1084090: Using as_document instead of serializable_hash to add/remove
+  keys (abhgupta@redhat.com)
+- Revert "Revert "Card origin_cartridge_133 - Maintain application state across
+  snapshot/restore"" (bparees@redhat.com)
+- Merge pull request #5155 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5137 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5151 from danmcp/master (dmcphers@redhat.com)
+- Merge pull request #5152 from
+  pravisankar/dev/ravi/bugs-1081381-1073342-1008654
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1082464 - Do not show links for ADD_MEMBER, UPDATE_MEMBERS, DELETE AND
+  LEAVE for global teams (lnader@redhat.com)
+- Split user errors and internal errors for analytics (dmcphers@redhat.com)
+- Bug 1008654 - oo-admin-chk: Report app gears with out server_identity field
+  set in mongo (rpenta@redhat.com)
+- Bug 1073342 - oo-admin-chk fix: don't print duplicate error messages when
+  login is null/empty (rpenta@redhat.com)
+- Adding user create tracking event (dmcphers@redhat.com)
+- Make non-global search more efficient (jliggitt@redhat.com)
+- Removed global flag - using owner_id=nil as indicator for global team
+  (lnader@redhat.com)
+- Require global flag on search (lnader@redhat.com)
+- changed min length for team name to 2 (lnader@redhat.com)
+- corrected typo - Search string must be at least 2 characters
+  (lnader@redhat.com)
+- fixed validation and tests (lnader@redhat.com)
+- use rest_teams for search count (lnader@redhat.com)
+- changed global=true to owner_id=nil (lnader@redhat.com)
+- modified error message - use same message for leave (lnader@redhat.com)
+- cleaned up team validation (lnader@redhat.com)
+- escape search string (lnader@redhat.com)
+- change validation on globally unique (lnader@redhat.com)
+- remove membership management links if team syncs to group (lnader@redhat.com)
+- added sorting (lnader@redhat.com)
+- moved global checking to before_filter (lnader@redhat.com)
+- Global teams (lnader@redhat.com)
+- Merge pull request #5114 from danmcp/analytics
+  (dmcphers+openshiftbot@redhat.com)
+- Analytics Tracker (dmcphers@redhat.com)
+- Bug 1079844: Fixed error message when removing an invalid cartridge
+  (abhgupta@redhat.com)
+- Revert "Card origin_cartridge_133 - Maintain application state across
+  snapshot/restore" (bparees@redhat.com)
+- Fix php file permissions cucumber tests (vvitek@redhat.com)
+- Merge pull request #5099 from liggitt/fix_app_locking_from_team_member_change
+  (dmcphers+openshiftbot@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+- Use application.owner_id in unlock_app (jliggitt@redhat.com)
+- Fix app locking from team member change (jliggitt@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.8-1
+- Merge pull request #5089 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- REST API docs for team (lnader@redhat.com)
+- Merge pull request #5087 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5082 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 989941: preventing colocation of cartridges that independently scale
+  (abhgupta@redhat.com)
+- Merge pull request #5072 from pravisankar/dev/ravi/bug1072289
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1072289 - Execute patching user env vars only on current group instance
+  gears when gear_instance_id is passed (rpenta@redhat.com)
+- corrected missing comma (lnader@redhat.com)
+- corrected UPDATE_MEMBER link for domain and team (lnader@redhat.com)
+- Bug 1065276 - Skip *.rpmnew when loading environments (jhonce@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.22.7-1
+- Merge pull request #5069 from pravisankar/dev/ravi/bug1078008
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5070 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1078008 - Restrict cloning app if storage requirements are not matched
+  (rpenta@redhat.com)
+- Bug 1078119 (lnader@redhat.com)
+- Bug 1078814: Adding more validations for cartridge manifests
+  (abhgupta@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.22.6-1
+- Merge pull request #5054 from bparees/missing_log_dirs
+  (dmcphers+openshiftbot@redhat.com)
+- remove checks for cart specific log dirs (bparees@redhat.com)
+- remove check for jbosseap log dir (bparees@redhat.com)
+- Merge pull request #5049 from pravisankar/dev/ravi/bug1079301
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5035 from liggitt/team_pending_ops
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5041 from ironcladlou/logshifter/carts
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1079301 - Fix oo-admin-ctl-district remove-node error output
+  (rpenta@redhat.com)
+- Remove parent_op from team_pending_ops (jliggitt@redhat.com)
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Mon Mar 24 2014 Adam Miller <admiller@redhat.com> 1.22.5-1
+- Fix typo in authorize call (jliggitt@redhat.com)
+- Use rails http basic auth parsing, reuse controller, correctify comments
+  (jliggitt@redhat.com)
+- Allow filtering authorizations by scope when deleting all
+  (jliggitt@redhat.com)
+- Update tests (jliggitt@redhat.com)
+- Return errors other than client_id or redirect_uri (jliggitt@redhat.com)
+- SSO OAuth support (jliggitt@redhat.com)
+- Merge pull request #5030 from liggitt/teams_api_includes_members
+  (dmcphers+openshiftbot@redhat.com)
+- Fixing gear extended (dmcphers@redhat.com)
+- Include members in /team/:id, and optionally in /teams (jliggitt@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Fixing extended tests (dmcphers@redhat.com)
+- Update tests to not use any installed gems and use source gems only Add
+  environment wrapper for running broker util scripts (jforrest@redhat.com)
+- Bug 1079072 - Hide quota error messsages (jhonce@redhat.com)
+- Merge pull request #4990 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Checking and fixing stale sshkeys and env_vars  - using oo-admin-chk and oo-
+  admin-repair (abhgupta@redhat.com)
+- Multiple fixes  - Checking the provides list for cartridge matches for
+  Configure-Order  - Skipping rollback for configure and similar operations in
+  case of a new gear creation. Instead, we will just delete the gear  - Fixing
+  exception raising logic on rollback success/failure (abhgupta@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- Merge pull request #4987 from jhadvig/10gen_new
+  (dmcphers+openshiftbot@redhat.com)
+- 10gen cartridge update (jhadvig@redhat.com)
+- Merge pull request #4993 from abhgupta/abhgupta-scheduler
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4995 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Fixing condition in run_jobs to prevent infinite loop (abhgupta@redhat.com)
+- fix https://bugzilla.redhat.com/show_bug.cgi?id=1076720 : embedded cart
+  should follow web_framework (rchopra@redhat.com)
+- Cleanup (dmcphers@redhat.com)
+- Merge pull request #4968 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4929 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4977 from nhr/test_fix (dmcphers+openshiftbot@redhat.com)
+- cart configure should expose ports as well (rchopra@redhat.com)
+- Merge pull request #4978 from pravisankar/dev/ravi/fix-pending-apps-domains
+  (dmcphers+openshiftbot@redhat.com)
+- Refactor find_by existing member lookup (jliggitt@redhat.com)
+- Make membership check more efficient, explicitly return (jliggitt@redhat.com)
+- Make rest_member more resilient to additional types (jliggitt@redhat.com)
+- Change "edit" example to "none" for team member role (jliggitt@redhat.com)
+- Remove show/create/update implementations from team_members_controller.
+  Require role param when adding team members. Test for missing/empty role
+  param (jliggitt@redhat.com)
+- Distinguish between non-members and indirect members in warning messages. Do
+  not include login field for members of type 'team' (jliggitt@redhat.com)
+- User can only add teams to domain that he owns (lnader@redhat.com)
+- Added allowed_roles/member_types, removed team add by name, refactored
+  removed_ids (lnader@redhat.com)
+- Updated scopes for application and domain (lnader@redhat.com)
+- Added validate_role and validate_type to base class and overide
+  (lnader@redhat.com)
+- Bug 1075437 (lnader@redhat.com)
+- Bug 1077047 (lnader@redhat.com)
+- fixed test failure (lnader@redhat.com)
+- Bug 1075445 (lnader@redhat.com)
+- team member update should only allow roles view and none (lnader@redhat.com)
+- Revised members controller to type qualify (lnader@redhat.com)
+- Type qualify member links (lnader@redhat.com)
+- Added LIST_TEAMS_BY_OWNER GET /teams?owner=@self (lnader@redhat.com)
+- Removed update ability from teams.  Teams cannot be renamed
+  (lnader@redhat.com)
+- Provide valid options for role (lnader@redhat.com)
+- Added :create_team ability (lnader@redhat.com)
+- corrected domain links and descriptions (lnader@redhat.com)
+- Bug 1075421 - corrected team GET link to use id instread of name
+  (lnader@redhat.com)
+- Delete user teams on force_delete (lnader@redhat.com)
+- Bug 1074861 - Added error code for team limit reached (lnader@redhat.com)
+- Bug 1075048 - null checking on role to update (lnader@redhat.com)
+- Teams API (lnader@redhat.com)
+- Update stub generator to provide fallback handling for JBoss cart
+  (hripps@redhat.com)
+- Remove on_domains/on_apps from user/domain/team pending op. Now
+  on_domains/on_apps are not passed from op-group instead current domains/apps
+  are used during pending op execution. (rpenta@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Merge pull request #4959 from bparees/remove_rhc_debug
+  (dmcphers+openshiftbot@redhat.com)
+- Revert "Rebalancing tests" (dmcphers@redhat.com)
+- Rebalancing tests (dmcphers@redhat.com)
+- remove debug flag for rhc get status operations in cucumber tests
+  (bparees@redhat.com)
+- Added User pending-op-group/pending-op functionality Added pending op groups
+  for user add_ssh_keys/remove_ssh_keys (rpenta@redhat.com)
+- Merge pull request #4954 from UhuruSoftware/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4924 from jhadvig/perl_deps
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1030305 - 'rhc app show --state/--gear' shows db gear stop after restore
+  snapshot for scalable app (bparees@redhat.com)
+- Merge pull request #4955 from fabianofranz/dev/163
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1075470 - Met "undefined method `platform' for nil" error when creating
+  application of download cartridge. (vlad.iovanov@uhurusoftware.com)
+- [origin-server-ui-163] When filtering by owner must respect token visibility
+  (contact@fabianofranz.com)
+- LIST_APPLICATIONS_BY_OWNER and LIST_DOMAINS_BY_OWNER only support @self as
+  the owner argument (contact@fabianofranz.com)
+- [origin-server-ui-163] Adding support to query apps owned by the user
+  (contact@fabianofranz.com)
+- cpanfila and Makefile.PL support (jhadvig@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Merge pull request #4944 from UhuruSoftware/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1007830 - Better error handling around quickstarts.json loading
+  (dmcphers@redhat.com)
+- Fix "create scalable app with custom web_proxy" test expectation. Fix getting
+  cart from CartridgeCache in the context of an application.
+  (vlad.iovanov@uhurusoftware.com)
+- Add support for multiple platforms in OpenShift. Changes span both the broker
+  and the node. (vlad.iovanov@uhurusoftware.com)
+- Speeding up tests (dmcphers@redhat.com)
+- Speeding up tests (dmcphers@redhat.com)
+- Blocking rollback once the gear/cart removal is underway
+  (abhgupta@redhat.com)
+- Create less apps in tests (dmcphers@redhat.com)
+- Merge pull request #4840 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Added max_teams capability (lnader@redhat.com)
+- Deleting applications on app creation rollbacks (abhgupta@redhat.com)
+- Checking for empty string in ObjectId (abhgupta@redhat.com)
+- Multiple fixes for stability  - Adding option to prevent rollback in case of
+  successful execution of a destructive operation that is not reversible
+  (deleting gear or deconfiguring cartridge on the node)  - Checking for the
+  existence of the application after obtaining the lock  - Reloading the
+  application after acquiring the lock to reflect any changes made by the
+  previous operation holding the lock  - Using regular run_jobs code in clear-
+  pending-ops script  - Handling DocumentNotFound exception in clear-pending-
+  ops script if the application is deleted (abhgupta@redhat.com)
+- Rebalancing tests (dmcphers@redhat.com)
+- Adding additional gear extended queue (dmcphers@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+- Merge pull request #4896 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Cleaning up cuc tags (dmcphers@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.21.6-1
+- Merge pull request #4895 from pmorie/bugs/1072663
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 1072663, 1072663: (pmorie@gmail.com)
+- Merge pull request #4889 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Rebalancing tests (dmcphers@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.21.5-1
+- Bug 1072249 (dmcphers@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.21.4-1
+- Merge pull request #4874 from liggitt/bug_1070450_improve_no_storage_message
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1070450: Improve message when an application cannot have additional
+  storage (jliggitt@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- Merge pull request #4867 from pravisankar/dev/ravi/bug-1069531
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1069531 - Fix populate_district_hash helper method for oo-admin-chk/oo-
+  admin-repair (rpenta@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Fixing typos (dmcphers@redhat.com)
+- remove old code (dmcphers@redhat.com)
+- Merge pull request #4684 from liggitt/domain_capabilities
+  (dmcphers+openshiftbot@redhat.com)
+- Python - DocumentRoot logic, Repository Layout simplification
+  (vvitek@redhat.com)
+- Template cleanup (dmcphers@redhat.com)
+- Merge pull request #4825 from bparees/jboss_config
+  (dmcphers+openshiftbot@redhat.com)
+- Surface owner storage capabilities and storage rates (jliggitt@redhat.com)
+- allow users to prevent overwrite of local jboss config from repository
+  (bparees@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Merge pull request #4812 from jhadvig/wip_perl
+  (dmcphers+openshiftbot@redhat.com)
+- Revert "Multiple fixes for stability" (dmcphers@redhat.com)
+- Perl repository layout changes (jhadvig@redhat.com)
+- Fixing tests (dmcphers@redhat.com)
+- Merge pull request #4806 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Multiple fixes for stability  - Adding option to prevent rollback in case of
+  successful execution of a destructive operation that is not reversible
+  (deleting gear or deconfiguring cartridge on the node)  - Checking for the
+  existence of the application after obtaining the lock  - Reloading the
+  application after acquiring the lock to reflect any changes made by the
+  previous operation holding the lock  - Using regular run_jobs code in clear-
+  pending-ops script  - Handling DocumentNotFound exception in clear-pending-
+  ops script if the application is deleted (abhgupta@redhat.com)
+- Bug 1070168 - Handle equal cart names different from equal cart name and
+  version (dmcphers@redhat.com)
+- <Extended Tests> Cartridge Extended Test fixes (jdetiber@redhat.com)
+- Merge pull request #4822 from
+  smarterclayton/bug_1069457_update_comp_limits_drops_gear_size
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1069457 - UpdateCompLimits drops gear size (ccoleman@redhat.com)
+- Improve finding a member in a members collection (jliggitt@redhat.com)
+- Validate roles (jliggitt@redhat.com)
+- Handle duplicate removes, removal of non-members (jliggitt@redhat.com)
+- Code review comments (jliggitt@redhat.com)
+- Team object, team membership (jliggitt@redhat.com)
+- Merge pull request #4814 from abhgupta/abhgupta-scheduler
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1069186: handling missing group instance (abhgupta@redhat.com)
+- PHP - DocumentRoot logic (optional php/ dir, simplify template repo)
+  (vvitek@redhat.com)
+- Merge pull request #4723 from liggitt/recalc_tracked_usage
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1066850 - Fixing urls (dmcphers@redhat.com)
+- Recalc tracked storage (jliggitt@redhat.com)
+- Rebalancing tests (dmcphers@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Mon Feb 17 2014 Adam Miller <admiller@redhat.com> 1.20.7-1
 - Bug 1065318 - Multiplier being reset (ccoleman@redhat.com)
 - Fix typos (dmcphers@redhat.com)

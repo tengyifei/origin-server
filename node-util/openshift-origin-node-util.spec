@@ -6,7 +6,7 @@
 
 Summary:       Utility scripts for the OpenShift Origin node
 Name:          openshift-origin-node-util
-Version: 1.20.0
+Version: 1.22.6
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -123,10 +123,11 @@ cp -p init.d/openshift-gears %{buildroot}%{_initddir}/
 %attr(0755,-,-) %{_bindir}/unidle_gear.sh
 %attr(0755,-,-) %{_bindir}/oo-config-eval
 %attr(0755,-,-) %{_bindir}/oo-gear-registry
-%attr(0755,-,-) %{_sysconfdir}/openshift/watchman/plugins.d
+%attr(0755,-,-) %{_sysconfdir}/openshift/watchman/plugins.d/
 %attr(0744,-,-) %{_sysconfdir}/openshift/watchman/plugins.d/*
 
 %{_mandir}/man8/oo-accept-node.8.gz
+%{_mandir}/man8/oo-admin-gear.8.gz
 %{_mandir}/man8/oo-admin-ctl-gears.8.gz
 %{_mandir}/man8/oo-auto-idler.8.gz
 %{_mandir}/man8/oo-idler-stats.8.gz
@@ -156,6 +157,121 @@ cp -p init.d/openshift-gears %{buildroot}%{_initddir}/
 %endif
 
 %changelog
+* Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.6-1
+- Bug 1088620 - Add check to oo-accept-node for empty
+  OPENSHIFT_PRIMARY_CARTRIDGE_DIR (jhonce@redhat.com)
+
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.22.5-1
+- Bug 1061926 - Use lock file to prevent race between idle/unidle
+  (jhonce@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.22.4-1
+- Bug 1087755 - node.conf#TRAFFIC_CONTROL_ENABLED defaults to true
+  (jhonce@redhat.com)
+- Bug 1086104 - improve the setting of TC_CHECK in oo-accept-node
+  (bleanhar@redhat.com)
+- Bug 1083730 - Move node-web-proxy logs to /var/log/openshift/node
+  (jhonce@redhat.com)
+
+* Mon Apr 14 2014 Troy Dawson <tdawson@redhat.com> 1.22.3-1
+- BZ1086104 - oo-accept-node needs to read tc setting from node.conf
+  (calfonso@redhat.com)
+- Bug 1086854 - Add timeout when locking operations (jhonce@redhat.com)
+
+* Thu Apr 10 2014 Adam Miller <admiller@redhat.com> 1.22.2-1
+- Merge pull request #5200 from ncdc/metrics (dmcphers+openshiftbot@redhat.com)
+- Metrics - code review changes (andy.goldstein@gmail.com)
+- Metrics (andy.goldstein@gmail.com)
+- Metrics work (teddythetwig@gmail.com)
+- Make metrics plugin delay configurable (ironcladlou@gmail.com)
+- Metrics work (teddythetwig@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Bug 1081249 - Refactor SELinux module to be SelinuxContext singleton
+  (jhonce@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.21.7-1
+- Bug 1080374 - Failing to remove .../limits.d/*-<uuid>.conf
+  (jhonce@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.21.6-1
+- Merge pull request #5051 from jwhonce/bug/1076640
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5041 from ironcladlou/logshifter/carts
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1076640 - Attempt to clean up using FQDN (jhonce@redhat.com)
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Mon Mar 24 2014 Adam Miller <admiller@redhat.com> 1.21.5-1
+- Merge pull request #5037 from jwhonce/bug/1079261
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1079261 - Update to support new cgroup mounts (jhonce@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.21.4-1
+- Node Platform - Add more checks for gear structure (jhonce@redhat.com)
+- fix bz1076722 - routes.json may have frontend extensions to fqdn
+  (rchopra@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- Bug 1077510 1077513 1077587 - Cleanup man page and logging
+  (jhonce@redhat.com)
+- Card origin_node_39 - Introduce GearStatePlugin (jhonce@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.21.2-1
+- Bug 1074627 - Removed unnecessary output (jhonce@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Bug 1076008 - Fix pgrep regex usage (jhonce@redhat.com)
+- Merge pull request #4944 from UhuruSoftware/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1074627 - Improve error handling and make more robust (jhonce@redhat.com)
+- Add support for multiple platforms in OpenShift. Changes span both the broker
+  and the node. (vlad.iovanov@uhurusoftware.com)
+- Merge pull request #4930 from jwhonce/bug/1071105
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1071105 - On validation just print commit timestamp (jhonce@redhat.com)
+- Bug 1070719 - Prevent openshift-watchman from running twice
+  (jhonce@redhat.com)
+- Merge pull request #4900 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- fix missing variable error (rchopra@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.20.5-1
+- re-fix oo-auto-idler. bz1072472. all gears will never be idled by the script.
+  man page changes (rchopra@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.20.4-1
+- fix bz1072472 - oo-last-access will be run within oo-auto-idler first and any
+  errors related to gears not found will block the operation
+  (rchopra@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.20.3-1
+- Merge pull request #4869 from jwhonce/bug/1071500
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4868 from jwhonce/bug/1070719
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1071500 - Prepend /sbin to ip command (jhonce@redhat.com)
+- Bug 1070719 - On restart, wait for stop before starting (jhonce@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.20.2-1
+- Fixing typos (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.20.1-1
+- Card origin_node_39 - Fix spec file for disabled plugin (jhonce@redhat.com)
+- Card origin_node_39 - Disable GearStatePlugin (jhonce@redhat.com)
+- Card origin_node_39 - Fix unit test (jhonce@redhat.com)
+- Card origin_node_39 - Introduce GearStatePlugin (jhonce@redhat.com)
+- Merge pull request #4807 from jwhonce/bug/1067345
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4776 from jwhonce/origin_node_39
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1067345 - Make *all commands honor stop_lock (jhonce@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+- Card origin_node_39 - Have Watchman attempt honor state of gear
+  (jhonce@redhat.com)
+
 * Tue Feb 11 2014 Adam Miller <admiller@redhat.com> 1.19.3-1
 - Bug 1063278 - kill user processes before user (lsm5@redhat.com)
 - Merge pull request #4704 from lsm5/oo-admin-gear

@@ -33,7 +33,16 @@ function waitondeployments() {
       client_message "Timed out waiting for management listening port"
       client_message "Could not connect to JBoss management interface, skipping deployment verification"
     else
-      getscanconfig
+      SCANCONFIG=""
+      c=0
+      while [ "$SCANCONFIG" == "" ] && [ $c -lt 5 ]; do
+        getscanconfig
+        if [ "$SCANCONFIG" != "" ]; then
+          break
+        fi
+        sleep 2
+        let c=c+1
+      done
 
       if [ "$SCANCONFIG" == "" ]; then
         client_message "Could not connect to JBoss management interface, skipping deployment verification"
@@ -165,7 +174,8 @@ function ishttpup() {
         fi
         # if the process failed to start, error out immediately
         # rather than waiting for the timeout on the port being available.
-        if ! ps | grep -v grep | grep $PROCESS_ID > /dev/null; then
+        jbpid=$(cat $JBOSSEAP_PID_FILE);
+        if ! ps | grep -v grep | grep $jbpid > /dev/null; then
           return 2
         fi
         let count=${count}+1
@@ -266,7 +276,7 @@ function build() {
       if marker_present "skip_maven_build"; then
         echo "skip_maven_build marker found; build will be skipped"
       fi
-      
+
   fi
 
 }
@@ -293,9 +303,12 @@ function start() {
   else
     echo "Starting $cartridge_type cartridge"
 
-    ${JBOSSEAP_BIN_DIR}/standalone.sh > ${OPENSHIFT_TMP_DIR}/${cartridge_type}.log 2>&1 &
-    PROCESS_ID=$!
-    echo "$PROCESS_ID" > ${JBOSSEAP_PID_FILE}
+    LOGPIPE=${OPENSHIFT_HOMEDIR}/app-root/runtime/logshifter-jbosseap
+    rm -f $LOGPIPE && mkfifo $LOGPIPE
+
+    /usr/bin/logshifter -tag jbosseap < $LOGPIPE &
+    ${JBOSSEAP_BIN_DIR}/standalone.sh &> $LOGPIPE &
+    echo $! > ${JBOSSEAP_PID_FILE}
 
     rc=0
     ishttpup || rc=$?
@@ -342,9 +355,9 @@ function reload() {
 
 # Clean up any log files
 function tidy() {
-  client_message "Emptying log dir: $OPENSHIFT_JBOSSEAP_LOG_DIR"
+  client_message "Emptying jbosseap logs in dir: $OPENSHIFT_LOG_DIR"
   shopt -s dotglob
-  rm -rf $OPENSHIFT_JBOSSEAP_LOG_DIR/*
+  rm -rf $OPENSHIFT_LOG_DIR/jbosseap.log*
   rm -rf $OPENSHIFT_JBOSSEAP_DIR/standalone/tmp/* 
 }
 
@@ -361,7 +374,7 @@ function threaddump() {
 
         client_result "Success"
         client_result ""
-        client_result "The thread dump file will be available via: rhc tail $OPENSHIFT_APP_NAME -g $OPENSHIFT_GEAR_UUID -f ${OPENSHIFT_TMP_DIR}${cartridge_type}.log -o '-n 250'"
+        client_result "The thread dump file will be available via: rhc tail $OPENSHIFT_APP_NAME -g $OPENSHIFT_GEAR_UUID -f ${OPENSHIFT_LOG_DIR}${cartridge_type}.log -o '-n 250'"
     else 
         echo "Failed to locate JBOSS PID File"
     fi

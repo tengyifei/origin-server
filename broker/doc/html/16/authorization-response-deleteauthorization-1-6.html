@@ -1,13 +1,67 @@
 <html><body><pre>{
   "api_version": 1.6,
-  "data": null,
+  "data": {
+    "created_at": "2014-04-15T00:40:57Z",
+    "expires_in": 15552000,
+    "expires_in_seconds": 15552000,
+    "id": "534c8019398d1a5cf60000ba",
+    "identity": "first.last@mycompany.com",
+    "links": {
+      "GET": {
+        "href": "https://openshift.redhat.com/broker/rest/user/authorization/534c8019398d1a5cf60000ba",
+        "method": "GET",
+        "optional_params": [
+
+        ],
+        "rel": "Get authorization",
+        "required_params": [
+
+        ]
+      },
+      "UPDATE": {
+        "href": "https://openshift.redhat.com/broker/rest/user/authorization/534c8019398d1a5cf60000ba",
+        "method": "PUT",
+        "optional_params": [
+
+        ],
+        "rel": "Update authorization",
+        "required_params": [
+          {
+            "description": "A note to remind you what this token is for.",
+            "invalid_options": [
+
+            ],
+            "name": "note",
+            "type": "string",
+            "valid_options": [
+
+            ]
+          }
+        ]
+      },
+      "DELETE": {
+        "href": "https://openshift.redhat.com/broker/rest/user/authorization/534c8019398d1a5cf60000ba",
+        "method": "DELETE",
+        "optional_params": [
+
+        ],
+        "rel": "Delete authorization",
+        "required_params": [
+
+        ]
+      }
+    },
+    "note": "This is my UPDATED note to myself",
+    "scopes": "userinfo",
+    "token": "8ce9d4b2db3166f1b61a105ba4a6e5cc44aa619b2497fa81dfc2a4468ae59990"
+  },
   "messages": [
     {
       "exit_code": 0,
       "field": null,
       "index": null,
       "severity": "info",
-      "text": "Authorization 527adfe07f9c4803e1000088 is revoked."
+      "text": "Change authorization"
     }
   ],
   "status": "ok",
@@ -20,6 +74,6 @@
     1.5,
     1.6
   ],
-  "type": null,
+  "type": "authorization",
   "version": "1.6"
 }</pre></body></html>

@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Common
 Name:          rubygem-%{gem_name}
-Version: 1.20.0
+Version: 1.22.5
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -91,6 +91,7 @@ mkdir -p %{buildroot}%{_mandir}/man8/
 cp bin/man/*.8 %{buildroot}%{_mandir}/man8/
 %endif
 
+rm -rf %{buildroot}%{gem_instdir}/.yardoc*
 
 %files
 %dir %{gem_instdir}
@@ -100,7 +101,7 @@ cp bin/man/*.8 %{buildroot}%{_mandir}/man8/
 %doc %{gem_instdir}/Rakefile
 %doc %{gem_instdir}/README.md
 %doc %{gem_instdir}/%{gem_name}.gemspec
-%{gem_instdir}
+%{gem_instdir}/test
 %{gem_spec}
 %{gem_libdir}
 
@@ -115,10 +116,78 @@ cp bin/man/*.8 %{buildroot}%{_mandir}/man8/
 %exclude %{gem_cache}
 %exclude %{gem_instdir}/rubygem-%{gem_name}.spec
 
-%files doc 
+%files doc
 %doc %{gem_docdir}
 
 %changelog
+* Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.5-1
+- cleanup yardoc (tdawson@redhat.com)
+
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.22.4-1
+- Bug 1086094: Multiple changes for cartridge colocation We are:  - taking into
+  account the app's complete group overrides  - allowing only plugin carts to
+  colocate with web/service carts  - blocking plugin (except sparse) carts from
+  responding to scaling min/max changes (abhgupta@redhat.com)
+
+* Fri Apr 11 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- Merge pull request #5222 from abhgupta/abhgupta-scheduler
+  (dmcphers+openshiftbot@redhat.com)
+- Add platform attribute to cartridge serialization and fixed tests
+  (abhgupta@redhat.com)
+- Removing Start-Order and Stop-Order from the manifest (abhgupta@redhat.com)
+
+* Thu Apr 10 2014 Adam Miller <admiller@redhat.com> 1.22.2-1
+- Merge pull request #5200 from ncdc/metrics (dmcphers+openshiftbot@redhat.com)
+- Metrics work (teddythetwig@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.21.6-1
+- Merge pull request #5087 from abhgupta/abhgupta-dev
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 989941: preventing colocation of cartridges that independently scale
+  (abhgupta@redhat.com)
+- Bug 1075437 - Return exit code 1 instead of nil when no exit code is NOT
+  provided (lnader@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.21.5-1
+- Bug 1078814: Adding more validations for cartridge manifests
+  (abhgupta@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.21.4-1
+- oo-diagnostics: add sclized /etc to selinux check (lmeyer@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- oo-diagnostics: fail more accurately w/ districts required
+  (lmeyer@redhat.com)
+- Bug 1077031 - Warn if Watchman is not running (jhonce@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.21.2-1
+- oo-diagnostics: detect unreadable apache conf files (lmeyer@redhat.com)
+- oo-diagnostics: refactor test for executable commands (lmeyer@redhat.com)
+- oo-diagnostics: remove enterprise RPM test from origin (lmeyer@redhat.com)
+- oo-diagnostics: warn on node.conf/envvars mismatch (lmeyer@redhat.com)
+- oo-diagnostics: handle missing host command (lmeyer@redhat.com)
+- oo-diagnostics: warn re vmware-tools on mco unsynced warning
+  (lmeyer@redhat.com)
+- oo-diagnostics: detect more common selinux problems (lmeyer@redhat.com)
+- oo-diagnostics: improve suggestion for mco-client.log (lmeyer@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Bug 916758 - Give better message on config failure (dmcphers@redhat.com)
+- Bug 1076032 - Attempting to unlock closed file descriptor (jhonce@redhat.com)
+- Add support for multiple platforms in OpenShift. Changes span both the broker
+  and the node. (vlad.iovanov@uhurusoftware.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.20.2-1
+- Enable docker builds of openshift-origin-broker (jforrest@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.20.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 1.19.4-1
 - Merge pull request #4770 from lsm5/revert-iptables-dir
   (dmcphers+openshiftbot@redhat.com)

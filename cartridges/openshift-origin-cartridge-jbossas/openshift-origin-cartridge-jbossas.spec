@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossAS7 support
 Name:          openshift-origin-cartridge-jbossas
-Version: 1.21.0
+Version: 1.23.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -96,13 +96,67 @@ fi
 %attr(0755,-,-) %{cartridgedir}/bin/
 %attr(0755,-,-) %{cartridgedir}/versions/7/bin/
 %attr(0755,-,-) %{cartridgedir}/hooks/
-%{cartridgedir}
+%{cartridgedir}/env
+%{cartridgedir}/metadata
+%{cartridgedir}/versions
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.3-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.2-1
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Use named pipes for logshifter redirection where appropriate
+  (ironcladlou@gmail.com)
+- Bug 1083663 - Provide better message when upgrade-node is used on a rerun
+  (dmcphers@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Merge pull request #5086 from VojtechVitek/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+- Use consistent log format across jboss carts (ironcladlou@gmail.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Remove unused teardowns (dmcphers@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- Merge pull request #4864 from bparees/jb_cleanup
+  (dmcphers+openshiftbot@redhat.com)
+- minor cleanup of jboss config scripts (bparees@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Template cleanup (dmcphers@redhat.com)
+- Merge pull request #4825 from bparees/jboss_config
+  (dmcphers+openshiftbot@redhat.com)
+- allow users to prevent overwrite of local jboss config from repository
+  (bparees@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- change mirror1.ops to mirror.ops, which is load balanced between servers
+  (tdawson@redhat.com)
+- add retry logic for deployment scan check (bparees@redhat.com)
+- Merge pull request #4787 from developercorey/fix_mysql_ds
+  (dmcphers+openshiftbot@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+- updatin MysqlDS to be MySQLDS to fall in line with ExampleDS and PostgreSQLDS
+  data source names (cdaley@redhat.com)
+
 * Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 1.20.4-1
 - Merge pull request #4744 from mfojtik/latest_versions
   (dmcphers+openshiftbot@redhat.com)

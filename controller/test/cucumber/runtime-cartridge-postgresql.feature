@@ -1,6 +1,6 @@
-@postgres
+@cartridge_extended3
 Feature: Postgres Application Sub-Cartridge
-  @cartridge_extended3
+
   Scenario Outline: Create/Delete to application with a Postgres database
     Given a new mock-0.1 type application
 
@@ -22,8 +22,6 @@ Feature: Postgres Application Sub-Cartridge
       |       8.4        |
       |       9.2        |
 
-  @cartridge_extended3
-  @postgres
   Scenario Outline: Connections and Snapshot/Restore a scalable application with a Postgres database
     Given a new client created scalable mock-0.1 application
     Given the embedded postgresql-<postgres_version> cartridge is added
@@ -54,10 +52,19 @@ Feature: Postgres Application Sub-Cartridge
     When I snapshot the application
     And I insert additional test data into postgres
     Then the additional test data will be present in postgres
+    And the cartridge postgresql-<postgres_version> status should be running
 
     When I restore the application
     Then the test data will be present in postgres
     And the additional test data will not be present in postgres
+    And the cartridge postgresql-<postgres_version> status should be running
+
+    When the application is stopped
+    And I snapshot the application
+    Then the cartridge postgresql-<postgres_version> status should be stopped
+
+    When I restore the application
+    Then the cartridge postgresql-<postgres_version> status should be stopped
 
     Scenarios: RHEL
       | postgres_version |

@@ -14,8 +14,8 @@
 # @!attribute [r] ssh_keys
 #   @return [Array[SshKey]] SSH keys used to access applications that the user has access to or owns
 #     @see {#add_ssh_key}, {#remove_ssh_key}, and {#update_ssh_key}
-# @!attribute [r] pending_ops
-#   @return [Array[PendingUserOps]] List of {PendingUserOps} objects
+# @!attribute [rw] pending_op_groups
+#   @return [Array<PendingUserOpGroup>] List of pending operations to be performed on this user
 class CloudUser
   include Mongoid::Document
   include Mongoid::Timestamps
@@ -36,9 +36,10 @@ class CloudUser
   field :plan_history, type: Array, default: []
   field :usage_account_id, type: String
   field :consumed_gears, type: Integer, default: 0
+  field :email, type: String
 
   embeds_many :ssh_keys, class_name: UserSshKey.name
-  embeds_many :pending_ops, class_name: PendingUserOps.name, cascade_callbacks: true
+  embeds_many :pending_op_groups, class_name: PendingUserOpGroup.name, cascade_callbacks: true
   # embeds_many :identities, class_name: Identity.name, cascade_callbacks: true
 
   has_many :domains, class_name: Domain.name, dependent: :restrict, foreign_key: :owner_id
@@ -52,7 +53,7 @@ class CloudUser
 
   scope :with_plan, any_of({:plan_id.ne => nil}, {:pending_plan_id.ne => nil}) 
   index({:login => 1}, {:unique => true})
-  index({'pending_ops.created_at' => 1})
+  index({'pending_op_groups.created_at' => 1})
 
   scope :with_identity_id, lambda{ |id| where(login: id) }
   scope :with_identity, lambda{ |provider, uid| with_identity_id(uid) }
@@ -153,7 +154,7 @@ class CloudUser
     user = find_by_identity(nil, login)
     #identity = user.current_identity!(provider, login)
     yield user, login if block_given?
-    user
+    [user, false]
   rescue Mongoid::Errors::DocumentNotFound
     user = new(create_attributes)
     #user.current_identity = user.identities.build(provider: provider, uid: login)
@@ -161,14 +162,14 @@ class CloudUser
     user.login = login
     begin
       user.with(safe: true).save
-      Lock.create_lock(user)
+      Lock.create_lock(user.id)
       OpenShift::UserActionLog.action("CREATE_USER", nil, true, "Creating user", 'USER' => user.id, 'LOGIN' => login, 'PROVIDER' => provider)
-      user
+      [user, true]
     rescue Moped::Errors::OperationFailure
       user = find_by_identity(nil, login)
       raise unless user
       yield user, login if block_given?
-      user
+      [user, true]
     end
   end
 
@@ -188,9 +189,13 @@ class CloudUser
   # domains/application that the user has access to.
   def add_ssh_key(key)
     if persisted?
-      pending_op = AddSshKeysUserOp.new(keys_attrs: [key.serializable_hash])
-      CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.as_document , ssh_keys: key.serializable_hash }})
-      reload.run_jobs
+      Lock.run_in_user_lock(self, 1800) do
+        op_group = AddSshKeysUserOpGroup.new(keys_attrs: [key.as_document])
+        self.pending_op_groups.push op_group
+        result_io = ResultIO.new
+        self.run_jobs(result_io)
+        result_io
+      end
     else
       ssh_keys << key
     end
@@ -207,10 +212,14 @@ class CloudUser
   # domains/application that the user has access to.
   def remove_ssh_key(name)
     if persisted?
-      key = self.ssh_keys.find_by(name: name)
-      pending_op = RemoveSshKeysUserOp.new(keys_attrs: [key.serializable_hash])
-      CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.as_document } , "$pull" => { ssh_keys: key.serializable_hash }})
-      reload.run_jobs
+      Lock.run_in_user_lock(self, 1800) do
+        key = self.ssh_keys.find_by(name: name)
+        op_group = RemoveSshKeysUserOpGroup.new(keys_attrs: [key.as_document])
+        self.pending_op_groups.push op_group
+        result_io = ResultIO.new
+        self.run_jobs(result_io)
+        result_io
+      end
     else
       ssh_keys.delete_if{ |k| k.name == name }
     end
@@ -222,7 +231,9 @@ class CloudUser
       "subaccounts" => false,
       "gear_sizes" => Rails.application.config.openshift[:default_gear_capabilities],
       "max_domains" => Rails.application.config.openshift[:default_max_domains],
-      "max_gears" => Rails.application.config.openshift[:default_max_gears]
+      "max_gears" => Rails.application.config.openshift[:default_max_gears],
+      "max_teams" => Rails.application.config.openshift[:default_max_teams],
+      "view_global_teams" => Rails.application.config.openshift[:default_view_global_teams]
     }
   end
 
@@ -272,25 +283,27 @@ class CloudUser
   end
 
   def set_capabilities(caps, clear_existing_caps=false)
-    self._capabilities = {} unless self._capabilities
-    if clear_existing_caps
-      self._capabilities.clear
-      user_caps = capabilities
-      user_caps.each do |k, v|
-        if v.is_a?(Array)
-          self._capabilities[k] = []
-        elsif v.is_a?(Hash)
-          self._capabilities[k] = {}
-        elsif v.is_a?(Boolean)
-          self._capabilities[k] = false
-        elsif v.is_a?(Integer) or v.is_a?(Float)
-          self._capabilities[k] = 0
-        else
-          raise OpenShift::UserException.new("Capability type not found for '#{k} : #{v}'")
-        end
-      end 
+    Lock.run_in_user_lock(self) do
+      self._capabilities = {} unless self._capabilities
+      if clear_existing_caps
+        self._capabilities.clear
+        user_caps = capabilities
+        user_caps.each do |k, v|
+          if v.is_a?(Array)
+            self._capabilities[k] = []
+          elsif v.is_a?(Hash)
+            self._capabilities[k] = {}
+          elsif v.is_a?(Boolean)
+            self._capabilities[k] = false
+          elsif v.is_a?(Integer) or v.is_a?(Float)
+            self._capabilities[k] = 0
+          else
+            raise OpenShift::UserException.new("Capability type not found for '#{k} : #{v}'")
+          end
+        end 
+      end
+      self._capabilities.merge!(caps.deep_dup)
     end
-    self._capabilities.merge!(caps.deep_dup)
   end
 
   def ha
@@ -315,6 +328,22 @@ class CloudUser
 
   def max_domains=(m)
     self._capabilities["max_domains"] = m if capabilities["max_domains"] != m
+  end
+  
+  def max_teams
+    capabilities["max_teams"] || Rails.application.config.openshift[:default_max_teams]
+  end
+
+  def max_teams=(m)
+    self._capabilities["max_teams"] = m if capabilities["max_teams"] != m
+  end
+
+  def view_global_teams
+    capabilities["view_global_teams"] || Rails.application.config.openshift[:default_view_global_teams]
+  end
+
+  def view_global_teams=(m)
+    self._capabilities["view_global_teams"] = m if capabilities["view_global_teams"] != m
   end
 
   def plan_upgrade_enabled
@@ -406,6 +435,10 @@ class CloudUser
     self._capabilities["max_tracked_addtl_storage_per_gear"] = m if capabilities["max_tracked_addtl_storage_per_gear"] != m
   end
 
+  def usage_rates
+    {}
+  end
+
   def private_ssl_certificates
     capabilities["private_ssl_certificates"] || false
   end
@@ -422,55 +455,76 @@ class CloudUser
       end
       domain.delete
     end
+    while team = Team.where(owner: self).first
+      team.destroy_team
+    end
 
     # will need to reload from primary to ensure that mongoid doesn't validate based on its cache
     # and prevent us from deleting this user because of the :dependent :restrict clause
     self.reload.delete
   end
 
-  # Runs all jobs in :init phase and stops at the first failure.
+  # Runs all pending jobs and stops at the first failure.
+  #
+  # IMPORTANT: Callers should take the user lock prior to calling run_jobs
+  #
+  # IMPORTANT: When changing jobs, be sure to leave old jobs runnable so that pending_ops
+  #   that are inserted during a running upgrade can continue to complete.
   #
   # == Returns:
   # True on success or false on failure
-  def run_jobs
-    begin
-      while self.pending_ops.where(state: :init).count > 0
-        op = self.pending_ops.where(state: :init).first
+  def run_jobs(result_io=nil, continue_on_successful_rollback=false)
+    result_io = ResultIO.new if result_io.nil?
+    op_group = nil
+    while self.pending_op_groups.count > 0
+      rollback_pending = false
+      op_group = self.pending_op_groups.first
 
-        # store the op._id to load it later after a reload
-        # this is required to prevent a reload from replacing it with another one based on position
-        op_id = op._id
+      begin
+        op_group.elaborate(self) if op_group.pending_ops.count == 0
 
-        # try to do an update on the pending_op state and continue ONLY if successful
-        op_index = self.pending_ops.index(op)
-        retval = CloudUser.where({ "_id" => self._id, "pending_ops.#{op_index}._id" => op._id, "pending_ops.#{op_index}.state" => "init" }).update({"$set" => { "pending_ops.#{op_index}.state" => "queued" }})
-        unless retval["updatedExisting"]
-          self.reload
-          next
+        if op_group.pending_ops.where(:state => :rolledback).count > 0
+          rollback_pending = true
+          raise Exception.new("Op group is already being rolled back.")
         end
 
+        op_group.execute(result_io)
+        op_group.delete
+      rescue Exception => e_orig
+        Rails.logger.error "Encountered error during execute '#{e_orig.message}'"
+        # don't log the error stacktrace if this exception was raised just to trigger a rollback
+        Rails.logger.debug e_orig.backtrace.inspect unless rollback_pending
+
+        #rollback
         begin
-          op.execute
-        rescue Exception => e
-          Rails.logger.error "Error #{e.message} #{e.backtrace}"
-          raise Exception.new("Exception thrown in execution of job #{op.class} for user #{op.cloud_user.login} error: #{e.message}")
-        end
-        # reloading the op reloads the cloud_user and then incorrectly reloads (potentially)
-        # the op based on its position within the pending_ops list
-        # hence, reloading the cloud_user, and then fetching the op using the op_id stored earlier
-        self.reload
-        op = self.pending_ops.find_by(_id: op_id)
+          # reload the user before a rollback
+          self.reload
+          op_group.execute_rollback(result_io)
+          op_group.delete
+        rescue Exception => e_rollback
+          Rails.logger.error "Error during rollback"
+          Rails.logger.error e_rollback.message
+          Rails.logger.error e_rollback.backtrace.join("\n")
 
-        # FIXME: We are assuming that the op is complete at this point.
-        # Need to use on_applications and completed_applications to figure out completion 
-        op.close_op
-        op.delete
+          # if the original exception was raised just to trigger a rollback
+          # then the rollback exception is the only thing of value and hence return/raise it
+          raise e_rollback if rollback_pending
+        end
+
+        # raise the original exception if it was the actual exception that led to the rollback
+        # if not, then we should just continue execution of any remaining op_groups.
+        # The continue_on_successful_rollback flag is used by the oo-admin-clear-pending-ops script
+        unless rollback_pending or continue_on_successful_rollback
+          if e_orig.respond_to? 'resultIO' and e_orig.resultIO
+            e_orig.resultIO.append result_io unless e_orig.resultIO == result_io
+          end
+          raise e_orig
+        end
       end
-      true
-    rescue Exception => ex
-      Rails.logger.error ex
-      Rails.logger.error ex.backtrace
-      raise ex
+
+      self.reload
     end
+    true
   end
+
 end

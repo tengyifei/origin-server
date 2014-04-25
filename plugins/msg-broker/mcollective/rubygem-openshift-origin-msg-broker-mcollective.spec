@@ -10,7 +10,7 @@
 
 Summary:       OpenShift plugin for mcollective service
 Name:          rubygem-%{gem_name}
-Version: 1.21.0
+Version: 1.23.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -85,6 +85,72 @@ sed -i -e "s|\(/etc/mcollective/client.cfg\)|%{scl_root}/\1|" %{buildroot}/etc/o
 %attr(0644,-,-) %ghost %{?scl:%scl_root}/etc/mcollective/client.cfg
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.2-1
+- Merge pull request #5289 from pravisankar/dev/ravi/bug1086566
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1086566 - Fix move gear: run_in_app_lock() will reload the app object and
+  any references to its fields (in this case 'gear') need to be recomputed
+  (rpenta@redhat.com)
+- Bug 1065047 - changed exception raised to NodeUnavailableException to
+  indicate retry advisable (503) (lnader@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Moved pruning of non-districted/non-zone nodes(when districted/zone nodes are
+  available) from rpc_find_all_available to select_best_fit_node. Rationale:
+  Node selection plugin should have flexibility to choose any candidate node
+  from non-districted/districted/non-zone/zone nodes. (rpenta@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.7-1
+- Merge pull request #5088 from pravisankar/dev/ravi/bug1070884
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1070884 - When web-framework gear is moved, run force-stop in the end
+  after all carts are stopped (rpenta@redhat.com)
+- Merge pull request #5068 from abhgupta/bug_1073576
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1073576: Replacing rpcutil usage with openshift agent  - Also fixing
+  indentation with one method (abhgupta@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.22.6-1
+- Bug 1075673: Sending the ref and artifact_url args only when specified
+  (abhgupta@redhat.com)
+- Merge pull request #5047 from abhgupta/bug_1080022
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1080022: calling the interface method to select the destination node
+  (abhgupta@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.22.5-1
+- Bug 1070533 - Fix gear's server_identity during move (rpenta@redhat.com)
+
+* Mon Mar 24 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Bug 1079226 - missing open-sshclients and bad IP from facter make oo-admin-
+  move fail (jforrest@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- auto expose ports upon configure, but only for scalable apps
+  (rchopra@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Added User pending-op-group/pending-op functionality Added pending op groups
+  for user add_ssh_keys/remove_ssh_keys (rpenta@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Add support for multiple platforms in OpenShift. Changes span both the broker
+  and the node. (vlad.iovanov@uhurusoftware.com)
+- Stop using direct addressing (dmcphers@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Bug 1070713: Checking to see if dns is initialized before closing
+  (abhgupta@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- fix typo (vvitek@redhat.com)
+- Better comments (dmcphers@redhat.com)
+- Cleaning up comments (dmcphers@redhat.com)
+- Fixing up comments (dmcphers@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 1.20.5-1
 - Merge pull request #4767 from pravisankar/dev/ravi/bug1055475
   (dmcphers+openshiftbot@redhat.com)

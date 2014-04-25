@@ -18,31 +18,20 @@ require 'openshift-origin-node/model/watchman/watchman_plugin'
 
 # Provide Watchman with JBoss server.log monitoring
 class JbossPlugin < OpenShift::Runtime::WatchmanPlugin
-  attr_accessor :epoch
-
-  # @param config  [Config]                   node configuration
-  # @param gears   [CachedGears]              collection of running gears on node
-  # @param restart [lambda<String, DateTime>] block to call to cause gear restart
-  # @param epoch   [DateTime]                 Time when this plugin was started
-  def initialize(config, gears, restart, epoch = DateTime.now)
-    super(config, gears, restart)
-    @epoch = epoch
-  end
-
-  # execute plugin code
-  def apply
+  # Restart JBoss cartridges that have suffered a java.lang.OutOfMemoryError condition
+  # @param [OpenShift::Runtime::WatchmanPluginTemplate::Iteration] iteration timestamps of given events
+  # @return void
+def apply(iteration)
     @gears.each do |uuid|
       path    = PathUtils.join(@config.get('GEAR_BASE_DIR', '/var/lib/openshift'),
                                uuid,
-                               '*',
-                               'env',
-                               'OPENSHIFT_JBOSS*_LOG_DIR')
+                               'app-root',
+                               'logs',
+                               'jboss*.log')
       results = Dir.glob(path)
       next if results.nil? || results.empty?
 
-      results.each do |var|
-        log = PathUtils.join(IO.read(var).chomp, 'server.log')
-
+      results.each do |log|
         # skip missing log files as jboss may be coming up.
         next unless File.exist?(log)
 
@@ -51,11 +40,11 @@ class JbossPlugin < OpenShift::Runtime::WatchmanPlugin
           #
           # Set the timestamp for messages with invalid timestamps to the 'epoch',
           # which will prevent to retry the parsing and exceptions in the log (BZ#999183)
-          ts = DateTime.strptime(event, '%Y/%m/%d %T') rescue @epoch
-          timestamp = DateTime.civil(ts.year, ts.month, ts.day, ts.hour, ts.min, ts.sec, @epoch.zone)
-          next if @epoch > timestamp
+          ts = DateTime.strptime(event, '%Y/%m/%d %T') rescue iteration.epoch
+          timestamp = DateTime.civil(ts.year, ts.month, ts.day, ts.hour, ts.min, ts.sec, iteration.epoch.zone)
+          next if iteration.last_run > timestamp
 
-          @restart.call(uuid, timestamp)
+          restart(uuid)
         end
       end
     end

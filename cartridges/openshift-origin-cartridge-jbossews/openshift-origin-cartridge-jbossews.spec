@@ -2,7 +2,7 @@
 
 Summary:       Provides JBossEWS2.0 support
 Name:          openshift-origin-cartridge-jbossews
-Version: 1.20.0
+Version: 1.22.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -68,12 +68,62 @@ alternatives --set jbossews-2.0 /usr/share/tomcat7
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/env
+%{cartridgedir}/metadata
+%{cartridgedir}/template
+%{cartridgedir}/usr
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.22.3-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Use named pipes for logshifter redirection where appropriate
+  (ironcladlou@gmail.com)
+- fix bad variable reference for version check (bparees@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.21.5-1
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.21.4-1
+- Incorrect log file name in the output when threaddump jbossews app.
+  (bparees@redhat.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.21.2-1
+- Remove unused teardowns (dmcphers@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.20.3-1
+- remove copy from setup script (bparees@redhat.com)
+- move config copy into install/upgrade scripts instead of setup script
+  (bparees@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.20.2-1
+- Template cleanup (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.20.1-1
+- change mirror1.ops to mirror.ops, which is load balanced between servers
+  (tdawson@redhat.com)
+- Merge pull request #4787 from developercorey/fix_mysql_ds
+  (dmcphers+openshiftbot@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+- updatin MysqlDS to be MySQLDS to fall in line with ExampleDS and PostgreSQLDS
+  data source names (cdaley@redhat.com)
+
 * Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 1.19.4-1
 - Merge pull request #4744 from mfojtik/latest_versions
   (dmcphers+openshiftbot@redhat.com)

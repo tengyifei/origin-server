@@ -17,7 +17,9 @@ class OoAdminCtlUserTest < ActionDispatch::IntegrationTest
     @non_existing_login = generate_username
     CloudUser.where(:login => @non_existing_login).delete
 
-    @file = Tempfile.new('logins')
+    tmpdir = File.join(Dir.tmpdir, "openshift")
+    FileUtils.mkdir_p(tmpdir) unless File.exists?(tmpdir)
+    @file = Tempfile.new('logins', tmpdir)
     @file.write(@non_existing_login)
     @file.write("\n")
     @file.write(@existing_login)
@@ -31,12 +33,12 @@ class OoAdminCtlUserTest < ActionDispatch::IntegrationTest
   end
 
   def run_command(*args)
-    result = `export RAILS_ENV=test; oo-admin-ctl-user #{args.join(' ')} 2>&1`
+    result = `oo-broker --non-interactive env "RAILS_ENV=test" oo-admin-ctl-user #{args.join(' ')} 2>&1`
     [result, $?.exitstatus]
   end
 
   def run_command_stderr(*args)
-    result = `export RAILS_ENV=test; oo-admin-ctl-user #{args.join(' ')} 2>&1 > /dev/null`
+    result = `oo-broker --non-interactive env "RAILS_ENV=test" oo-admin-ctl-user #{args.join(' ')} 2>&1 > /dev/null`
     [result, $?.exitstatus]
   end
 

@@ -54,7 +54,7 @@ end
 
 def calculate_usage_cost(usage_rate, duration)
   cost = nil
-  
+
   unless usage_rate.nil?
     if usage_rate[:duration] == :hour
       duration_in_hr =  duration / (60 * 60)
@@ -172,6 +172,11 @@ require "#{ENV['OPENSHIFT_BROKER_DIR'] || '/var/www/openshift/broker'}/config/en
 include AdminHelper
 # Disable analytics for admin scripts
 Rails.configuration.analytics[:enabled] = false
+
+unless BSON::ObjectId.legal?(gear)
+  puts "Error: Invalid gear format"
+  exit 1
+end if gear
 
 billing_api = OpenShift::BillingService.instance
 if plan_id and !billing_api.valid_plan(plan_id)

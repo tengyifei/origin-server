@@ -160,6 +160,11 @@ module OpenShift
             end
         end
 
+        def get_team(id=nil)
+          id ||= params[:team_id].presence
+          @team = Team.accessible(current_user).find(id)
+        end
+
         def authorize!(permission, resource, *resources)
           Ability.authorize!(current_user, current_user.scopes, permission, resource, *resources)
         end
@@ -183,7 +188,7 @@ module OpenShift
           end
           params.each_value(&check)
         end
-  
+
         def support_valid_encoding?
           String.new.respond_to?('valid_encoding?')
         end

@@ -22,7 +22,10 @@ h5 {font-weight: normal;}
 	margin-top: 20px;
 	}
 
-.error-reference { color: #606060 }
+.error-reference { 
+  color: #606060;
+  margin-bottom: 5px; 
+}
 
 @media (max-width: 767px) {
   .form-horizontal .control-label {
@@ -551,10 +554,10 @@ a.cap-link:hover {
     position: absolute;
     right: 1px;
     top: 4px;
-    width: 26px;
+    width: 35px;
     color: #333;
     border: 0;
-    background-color: transparent;
+    background-color: $inputBackground;
   }
 }
 

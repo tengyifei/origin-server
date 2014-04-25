@@ -17,7 +17,7 @@
 
 Summary:       Cloud Development Node
 Name:          rubygem-%{gem_name}
-Version: 1.21.0
+Version: 1.23.9
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -36,6 +36,9 @@ Requires:      %{?scl:%scl_prefix}rubygem(parallel)
 # non-scl open4 required for ruby 1.8 cartridge
 # Also see related bugs 924556 and 912215
 Requires:      rubygem(open4)
+# non-scl json required for oo-cgroup-read
+# Also see related bugs 924556 and 912215
+Requires:      rubygem(json)
 %endif
 Requires:      %{?scl:%scl_prefix}rubygem(parseconfig)
 Requires:      %{?scl:%scl_prefix}rubygem(safe_yaml)
@@ -49,15 +52,13 @@ Requires:      libcgroup-pam
 Requires:      libselinux-python
 Requires:      iproute
 Requires:      lsof
-Requires:      mercurial
 Requires:      mod_ssl
 Requires:      openshift-origin-node-proxy
+Requires:      openshift-origin-logshifter
 Requires:      pam_openshift
 Requires:      python
 Requires:      quota
 Requires:      rubygem(openshift-origin-common)
-Requires:      unixODBC
-Requires:      unixODBC-devel
 %if 0%{?fedora}%{?rhel} <= 6
 Requires:      libcgroup
 %else
@@ -242,6 +243,7 @@ fi
 %dir /etc/openshift
 %attr(0644,-,-) %config /etc/openshift/system-config-firewall-compat
 %config(noreplace) /etc/openshift/node.conf
+%config(noreplace) /etc/openshift/logshifter.conf
 %attr(0600,-,-) %config(noreplace) /etc/openshift/iptables.filter.rules
 %attr(0600,-,-) %config(noreplace) /etc/openshift/iptables.nat.rules
 %config(noreplace) /etc/openshift/env/*
@@ -281,6 +283,298 @@ fi
 %attr(0755,-,-) /etc/cron.daily/openshift-origin-stale-lockfiles
 
 %changelog
+* Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.23.9-1
+- Merge pull request #5299 from bparees/psql_unary
+  (dmcphers+openshiftbot@redhat.com)
+-  Meet "unary operator expected" error when use psql in rhcsh but postgresql
+  is not added to app (bparees@redhat.com)
+
+* Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.23.8-1
+- Merge pull request #5291 from lnader/bugs (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5296 from jwhonce/bug/1086886
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1086886 - Don't read managed_file.yml twice (jhonce@redhat.com)
+- Bug 1088620 - Check for empty OPENSHIFT_PRIMARY_CARTRIDGE_DIR values
+  (lnader@redhat.com)
+
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.7-1
+- Bug 1061926 - Use lock file to prevent race between idle/unidle
+  (jhonce@redhat.com)
+
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.6-1
+- remove unused code (dmcphers@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.5-1
+- Improving the inline docs for TRAFFIC_CONTROL_ENABLED in node.conf
+  (bleanhar@redhat.com)
+- Bug 1086427 - JSON.load() allowed empty JSON files (jhonce@redhat.com)
+- Bug 1086427 - Do not use JSON.load() with untrusted JSON (jhonce@redhat.com)
+- Bug 1086886 - Add guard for empty managed_files.yml (jhonce@redhat.com)
+
+* Mon Apr 14 2014 Troy Dawson <tdawson@redhat.com> 1.23.4-1
+- Merge pull request #5245 from lnader/bugs (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5234 from brenton/BZ1086691
+  (dmcphers+openshiftbot@redhat.com)
+- Fix formatting (dmcphers@redhat.com)
+- Fix typo (dmcphers@redhat.com)
+- Bug 1086691 - Accessing a Gear by ssh shows "Your application is out of disk
+  space" when "quota" command is missing (bleanhar@redhat.com)
+- Merge pull request #5219 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1086886 - Check for empty managed_files.yml and return a better error
+  message (lnader@redhat.com)
+- Merge pull request #5239 from ncdc/bug/1086549
+  (dmcphers+openshiftbot@redhat.com)
+- DNS may have been stored as mixed case, but should always be used downcased
+  (rchopra@redhat.com)
+- Don't show backtrace when metrics script times out (andy.goldstein@gmail.com)
+- Merge pull request #5231 from mfojtik/bugzilla/1070173
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1070173 - Add '-v' option for oo-admin-ctl-tc to turn verbose output
+  (mfojtik@redhat.com)
+
+* Fri Apr 11 2014 Adam Miller <admiller@redhat.com> 1.23.3-1
+- cleanup whitespace (dmcphers@redhat.com)
+- Add platform attribute to cartridge serialization and fixed tests
+  (abhgupta@redhat.com)
+- Merge pull request #5208 from bparees/haproxy_scale
+  (dmcphers+openshiftbot@redhat.com)
+- Add the ability to adjust when haproxy shutsdown the app cart in the lead
+  gear (bparees@redhat.com)
+
+* Thu Apr 10 2014 Adam Miller <admiller@redhat.com> 1.23.2-1
+- Merge pull request #5212 from ironcladlou/upgrade-error-handling
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5200 from ncdc/metrics (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5207 from ncdc/selinux-turbo-boost
+  (dmcphers+openshiftbot@redhat.com)
+- Handle missing/invalid HTTP response during upgrade validation
+  (ironcladlou@gmail.com)
+- Speed up chcon calls (andy.goldstein@gmail.com)
+- Metrics - code review changes (andy.goldstein@gmail.com)
+- Metrics (andy.goldstein@gmail.com)
+- Metrics work (teddythetwig@gmail.com)
+- Metrics work (teddythetwig@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Adding new default setting for traffic control (bleanhar@redhat.com)
+- Bug 1075760 - Allow traffic control to be disabled (bleanhar@redhat.com)
+- Merge pull request #5153 from jwhonce/bug/1081249
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5141 from bparees/facter
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5161 from bparees/unrevert_restore_state
+  (dmcphers+openshiftbot@redhat.com)
+- Revert "Revert "Card origin_cartridge_133 - Maintain application state across
+  snapshot/restore"" (bparees@redhat.com)
+- Bug 1081249 - Fix up code after reviews (jhonce@redhat.com)
+- hide output from pgrep (bparees@redhat.com)
+- Bug 1081249 - Refactor SELinux module to be SelinuxContext singleton
+  (jhonce@redhat.com)
+- Fix graceful shutdown logic (ironcladlou@gmail.com)
+- Node Platform - Remove ruby version of oo-trap-user (jhonce@redhat.com)
+- Merge pull request #5131 from bparees/revert_restore_state
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5135 from bparees/process_running_check
+  (dmcphers+openshiftbot@redhat.com)
+- fix process running check to use proper return code check
+  (bparees@redhat.com)
+- Revert "Card origin_cartridge_133 - Maintain application state across
+  snapshot/restore" (bparees@redhat.com)
+- Adding a function test for outbound traffic control (bleanhar@redhat.com)
+- Adding error checking for outbound tc settings (bleanhar@redhat.com)
+- Bug 1076217 - Making the tc outbound settings configurable
+  (bleanhar@redhat.com)
+- facter ipaddress does not always return the ip that we would want
+  (bparees@redhat.com)
+- Bug 1082488 - Silence error message on node with no gears (jhonce@redhat.com)
+- Merge pull request #5095 from jwhonce/bug/1081249
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5100 from jwhonce/bug/1081441
+  (dmcphers+openshiftbot@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+- Bug 1081249 - Synchronize access to selinux matchpath context
+  (jhonce@redhat.com)
+- Bug 1081441 - unprivileged_unidle not updating idler.txt (jhonce@redhat.com)
+- Bug 1081249 - Synchronize access to selinux matchpath context
+  (jhonce@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.10-1
+- Merge pull request #5094 from ironcladlou/binary-deploy-bug
+  (dmcphers+openshiftbot@redhat.com)
+- Fix raise during initial deployment meta creation (ironcladlou@gmail.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.9-1
+- Sanitize usage of 'ps' command in Bash SDK (mfojtik@redhat.com)
+- Bug 1081367 - Use process_running in shutdown_httpd_graceful
+  (mfojtik@redhat.com)
+- Merge pull request #5078 from jwhonce/bug/1065276
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5062 from bparees/ctl_app_restart
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1065276 - Skip *.rpmnew when loading environments (jhonce@redhat.com)
+- Action hooks run are not consistent between `ctl_all restart` and `rhc app-
+  restart` (bparees@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.22.8-1
+- Merge pull request #5075 from ironcladlou/force-stop-fix
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5066 from dobbymoodge/BZ1077077
+  (dmcphers+openshiftbot@redhat.com)
+- Check for pid existence in graceful shutdown func (ironcladlou@gmail.com)
+- Bug 1078814: Adding more validations for cartridge manifests
+  (abhgupta@redhat.com)
+- Merge pull request #5065 from bparees/logdir_refs
+  (dmcphers+openshiftbot@redhat.com)
+- node spec: add rubygem(json) Bug 1077077 (jolamb@redhat.com)
+- write logs to expected jboss filename so watchman finds it
+  (bparees@redhat.com)
+- Report lingering httpd procs following graceful shutdown
+  (ironcladlou@gmail.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.22.7-1
+- Merge pull request #5041 from ironcladlou/logshifter/carts
+  (dmcphers+openshiftbot@redhat.com)
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+
+* Mon Mar 24 2014 Adam Miller <admiller@redhat.com> 1.22.6-1
+- Merge pull request #5032 from a13m/oo-sched-jobs-nogrep
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5037 from jwhonce/bug/1079261
+  (dmcphers+openshiftbot@redhat.com)
+- fix vendor match on cron cart check (agrimm@redhat.com)
+- Bug 1079261 - Update to support new cgroup mounts (jhonce@redhat.com)
+- Remove excessive grep invocations from oo-scheduled-jobs (agrimm@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.22.5-1
+- Merge pull request #5029 from danmcp/master (dmcphers@redhat.com)
+- Merge pull request #5021 from ironcladlou/initial-build-limiting
+  (dmcphers+openshiftbot@redhat.com)
+- Fixing extended tests (dmcphers@redhat.com)
+- Limit initial build client output to 10Kb (ironcladlou@gmail.com)
+- fix default expose_port option to false (rchopra@redhat.com)
+- Update tests to not use any installed gems and use source gems only Add
+  environment wrapper for running broker util scripts (jforrest@redhat.com)
+- Bug 1079072 - Hide quota error messsages (jhonce@redhat.com)
+- Merge pull request #5003 from rajatchopra/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5002 from tdawson/2014-03/tdawson/move-node-requires
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5001 from bparees/missing_ident
+  (dmcphers+openshiftbot@redhat.com)
+- auto expose ports upon configure, but only for scalable apps
+  (rchopra@redhat.com)
+- move some node requires to diy cartridge dependencies (tdawson@redhat.com)
+- Check for cartridge IDENT before starting gear upgrade process
+  (bparees@redhat.com)
+- error out of upgrade as soon as a bad gear configuration is detected
+  (bparees@redhat.com)
+
+* Wed Mar 19 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Bug 1061926 - Ensure frontend unidled if backend unidled (jhonce@redhat.com)
+- cart configure should expose ports as well (rchopra@redhat.com)
+
+* Tue Mar 18 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- Merge pull request #4976 from mfojtik/bugzilla/1076626
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1076626 - Fix LD_LIBRARY_PATH for cron_runjobs (mfojtik@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Merge pull request #4965 from UhuruSoftware/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1076366 - Need to migrate 'platform' into gear-registry.json for scaling
+  applications (vlad.iovanov@uhurusoftware.com)
+- Bug 1067008 - Delete gear when missing a Cartridge Ident (jhonce@redhat.com)
+- Card origin_cartridge_133 - Maintain application state across
+  snapshot/restore (mfojtik@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Merge pull request #4956 from bparees/binary_deploy
+  (dmcphers+openshiftbot@redhat.com)
+- undo unnecessary reording of permissions (bparees@redhat.com)
+- Merge pull request #4944 from UhuruSoftware/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1067008 - Guard gear delete from missing Cartridge IDENT
+  (jhonce@redhat.com)
+- Merge pull request #4943 from bparees/binary_deploy
+  (dmcphers+openshiftbot@redhat.com)
+- Add support for multiple platforms in OpenShift. Changes span both the broker
+  and the node. (vlad.iovanov@uhurusoftware.com)
+- Bug 1075673 - Unable to perform git deploy after binary deployment
+  (bparees@redhat.com)
+- Bug 1075221 - Prevent mcollective and watchman restart after logrotate
+  (mfojtik@redhat.com)
+- Adding tests for cartridge sdk version comparisons (bleanhar@redhat.com)
+- Adding methods for version comparisons to the cartridge sdk
+  (bleanhar@redhat.com)
+- Use NodeLogger in MCollective agent code (ironcladlou@gmail.com)
+- Adding additional gear extended queue (dmcphers@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.21.5-1
+- Merge pull request #4895 from pmorie/bugs/1072663
+  (dmcphers+openshiftbot@redhat.com)
+- Fix bug 1072663, 1072663: (pmorie@gmail.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.21.4-1
+- Bug 1072249 (dmcphers@redhat.com)
+
+* Tue Mar 04 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- Merge pull request #4865 from pmorie/bugs/1066980
+  (dmcphers+openshiftbot@redhat.com)
+- msg change for tc when its already active (rchopra@redhat.com)
+- Fix bug 1066980: relax matching conditions for secondary groups in scalable
+  app (pmorie@gmail.com)
+- fix bz1071473 - add fixaddr to the chkconfiged service 'openshift-iptables-
+  port-proxy' (rchopra@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Bug 1071721 - Show errors when env vars aren't found (dmcphers@redhat.com)
+- Fixing typos (dmcphers@redhat.com)
+- Merge pull request #4856 from jwhonce/origin_node_39
+  (dmcphers+openshiftbot@redhat.com)
+- Card origin_node_39 - Fix unit test (jhonce@redhat.com)
+- check if gears are already throttled.
+  https://bugzilla.redhat.com/show_bug.cgi?id=1071167 (rchopra@redhat.com)
+- Python - DocumentRoot logic, Repository Layout simplification
+  (vvitek@redhat.com)
+- Reworked rhcsh to be more efficient (mfojtik@redhat.com)
+- Update oo-trap-user to handle LD_LIBRARY_PATH_ELEMENT (mfojtik@redhat.com)
+- Use SDK functions in rhcsh and cronjob task to build PATH/LD_LIBRARY_PATH
+  (mfojtik@redhat.com)
+- Card origin_cartridge_31 - Add support for LD_LIBRARY_PATH_ELEMENT to node
+  (mfojtik@redhat.com)
+- Merge pull request #4846 from jwhonce/origin_node_39
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4838 from ncdc/bug/1070656-require-args
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #4844 from pmorie/activate
+  (dmcphers+openshiftbot@redhat.com)
+- Card origin_node_39 - Fix functional tests (jhonce@redhat.com)
+- Relax catch clause for errors during activation (pmorie@gmail.com)
+- Validate required args exist for gear actions (andy.goldstein@gmail.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- Card origin_node_39 - Make test optional (jhonce@redhat.com)
+- Merge pull request #4829 from jwhonce/origin_node_39
+  (dmcphers+openshiftbot@redhat.com)
+- Card origin_node_39 - Fix unit test (jhonce@redhat.com)
+- Bug 1068891 - Remove redundant call to date (jhonce@redhat.com)
+- Card origin_node_39 - Introduce GearStatePlugin (jhonce@redhat.com)
+- fix PHP functional api test (vvitek@redhat.com)
+- Bug 1056713 - Remove nil from output (jhonce@redhat.com)
+- Merge pull request #4776 from jwhonce/origin_node_39
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1067031 - Do not include old versions of carts in latest carts just
+  because they have a unique software version (dmcphers@redhat.com)
+- Fix typo (dmcphers@redhat.com)
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+- Merge pull request #4788 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1025195 - Reset quota to the min extra (dmcphers@redhat.com)
+- Card origin_node_39 - Have Watchman attempt honor state of gear
+  (jhonce@redhat.com)
+
 * Mon Feb 17 2014 Adam Miller <admiller@redhat.com> 1.20.7-1
 - Merge pull request #4782 from danmcp/master
   (dmcphers+openshiftbot@redhat.com)

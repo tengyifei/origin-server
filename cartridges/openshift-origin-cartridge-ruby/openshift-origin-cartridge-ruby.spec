@@ -7,7 +7,7 @@
 %global httpdconfdir /etc/openshift/cart.conf.d/httpd/ruby
 
 Name:          openshift-origin-cartridge-ruby
-Version: 1.21.0
+Version: 1.23.3
 Release:       1%{?dist}
 Summary:       Ruby cartridge
 Group:         Development/Languages
@@ -25,6 +25,9 @@ Requires:      rubygem-passenger
 Requires:      rubygem-passenger-native
 Requires:      rubygem-passenger-native-libs
 Requires:      rubygems
+# BZ1066246 - Older versions rubygems required ruby-rdoc, but now we
+# need to declare the dependency here
+Requires:      ruby-rdoc
 Requires:      rubygem-thread-dump
 Requires:      %{?scl:%scl_prefix}rubygem-fastthread
 Requires:      %{?scl:%scl_prefix}runtime
@@ -62,24 +65,15 @@ Ruby cartridge for OpenShift. (Cartridge Format V2)
 %__cp -r * %{buildroot}%{cartridgedir}
 %__mkdir -p %{buildroot}%{httpdconfdir}
 
-%if 0%{?fedora}%{?rhel} <= 6
-%__mv %{buildroot}%{cartridgedir}/versions/1.9-scl %{buildroot}%{cartridgedir}/versions/1.9
-%__mv %{buildroot}%{cartridgedir}/lib/ruby_context.rhel %{buildroot}%{cartridgedir}/lib/ruby_context
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.rhel %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%endif
-%if 0%{?fedora} == 19
-%__rm -rf %{buildroot}%{cartridgedir}/versions/1.9-scl
-%__rm -rf %{buildroot}%{cartridgedir}/versions/1.8
-%__mv %{buildroot}%{cartridgedir}/lib/ruby_context.f19 %{buildroot}%{cartridgedir}/lib/ruby_context
-%__mv %{buildroot}%{cartridgedir}/metadata/manifest.yml.f19 %{buildroot}%{cartridgedir}/metadata/manifest.yml
-%endif
-%__rm -f %{buildroot}%{cartridgedir}/lib/ruby_context.*
-%__rm -f %{buildroot}%{cartridgedir}/metadata/manifest.yml.*
-
 %files
 %dir %{cartridgedir}
 %attr(0755,-,-) %{cartridgedir}/bin/
-%{cartridgedir}
+%{cartridgedir}/env
+%{cartridgedir}/lib
+%{cartridgedir}/logs
+%{cartridgedir}/metadata
+%{cartridgedir}/run
+%{cartridgedir}/versions
 %doc %{cartridgedir}/README.md
 %doc %{cartridgedir}/COPYRIGHT
 %doc %{cartridgedir}/LICENSE
@@ -87,6 +81,66 @@ Ruby cartridge for OpenShift. (Cartridge Format V2)
 %attr(0755,-,-) %{httpdconfdir}
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.3-1
+- Bumping cartridge versions for sprint 43 (bparees@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.2-1
+- Re-introduce cartridge-scoped log environment vars (ironcladlou@gmail.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Removing file listed twice warnings (dmcphers@redhat.com)
+- Bug 1084379 - Added ensure_httpd_restart_succeed() back into ruby/phpmyadmin
+  (mfojtik@redhat.com)
+- Force httpd into its own pgroup (ironcladlou@gmail.com)
+- Fix graceful shutdown logic (ironcladlou@gmail.com)
+- Make restarts resilient to missing/corrupt pidfiles (ironcladlou@gmail.com)
+- Merge pull request #5097 from dobbymoodge/BZ1066246
+  (dmcphers+openshiftbot@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+- ruby cart: Explicitly req. ruby-rdoc dep for rhel (jolamb@redhat.com)
+
+* Thu Mar 27 2014 Adam Miller <admiller@redhat.com> 1.22.5-1
+- Merge pull request #5086 from VojtechVitek/latest_versions
+  (dmcphers+openshiftbot@redhat.com)
+- Update Cartridge Versions for Stage Cut (vvitek@redhat.com)
+- util: add nodejs context for bundle exec call (jolamb@redhat.com)
+- Merge pull request #5077 from mfojtik/bugzilla/1080789
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1080789 - Add PASSENGER_TEMP_DIR to ruby cartridge (mfojtik@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.22.4-1
+- Bug 1080381 - Fixed problem with httpd based carts restart after force-stop
+  (mfojtik@redhat.com)
+- Report lingering httpd procs following graceful shutdown
+  (ironcladlou@gmail.com)
+- Merge pull request #5055 from ironcladlou/ruby-umask
+  (dmcphers+openshiftbot@redhat.com)
+- Set umask when starting Passenger/httpd (ironcladlou@gmail.com)
+
+* Tue Mar 25 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- Merge pull request #5041 from ironcladlou/logshifter/carts
+  (dmcphers+openshiftbot@redhat.com)
+- Port cartridges to use logshifter (ironcladlou@gmail.com)
+- Bug 1030873 - Fix the there is no system NodeJS installed which is required
+  for assets compilation (mfojtik@redhat.com)
+
+* Mon Mar 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.2-1
+- Remove unused teardowns (dmcphers@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- Refactor the way how we check if compilation of assets is necessary (ruby)
+  (mfojtik@redhat.com)
+- Removing f19 logic (dmcphers@redhat.com)
+- Updating cartridge versions (jhadvig@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Mon Mar 03 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- Update ruby cartridge to support LD_LIBRARY_PATH_ELEMENT (mfojtik@redhat.com)
+- Template cleanup (dmcphers@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Sun Feb 16 2014 Adam Miller <admiller@redhat.com> 1.20.5-1
 - httpd cartridges: OVERRIDE with custom httpd conf (lmeyer@redhat.com)
 

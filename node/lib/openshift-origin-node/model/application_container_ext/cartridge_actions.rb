@@ -24,8 +24,13 @@ module OpenShift
         # @param cart_name         cartridge name
         # @param template_git_url  URL for template application source/bare repository
         # @param manifest          Broker provided manifest
-        def configure(cart_name, template_git_url=nil,  manifest=nil)
-          @cartridge_model.configure(cart_name, template_git_url, manifest)
+        # @param do_expose_ports   Flag to suggest whether cartridge's public endpoints should be exposed out or not
+        def configure(cart_name, template_git_url=nil,  manifest=nil, do_expose_ports=false)
+          o = (@cartridge_model.configure(cart_name, template_git_url, manifest) || "")
+          if do_expose_ports
+            o += (create_public_endpoints(cart_name) || "")
+          end
+          o
         end
 
         def post_configure(cart_name, template_git_url=nil)
@@ -71,38 +76,14 @@ module OpenShift
               raise ::OpenShift::Runtime::Utils::Sdk.translate_out_for_client(message, :error)
             end
           elsif cartridge.deployable?
-            deployment_datetime = latest_deployment_datetime
-            deployment_metadata = deployment_metadata_for(deployment_datetime)
-
-            # only do this if we've never activated
-            if deployment_metadata.activations.empty?
-              prepare(deployment_datetime: deployment_datetime)
-
-              # prepare modifies the deployment metadata - need to reload
-              deployment_metadata.load
-
-              application_repository = ApplicationRepository.new(self)
-              git_ref = 'master'
-              git_sha1 = application_repository.get_sha1(git_ref)
-              deployment_metadata.git_sha1 = git_sha1
-              deployment_metadata.git_ref = git_ref
-
-              deployments_dir = PathUtils.join(@container_dir, 'app-deployments')
-              set_rw_permission_R(deployments_dir)
-              reset_permission_R(deployments_dir)
-
-              deployment_metadata.record_activation
-              deployment_metadata.save
-
-              update_current_deployment_datetime_symlink(deployment_datetime)
-            end
+            setup_deployment(latest_deployment_datetime)
           end
 
           output << @cartridge_model.post_configure(cart_name)
 
           if perform_initial_build
             pattern   = Utils::Sdk::CLIENT_OUTPUT_PREFIXES.join('|')
-            out, _, _ = Utils.oo_spawn("grep -E '#{pattern}' #{build_log}",
+            out, _, _ = Utils.oo_spawn("grep -E '#{pattern}' #{build_log} | head -c 10K",
                                       env:                 env,
                                       chdir:               @container_dir,
                                       uid:                 @uid,
@@ -111,6 +92,32 @@ module OpenShift
           end
 
           output
+        end
+
+        def setup_deployment(deployment_datetime)
+          deployment_metadata = deployment_metadata_for(deployment_datetime)
+          # only do this if we've never activated
+          if deployment_metadata.activations.empty?
+            prepare(deployment_datetime: deployment_datetime)
+
+            # prepare modifies the deployment metadata - need to reload
+            deployment_metadata.load
+
+            application_repository = ApplicationRepository.new(self)
+            git_ref = 'master'
+            git_sha1 = application_repository.get_sha1(git_ref)
+            deployment_metadata.git_sha1 = git_sha1
+            deployment_metadata.git_ref = git_ref
+
+            deployments_dir = PathUtils.join(@container_dir, 'app-deployments')
+            set_rw_permission_R(deployments_dir)
+            reset_permission_R(deployments_dir)
+
+            deployment_metadata.record_activation
+            deployment_metadata.save
+
+            update_current_deployment_datetime_symlink(deployment_datetime)
+          end
         end
 
         # Remove cartridge from gear
@@ -168,10 +175,7 @@ module OpenShift
 
           output = ''
 
-          # TODO this is a quick fix because the PUBLIC_IP from the node config
-          # isn't the one we want - the port proxy binds to the 10.x IPs, not
-          # to the public EC2 IP addresses
-          ip_address = `facter ipaddress`.chomp
+          ip_address = `facter host_ip`.chomp
 
           env  = ::OpenShift::Runtime::Utils::Environ::for_gear(@container_dir)
           # TODO: better error handling
@@ -745,7 +749,10 @@ module OpenShift
           }
 
           deployments_dir = PathUtils.join(@container_dir, 'app-deployments')
-          out, err, rc = run_in_container_context("rsync -avz --rsh=/usr/bin/oo-ssh --delete-before --exclude=current ./ #{gear}:app-deployments/",
+
+          rsync_options = remote_rsync_options(result[:gear_uuid])
+
+          out, err, rc = run_in_container_context("rsync #{rsync_options} --rsh=/usr/bin/oo-ssh --delete-before --exclude=current ./ #{gear}:app-deployments/",
                                                   env: gear_env,
                                                   chdir: deployments_dir)
 
@@ -800,6 +807,9 @@ module OpenShift
               activate_remote_gear(target_gear, local_gear_env, options)
             end
           end
+
+          # if we have a standalone proxy, the call to 'with_gear_rotation' ignores a gear without a web cart
+          parallel_results << activate_local_gear(options) if @cartridge_model.standalone_web_proxy?
 
           activated_gear_uuids = []
 
@@ -860,7 +870,8 @@ module OpenShift
 
             raise "No result JSON was received from the remote activate call" if out.nil? || out.empty?
 
-            activate_result = HashWithIndifferentAccess.new(JSON.load(out))
+            # JSON.load is not used to prevent class injection. BZ#1086427
+            activate_result = HashWithIndifferentAccess.new(JSON.parse(out))
 
             raise "Invalid result JSON received from remote activate call: #{activate_result.inspect}" unless activate_result.has_key?(:status)
 
@@ -1203,19 +1214,31 @@ module OpenShift
           begin
             # stay local (don't ssh) if the target gear is the local gear
             if target_gear_uuid == uuid
-              result[:messages] << @cartridge_model.start_cartridge('restart',
-                                                                   cart_name,
-                                                                   user_initiated: true,
-                                                                   out: options[:out],
-                                                                   err: options[:err])
+              if cart_name
+                result[:messages] << @cartridge_model.start_cartridge('restart',
+                                                                     cart_name,
+                                                                     user_initiated: true,
+                                                                     out: options[:out],
+                                                                     err: options[:err])
+              else
+                result[:messages] << @cartridge_model.restart_gear(user_initiated: true,
+                                                                  out: options[:out],
+                                                                  err: options[:err])
+              end
             else
-              out, err, rc = run_in_container_context("/usr/bin/oo-ssh #{target_gear.to_ssh_url} gear restart --cart #{cart_name} --as-json",
+              if cart_name
+                out, err, rc = run_in_container_context("/usr/bin/oo-ssh #{target_gear.to_ssh_url} gear restart --cart #{cart_name} --as-json",
+                                                        env: local_gear_env,
+                                                        expected_exitstatus: 0)
+              else
+                out, err, rc = run_in_container_context("/usr/bin/oo-ssh #{target_gear.to_ssh_url} gear restart --all-cartridges --as-json",
                                                       env: local_gear_env,
                                                       expected_exitstatus: 0)
-
+              end
               raise "No result JSON was received from the remote gear restart call" if out.nil? || out.empty?
 
-              result = HashWithIndifferentAccess.new(JSON.load(out))
+              # JSON.load is not used to prevent class injection. BZ#1086427
+              result = HashWithIndifferentAccess.new(JSON.parse(out))
 
               raise "Invalid result JSON received from remote gear restart call: #{result.inspect}" unless result.has_key?(:status)
             end
@@ -1304,7 +1327,7 @@ module OpenShift
             cloud_domain = @config.get("CLOUD_DOMAIN")
 
             cluster.split(' ').each do |line|
-              gear_uuid, gear_name, namespace, proxy_hostname, proxy_port = line.split(',')
+              gear_uuid, gear_name, namespace, proxy_hostname, proxy_port, platform = line.split(',')
               gear_dns = "#{gear_name}-#{namespace}.#{cloud_domain}"
 
               # add the entry to the gear registry
@@ -1314,14 +1337,15 @@ module OpenShift
                 namespace: namespace,
                 dns: gear_dns,
                 proxy_hostname: proxy_hostname,
-                proxy_port: proxy_port
+                proxy_port: proxy_port,
+                platform: platform
               }
               logger.info "Adding gear registry #{uuid} new web entry: #{new_entry}"
               gear_registry.add(new_entry)
             end
 
             proxies.split(' ').each do |line|
-              gear_uuid, gear_name, namespace, proxy_hostname = line.split(',')
+              gear_uuid, gear_name, namespace, proxy_hostname, platform = line.split(',')
               gear_dns = "#{gear_name}-#{namespace}.#{cloud_domain}"
               new_entry = {
                 type: :proxy,
@@ -1329,7 +1353,8 @@ module OpenShift
                 namespace: namespace,
                 dns: gear_dns,
                 proxy_hostname: proxy_hostname,
-                proxy_port: 0
+                proxy_port: 0,
+                platform: platform
               }
               logger.info "Adding gear registry #{uuid} new proxy entry: #{new_entry}"
               gear_registry.add(new_entry)
@@ -1342,6 +1367,17 @@ module OpenShift
 
             logger.info "Retrieving updated gear registry #{uuid} entries"
             updated_entries = gear_registry.entries
+
+            # we initialize the standalone web proxy git template after we're aware of web gears
+            if @cartridge_model.standalone_web_proxy?
+              repo = ApplicationRepository.new(self)
+
+              unless repo.exist?
+                @cartridge_model.populate_gear_repo(@cartridge_model.web_proxy.name, nil)
+              end
+
+              setup_deployment(latest_deployment_datetime)
+            end
 
             # the broker will inform us if we are supposed to sync and activate new gears
             if sync_new_gears == true
@@ -1361,13 +1397,15 @@ module OpenShift
               end
 
               unless new_web_gears.empty?
-                # convert the new gears to the format uuid@ip
-                ssh_urls = new_web_gears.map { |e| "#{e.uuid}@#{e.proxy_hostname}" }
-
                 # sync from this gear (load balancer) to all new gears
                 # copy app-deployments and make all the new gears look just like it (i.e., use --delete)
-                ssh_urls.each do |gear|
-                  out, err, rc = run_in_container_context("rsync -avz --delete --rsh=/usr/bin/oo-ssh app-deployments/ #{gear}:app-deployments/",
+                new_web_gears.each do |web_gear|
+                  # convert the new gear to the format uuid@ip
+                  gear = "#{web_gear.uuid}@#{web_gear.proxy_hostname}"
+
+                  rsync_options = remote_rsync_options(web_gear)
+
+                  out, err, rc = run_in_container_context("rsync #{rsync_options} --delete --rsh=/usr/bin/oo-ssh app-deployments/ #{gear}:app-deployments/",
                                                           env: gear_env,
                                                           chdir: container_dir,
                                                           expected_exitstatus: 0)
@@ -1427,7 +1465,11 @@ module OpenShift
 
         def sync_git_repo(ssh_urls, gear_env)
           OpenShift::Runtime::Threads::Parallel.map(ssh_urls, :in_threads => MAX_THREADS) do |gear|
-            out, err, rc = run_in_container_context("rsync -avz --delete --exclude hooks --rsh=/usr/bin/oo-ssh git/#{application_name}.git/ #{gear}:git/#{application_name}.git/",
+            gear_uuid = gear.split('@')[0]
+
+            rsync_options = remote_rsync_options(gear_uuid)
+
+            out, err, rc = run_in_container_context("rsync #{rsync_options} --delete --exclude hooks --rsh=/usr/bin/oo-ssh git/#{application_name}.git/ #{gear}:git/#{application_name}.git/",
                                                     env: gear_env,
                                                     chdir: container_dir,
                                                     expected_exitstatus: 0)
@@ -1518,7 +1560,8 @@ module OpenShift
 
             raise "No result JSON was received from the remote proxy update call" if out.nil? || out.empty?
 
-            result = HashWithIndifferentAccess.new(JSON.load(out))
+            # JSON.load is not used to prevent class injection. BZ#1086427
+            result = HashWithIndifferentAccess.new(JSON.parse(out))
 
             raise "Invalid result JSON received from remote proxy update call: #{result.inspect}" unless result.has_key?(:status)
           rescue => e
@@ -1652,6 +1695,19 @@ module OpenShift
             deployment_metadata.force_clean_build = options[:force_clean_build]
             deployment_metadata.save
           end
+
+        def remote_rsync_options(gear)
+          if gear.is_a? String
+            gear = gear_registry.entries[:web][gear]
+          end
+
+          case gear.platform
+            when 'windows'
+              '-rltgoDOv'
+            else
+              '-avz'
+          end
+        end
       end
     end
   end

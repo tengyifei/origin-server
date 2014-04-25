@@ -11,7 +11,7 @@ class DeploymentsControllerTest < ActionController::TestCase
     @user = CloudUser.new(login: @login)
     @user.private_ssl_certificates = true
     @user.save
-    Lock.create_lock(@user)
+    Lock.create_lock(@user.id)
     register_user(@login, @password)
 
     @request.env['HTTP_AUTHORIZATION'] = "Basic " + Base64.encode64("#{@login}:#{@password}")
@@ -60,6 +60,11 @@ class DeploymentsControllerTest < ActionController::TestCase
     assert_response :success
     assert json = JSON.parse(response.body)
     assert_equal id, json['data']['id']
+
+    @request.env['HTTP_ACCEPT'] = 'application/xml'
+    get :show, {"id" => id, "application_id" => @app._id}
+    assert_response :success
+    @request.env['HTTP_ACCEPT'] = 'application/json'
 
     get :index , {"application_id" => @app._id}
     assert_response :success
@@ -113,7 +118,7 @@ class DeploymentsControllerTest < ActionController::TestCase
       assert_equal msg_exit_code, message["exit_code"]
     }
   end
-  
+
   test "validate ref" do
     # See git-check-ref-format man page for rules
     invalid_values = ["a"*257, "abc.lock", "abc/.xyz", "abc..xyz", "/abc", "abc/", "abc//xyz", "abc.", "abc@{xyz}"]

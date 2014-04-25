@@ -8,9 +8,12 @@
 
 RULES_FILE="/etc/openshift/iptables.filter.rules"
 NAT_FILE="/etc/openshift/iptables.nat.rules"
+OO_SBIN="/usr/bin/"
 
 start() {
     check_firewall true
+
+    ${OO_SBIN}oo-iptables-port-proxy fixaddr
 
     ROUTE_LOCALNET=`sysctl -n net.ipv4.conf.all.route_localnet`
     if [ $ROUTE_LOCALNET -eq "0" ]; then
@@ -29,7 +32,7 @@ start() {
 }
 
 stop() {
-    # Droping the reference from the input chain would needlessly complicate
+    # Dropping the reference from the input chain would needlessly complicate
     # this logic.  For that reason we can't actually drop the chain.  This will
     # allow admins to flush the chain if needed.
     iptables -F rhc-app-comm
@@ -98,7 +101,7 @@ case "$1" in
         start
         ;;
     reload)
-	# Calling stop could cause an outage.  It's best to simply call start.
+        # Calling stop could cause an outage.  It's best to simply call start.
         start
         ;;
     *)

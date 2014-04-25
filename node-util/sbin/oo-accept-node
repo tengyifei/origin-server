@@ -76,8 +76,6 @@ rescue LoadError => e
   verbose("using default accept-node extensions")
 end
 
-$TC_CHECK=true
-
 $CONF_DIR="/etc/openshift"
 $NODE_CONF_FILE=File.join($CONF_DIR, "/node.conf")
 $RESOURCE_LIMITS_FILE=File.join($CONF_DIR,"/resource_limits.conf")
@@ -133,7 +131,7 @@ def user_fail(uuid, msg)
 
   # Did a create/destroy hook get modified for the user?
   begin
-    if File.stat("/var/lock/oo-create.#{uuid}").mtime >= $START_TIME
+    if File.stat("/var/lock/gear.#{uuid}").mtime >= $START_TIME
       return
     end
   rescue Errno::ENOENT
@@ -237,7 +235,7 @@ def load_users
   # for a user are displayed on a single line. Other times, they are split.
   # This handles both cases using Set merging.
   $CGROUP_DATA = Hash.new{|hash, key| hash[key] = Set.new()}
-  %x["/bin/lscgroup"].split.each { |entry|
+  %x[/bin/lscgroup].split.each { |entry|
     subsystems,uuid = entry.split(':')
     uuid.match('/openshift/(.+)') { |m| $CGROUP_DATA[m[1]].merge(subsystems.split(',')) }
   }
@@ -317,7 +315,7 @@ def check_node_public_resolution
     # but we can check PUBLIC_HOSTNAME resolves to either a NIC on this host or PUBLIC_IP.
     # in EC2, hostname resolves differently internal vs. external, so will match NIC.
     # in most places, PUBLIC_HOSTNAME will resolve to PUBLIC_IP
-    my_ips = `ip addr show scope global`.scan(/^\s+inet\s+([\d\.]+)/).flatten.push(pubip).uniq
+    my_ips = %x[/sbin/ip addr show scope global].scan(/^\s+inet\s+([\d\.]+)/).flatten.push(pubip).uniq
     do_fail("#{$NODE_CONF_FILE}: PUBLIC_HOSTNAME #{pubhost} resolves to #{resolved_host}; expected #{my_ips.join '|'}") unless my_ips.member? resolved_host
 end
 
@@ -326,20 +324,20 @@ def check_selinux()
 
     policy_name = selinux_policy_name
 
-    unless %x[/usr/sbin/getenforce] =~ /Enforcing/
-        do_fail("selinux is not enabled")
+    if %x[/usr/sbin/getenforce] =~ /Enforcing/
+      verbose("checking selinux #{policy_name} policy")
+      do_fail("selinux #{policy_name} policy is not loaded") unless %x[/usr/bin/timeout -s9 #{$OPTIONS[:timeout]} /usr/sbin/semodule -l] =~ /#{policy_name}[\d\.\W]+$/
     else
-        verbose("checking selinux #{policy_name} policy")
-        do_fail("selinux #{policy_name} policy is not loaded") unless %x[/usr/bin/timeout -s9 #{$OPTIONS[:timeout]} /usr/sbin/semodule -l] =~ /#{policy_name}[\d\.\W]+$/
+      do_fail('selinux is not enabled')
     end
-    verbose("checking selinux booleans")
+    verbose('checking selinux booleans')
     $SEBOOL_LIST.split.each { |bool|
         name,value = bool.split(':')
         result = %x[/usr/sbin/getsebool #{name}]
         do_fail("selinux boolean #{name} should be #{value}") unless result =~ /#{name} --> #{value}/
     }
 
-    do_fail("invalid selinux labels in OPENSHIFT_DIR $GEAR_BASE_DIR") unless %x[/sbin/restorecon -n -v #{$GEAR_BASE_DIR}] =~ //
+    do_fail('invalid selinux labels in OPENSHIFT_DIR $GEAR_BASE_DIR') unless %x[/sbin/restorecon -n -v #{$GEAR_BASE_DIR}] =~ //
 
     # This will likely only detect the effects of a full relabel but it's
     # better than nothing.  My unscientific tests shows that checking 100 gears
@@ -464,8 +462,7 @@ def check_cgroup_procs
     # Support mounting cgroup controllers under /cgroup/all or
     # /cgroup/<controller>
     Dir.glob("/cgroup/*/openshift/*/cgroup.procs").each do |file|
-        controller = file.split("/")[2]
-        uuid = file.split("/")[4]
+        _, _, controller, _, uuid, _ = file.split("/")
         lines = []
         IO.foreach(file).each { |line| lines << line.strip }
         cgroup_procs[controller][uuid] = lines
@@ -494,6 +491,12 @@ end
 # Check tc config
 #
 def check_tc_config
+    # BZ#1087755 TRAFFIC_CONTROL_ENABLED defaults to true not false
+    if 'false' == $CONF.get('TRAFFIC_CONTROL_ENABLED', 'true')
+      verbose("traffic control not enabled in /etc/openshift/node.conf, set TRAFFIC_CONTROL_ENABLED=true to enable")
+      return
+    end
+
     verbose("checking presence of tc qdisc")
     qdiscresponse="qdisc htb 1: root"
 
@@ -708,7 +711,7 @@ def check_system_httpd_configs
       httpconfs['aliases.txt'].delete_if { |k,v|  v == fqdn }
       httpconfs['idler.txt'].delete(fqdn)
       httpconfs['sts.txt'].delete(fqdn)
-      httpconfs['routes.json'].delete(fqdn)
+      httpconfs['routes.json'].delete_if   { |k,v|  k.split('/')[0] == fqdn }
       httpconfs['routes.json'].delete_if { |k, v| v["alias"] == fqdn }
       httpconfs['geardb.json'].delete_if { |k, v| v["fqdn"] == fqdn }
     rescue
@@ -750,7 +753,7 @@ def check_system_httpd_configs
 end
 
 def check_app_dirs
-  verbose("checking application dirs")
+  verbose('checking application dirs')
   copy_all_users = $USERS.dup
 
   Dir.foreach($GEAR_BASE_DIR) do |entry|
@@ -763,18 +766,39 @@ def check_app_dirs
     next if File.symlink? gear_home
     next unless File.directory? gear_home
 
-    [ ".ssh", ".env", ".sandbox", ".tmp" ].each do |dotdir|
-         user_fail(entry, "directory #{entry} doesn't have a #{dotdir} directory") unless File.directory? File.join(gear_home,dotdir)
+    %w(.ssh .env .sandbox .tmp).each do |dotdir|
+      unless File.directory? File.join(gear_home, dotdir)
+        user_fail(entry, "directory #{entry} doesn't have a #{dotdir} directory")
+      end
     end
 
-    if Dir.glob(File.join(gear_home, %w(* metadata manifest.yml))).size == 0
+    cartridges = Dir.glob(File.join(gear_home, %w(* metadata manifest.yml)))
+    idents = Dir.glob(File.join(gear_home, %w(* env OPENSHIFT_*_IDENT)))
+
+    if cartridges.empty?
       user_fail(entry, "directory #{entry} doesn't have a cartridge directory")
+    end
+
+    if cartridges.size != idents.size
+      user_fail(entry, "directory #{entry} ratio of cartridge:ident not 1:1 rather #{cartridges.size}:#{idents.size}")
     end
 
     if copy_all_users.select { |u| u.name == entry }.empty?
       user_fail(entry, "directory #{entry} doesn't have an associated user")
     else
       copy_all_users.delete_if { |u| u.name == entry }
+    end
+
+    primary = File.join(gear_home, '.env', 'OPENSHIFT_PRIMARY_CARTRIDGE_DIR')
+    if File.exist? primary
+      primary = IO.read(primary).chomp
+      if primary.empty?
+        user_fail(entry, %Q(directory #{entry}/.env has empty OPENSHIFT_PRIMARY_CARTRIDGE_DIR'))
+      elsif !File.directory? primary
+        user_fail(entry, %Q(directory #{entry} doesn't have primary cartridge '#{File.basename(primary)}'))
+      end
+    else
+      user_fail(entry, "directory #{entry}/.env doesn't have OPENSHIFT_PRIMARY_CARTRIDGE_DIR")
     end
   end
 end
@@ -895,7 +919,7 @@ if __FILE__ == $0
       check_semaphores
       check_cgroup_config
       check_cgroup_procs
-      check_tc_config if $TC_CHECK
+      check_tc_config
       check_quotas
       check_users
       check_app_dirs

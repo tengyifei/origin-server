@@ -37,7 +37,7 @@ module OpenShift
         end
       end
 
-      # Exception used to signal command overran it's timeout in seconds
+      # Exception used to signal command overran its timeout in seconds
       class TimeoutExceeded < RuntimeError
         attr_reader :seconds
 
@@ -99,10 +99,10 @@ module OpenShift
 
             if options[:uid]
               # lazy init otherwise we end up with a cyclic require...
-              require 'openshift-origin-node/utils/selinux'
+              require 'openshift-origin-node/utils/selinux_context'
 
-              current_context  = SELinux.getcon
-              target_context   = SELinux.context_from_defaults(SELinux.get_mcs_label(options[:uid]))
+              current_context  = SelinuxContext.instance.getcon
+              target_context   = SelinuxContext.instance.from_defaults(SelinuxContext.instance.get_mcs_label(options[:uid]))
 
               # Only switch contexts if necessary
               if (current_context != target_context) || (Process.uid != options[:uid])
@@ -196,7 +196,7 @@ module OpenShift
 
       # kill_process_tree 2199 -> fixnum
       #
-      # Given a pid find it and KILL it and all it's children
+      # Given a pid find it and KILL it and all its children
       def self.kill_process_tree(pid)
         ps_results = `ps -e -opid,ppid --no-headers`.split("\n")
 

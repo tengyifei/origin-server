@@ -78,7 +78,7 @@ module SetupHelper
     FileUtils.chmod 0600, $test_priv_key
 
     # create a submodule repo for the tests
-    if !File.exists?($submodule_repo_dir)
+    unless File.exists?($submodule_repo_dir)
       `git init #{$submodule_repo_dir}`
       Dir.chdir($submodule_repo_dir) do
         `echo Submodule > index`
@@ -98,6 +98,9 @@ module SetupHelper
     `touch ~/.ssh/config`
     `chmod 600 ~/.ssh/config`
     
+    # Test we can load environments if .rpmnew files exist
+    entries = Dir['/etc/openshift/env/*.rpmnew']
+    IO.write('/etc/openshift/env/OPENSHIFT_TEST.rpmnew', 'Cucumber tests are fun') if entries.empty?
   end
 end
 World(SetupHelper)

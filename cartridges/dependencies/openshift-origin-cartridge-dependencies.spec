@@ -5,7 +5,7 @@
 
 Summary:       User dependencies for OpenShift Cartridges
 Name:          openshift-origin-cartridge-dependencies
-Version: 1.21.0
+Version: 1.23.3
 Release:       1%{?dist}
 License:       ASL 2.0
 URL:           http://www.openshift.com
@@ -24,6 +24,7 @@ an OpenShift cartrige.
 %package recommended-all
 Summary:   All recommended user dependency packages for OpenShift Cartridges
 BuildArch: noarch
+Requires:  %{name}-recommended-diy
 Requires:  %{name}-recommended-jbossas
 Requires:  %{name}-recommended-jbosseap
 Requires:  %{name}-recommended-jbossews
@@ -47,6 +48,7 @@ an OpenShift cartrige.
 %package optional-all
 Summary:   All optional user dependency packages for OpenShift Cartridges
 BuildArch: noarch
+Requires:  %{name}-optional-diy
 Requires:  %{name}-optional-jbossas
 Requires:  %{name}-optional-jbosseap
 Requires:  %{name}-optional-jbossews
@@ -67,6 +69,38 @@ an OpenShift cartrige.
 %files optional-all
 
 #===================
+# DIY
+#===================
+# DIY Recommended
+%package recommended-diy
+Summary:   Recommended user dependencies for DIY OpenShift Cartridges
+BuildArch: noarch
+Requires:  mercurial
+Requires:  unixODBC
+Requires:  unixODBC-devel
+
+%description recommended-diy
+This package pulls in other packages that a user
+might need when building common applications using
+an OpenShift cartrige.
+
+%files recommended-diy
+
+# DIY Optional
+%package optional-diy
+Summary:   Optional user dependencies for DIY OpenShift Cartridges
+BuildArch: noarch
+Requires: %{name}-recommended-diy
+Requires:  lua-devel
+
+%description optional-diy
+This package pulls in other packages that a user
+might need when building common applications using
+an OpenShift cartrige.
+
+%files optional-diy
+
+#===================
 # JBossAS
 #===================
 # JBossAS Recommended
@@ -85,6 +119,8 @@ an OpenShift cartrige.
 %package optional-jbossas
 Summary:   Optional user dependencies for JBossAS OpenShift Cartridges
 BuildArch: noarch
+Requires: %{name}-recommended-jbossas
+Requires: jython
 
 %description optional-jbossas
 This package pulls in other packages that a user
@@ -112,18 +148,8 @@ an OpenShift cartrige.
 %package optional-jbosseap
 Summary:   Optional user dependencies for JBossEAP OpenShift Cartridges
 BuildArch: noarch
-Requires:  jbossas-appclient
-Requires:  jbossas-bundles
-Requires:  jbossas-core
-Requires:  jbossas-domain
-Requires:  jbossas-hornetq-native
-Requires:  jbossas-jbossweb-native
-Requires:  jbossas-modules-eap
-Requires:  jbossas-product-eap
-Requires:  jbossas-standalone
-Requires:  jbossas-welcome-content-eap
-Requires:  jboss-eap6-modules
-Requires:  jboss-eap6-index
+Requires: %{name}-recommended-jbosseap
+Requires: jython
 
 %description optional-jbosseap
 This package pulls in other packages that a user
@@ -151,6 +177,8 @@ an OpenShift cartrige.
 %package optional-jbossews
 Summary:   Optional user dependencies for JBossEWS OpenShift Cartridges
 BuildArch: noarch
+Requires: %{name}-recommended-jbossews
+Requires: jython
 
 %description optional-jbossews
 This package pulls in other packages that a user
@@ -178,6 +206,7 @@ an OpenShift cartrige.
 %package optional-nodejs
 Summary:   Optional user dependencies for Nodejs OpenShift Cartridges
 BuildArch: noarch
+Requires: %{name}-recommended-nodejs
 
 %description optional-nodejs
 This package pulls in other packages that a user
@@ -211,12 +240,12 @@ an OpenShift cartrige.
 %package optional-perl
 Summary:   Optional user dependencies for Perl OpenShift Cartridges
 BuildArch: noarch
+Requires:  %{name}-recommended-perl
 Requires:  expat-devel
 Requires:  gd-devel
 Requires:  gdbm-devel
 Requires:  ImageMagick-perl
 Requires:  perl-MongoDB
-Requires:  rpm-build
 
 %description optional-perl
 This package pulls in other packages that a user
@@ -250,8 +279,9 @@ an OpenShift cartrige.
 
 # PHP Optional
 %package optional-php
-Summary:   Optional user dependencies for Ruby OpenShift Cartridges
+Summary:   Optional user dependencies for PHP OpenShift Cartridges
 BuildArch: noarch
+Requires:  %{name}-recommended-php
 Requires:  php-bcmath
 Requires:  php-devel
 Requires:  php-fpm
@@ -263,6 +293,7 @@ Requires:  php-mcrypt
 Requires:  php-pdo
 Requires:  php-pecl-apc
 Requires:  php-pecl-imagick
+Requires:  php-pecl-memcache
 Requires:  php-pecl-xdebug
 Requires:  php-process
 Requires:  php-soap
@@ -275,9 +306,12 @@ Requires:  php54-php-gd
 Requires:  php54-php-intl
 Requires:  php54-php-ldap
 Requires:  php54-php-mbstring
+Requires:  php54-php-mcrypt
 Requires:  php54-php-pdo
 Requires:  php54-php-pecl-apc
 Requires:  php54-php-pecl-imagick
+Requires:  php54-php-pecl-memcache
+Requires:  php54-php-pecl-xdebug
 Requires:  php54-php-process
 Requires:  php54-php-soap
 Requires:  php54-php-xml
@@ -305,10 +339,8 @@ Requires:  python-psycopg2
 Requires:  redhat-lsb-core
 Requires:  symlinks
 %if 0%{?fedora}%{?rhel} <= 6
-Requires:  python27-mod_wsgi
 Requires:  python27-MySQL-python
 Requires:  python27-python-psycopg2
-Requires:  python33-mod_wsgi
 Requires:  python33-python-psycopg2
 %endif
 
@@ -323,6 +355,7 @@ an OpenShift cartrige.
 %package optional-python
 Summary:   Optional user dependencies for Python OpenShift Cartridges
 BuildArch: noarch
+Requires:  %{name}-recommended-python
 Requires:  atlas-devel
 Requires:  freetype-devel
 Requires:  gcc-gfortran
@@ -330,17 +363,16 @@ Requires:  lapack-devel
 Requires:  libcurl-devel
 Requires:  libffi-devel
 Requires:  libjpeg-devel
+Requires:  libyaml-devel
 Requires:  numpy
 Requires:  numpy-f2py
 Requires:  pymongo
 Requires:  pymongo-gridfs
-Requires:  python-virtualenv
 Requires:  ta-lib-devel
+Requires:  xz-devel
 %if 0%{?fedora}%{?rhel} <= 6
 Requires:  python27-numpy
-Requires:  python27-python-pip-virtualenv
 Requires:  python33-numpy
-Requires:  python33-python-virtualenv
 Requires:  python33-python-pymongo
 %endif
 
@@ -382,11 +414,13 @@ an OpenShift cartrige.
 %package optional-ruby
 Summary:   Optional user dependencies for Ruby OpenShift Cartridges
 BuildArch: noarch
+Requires:  %{name}-recommended-ruby
 Requires:  libicu-devel
 Requires:  gcc-c++
 Requires:  gmp-devel
 Requires:  ImageMagick-devel
 Requires:  libev-devel
+Requires:  libgit2-devel
 Requires:  libicu-devel
 Requires:  libxml2-devel
 Requires:  libxslt-devel
@@ -396,6 +430,7 @@ Requires:  js
 Requires:  ruby-nokogiri
 Requires:  rubygem-bson_ext
 Requires:  rubygem-rack >= 1.1.0
+Requires:  rubygem-rugged
 %else
 Requires:  rubygem-nokogiri
 %endif
@@ -454,6 +489,7 @@ Requires:  %{?scl_prefix}rubygem-rdoc
 Requires:  %{?scl_prefix}rubygem-rspec
 Requires:  %{?scl_prefix}rubygem-ruby2ruby
 Requires:  %{?scl_prefix}rubygem-ruby_parser
+Requires:  %{?scl_prefix}rubygem-rugged
 Requires:  %{?scl_prefix}rubygem-sass
 Requires:  %{?scl_prefix}rubygem-sass-rails
 Requires:  %{?scl_prefix}rubygem-sexp_processor
@@ -476,6 +512,48 @@ an OpenShift cartrige.
 %files optional-ruby
 
 %changelog
+* Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.3-1
+- Bug 1088230 - Fix php-pecl-memcache extension (vvitek@redhat.com)
+
+* Tue Apr 15 2014 Troy Dawson <tdawson@redhat.com> 1.23.2-1
+- move libyaml-devel dependency into python cartridge optional dependencies
+  (bparees@redhat.com)
+
+* Wed Apr 09 2014 Adam Miller <admiller@redhat.com> 1.23.1-1
+- Bug 1084094 - provide libgit2-devel and rubygem-rugged (tdawson@redhat.com)
+- Bug 1082696 - Add lua-devel as dependency (tdawson@redhat.com)
+- Enable PHP 5.4 xdebug (vvitek@redhat.com)
+- Enable mcrypt for PHP 5.4 (vvitek@redhat.com)
+- bump_minor_versions for sprint 43 (admiller@redhat.com)
+
+* Wed Mar 26 2014 Adam Miller <admiller@redhat.com> 1.22.3-1
+- adding xz-devel to optional-python (tdawson@redhat.com)
+- adding xv-devel to optional-python (tdawson@redhat.com)
+
+* Fri Mar 21 2014 Adam Miller <admiller@redhat.com> 1.22.2-1
+- move some node requires to diy cartridge dependencies (tdawson@redhat.com)
+
+* Fri Mar 14 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- add jython to jboss cartridges (admiller@redhat.com)
+- Require -recommended metapackages from -optional cart deps
+  (jolamb@redhat.com)
+- bump_minor_versions for sprint 42 (admiller@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- These jboss packages are _not_ optional for the JBoss cartridge.
+  (bleanhar@redhat.com)
+- Merge pull request #4890 from brenton/deps2
+  (dmcphers+openshiftbot@redhat.com)
+- rpm-build is required for the perl cartridge's build script
+  (bleanhar@redhat.com)
+
+* Wed Mar 05 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
+- virtualenv and mod_wsgi are required for python 2.6, 2.7 and 3.3.
+  (bleanhar@redhat.com)
+
+* Thu Feb 27 2014 Adam Miller <admiller@redhat.com> 1.21.1-1
+- bump_minor_versions for sprint 41 (admiller@redhat.com)
+
 * Wed Feb 12 2014 Adam Miller <admiller@redhat.com> 1.20.4-1
 - PHP 5.4 - add mongo and imagick dependencies (vvitek@redhat.com)
 

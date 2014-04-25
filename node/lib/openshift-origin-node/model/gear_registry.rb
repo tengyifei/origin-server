@@ -27,7 +27,7 @@ module OpenShift
 
       # Represents an individual entry in the gear registry
       class Entry
-        attr_reader :uuid, :namespace, :dns, :proxy_hostname, :proxy_port
+        attr_reader :uuid, :namespace, :dns, :proxy_hostname, :proxy_port, :platform
 
         def initialize(options)
           @uuid = options[:uuid]
@@ -35,10 +35,11 @@ module OpenShift
           @dns = options[:dns]
           @proxy_hostname = options[:proxy_hostname]
           @proxy_port = options[:proxy_port]
+          @platform = options[:platform] || 'linux'
         end
 
         def as_json(options={})
-          {namespace: @namespace, dns: @dns, proxy_hostname: @proxy_hostname, proxy_port: @proxy_port}
+          {namespace: @namespace, dns: @dns, proxy_hostname: @proxy_hostname, proxy_port: @proxy_port, platform: @platform}
         end
 
         def to_ssh_url
@@ -104,7 +105,8 @@ module OpenShift
       #      "namespace": "foo",
       #      "dns": "myapp-foo.example.com",
       #      "proxy_hostname": "node1.example.com",
-      #      "proxy_port": 35561
+      #      "proxy_port": 35561,
+      #      "platform": "linux"
       #    },
       #    ...
       #  },
@@ -117,7 +119,11 @@ module OpenShift
 
         with_lock do
           File.open(@registry_file, "r") do |f|
-            raw_json = HashWithIndifferentAccess.new(JSON.load(f))
+            contents = f.read
+            return if contents.nil? || contents.empty?
+
+            # JSON.load is not used to prevent class injection. BZ#1086427
+            raw_json = HashWithIndifferentAccess.new(JSON.parse(contents))
             raw_json.each_pair do |type, entries|
               entries.each_pair do |uuid, entry|
                 add(entry.merge({type: type.to_sym, uuid: uuid}))

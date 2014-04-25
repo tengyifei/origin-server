@@ -173,12 +173,16 @@ class CartridgeType
   delegate :requires, :get_component, :usage_rates,
            :additional_control_actions, :cart_data_def,
            :components, :connections, :group_overrides,
-           :start_order, :stop_order, :configure_order,
+           :configure_order,
            :specification_hash, :to_descriptor,
            to: :cartridge
 
   def has_feature?(feature)
     provides.include?(feature)
+  end
+
+  def scaling_required?
+    self.components.any? { |comp| comp.scaling.required }
   end
 
   def ===(other)
