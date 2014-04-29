@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Controller
 Name:          rubygem-%{gem_name}
-Version: 1.23.9
+Version: 1.24.4
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -85,6 +85,23 @@ mkdir -p %{buildroot}/etc/openshift/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Tue Apr 29 2014 Adam Miller <admiller@redhat.com> 1.24.4-1
+- Adding test coverage for remote-user auth (bleanhar@redhat.com)
+
+* Mon Apr 28 2014 Adam Miller <admiller@redhat.com> 1.24.3-1
+- Merge pull request #5341 from danmcp/master
+  (dmcphers+openshiftbot@redhat.com)
+- Remove unused code (dmcphers@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 1.24.2-1
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com>
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller - 1.24.0-2
+- bumpspec to mass fix tags
+
 * Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.23.9-1
 - Bug 1088845: Blocking external carts from adding storage and setting
   multiplier (abhgupta@redhat.com)

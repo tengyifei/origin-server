@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Common
 Name:          rubygem-%{gem_name}
-Version: 1.22.5
+Version: 1.23.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -120,6 +120,15 @@ rm -rf %{buildroot}%{gem_instdir}/.yardoc*
 %doc %{gem_docdir}
 
 %changelog
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 1.23.2-1
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com>
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller - 1.23.0-2
+- bumpspec to mass fix tags
+
 * Thu Apr 17 2014 Troy Dawson <tdawson@redhat.com> 1.22.5-1
 - cleanup yardoc (tdawson@redhat.com)
 

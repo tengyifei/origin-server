@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossAS7 support
 Name:          openshift-origin-cartridge-jbossas
-Version: 1.23.3
+Version: 1.24.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -16,6 +16,7 @@ Requires:      lsof
 Requires:      java-1.7.0-openjdk
 Requires:      java-1.7.0-openjdk-devel
 Requires:      jboss-as7-modules >= %{jbossver}
+Requires:      jboss-openshift-metrics-module
 Requires:      bc
 %if 0%{?rhel}
 Requires:      jboss-as7 >= %{jbossver}
@@ -105,6 +106,18 @@ fi
 
 
 %changelog
+* Tue Apr 29 2014 Adam Miller <admiller@redhat.com> 1.24.3-1
+- JBoss metrics module (andy.goldstein@gmail.com)
+
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 1.24.2-1
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com>
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller - 1.24.0-2
+- bumpspec to mass fix tags
+
 * Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.23.3-1
 - Bumping cartridge versions for sprint 43 (bparees@redhat.com)
 

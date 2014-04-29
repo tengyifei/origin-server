@@ -11,7 +11,7 @@
 
 Summary:       OpenShift plugin for remote-user authentication
 Name:          rubygem-%{gem_name}
-Version: 1.19.6
+Version: 1.20.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -119,6 +119,15 @@ EOF
 fi
 
 %changelog
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 1.20.2-1
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com>
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller - 1.20.0-2
+- bumpspec to mass fix tags
+
 * Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 1.19.6-1
 - Bug 1087701 - The remote-user sample configs were incorrectly using regexes
   (bleanhar@redhat.com)

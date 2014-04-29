@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossEAP6.0 support
 Name:          openshift-origin-cartridge-jbosseap
-Version: 2.16.3
+Version: 2.17.3
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -27,6 +27,7 @@ Requires:      jbossas-standalone
 Requires:      jbossas-welcome-content-eap
 Requires:      jboss-eap6-modules
 Requires:      jboss-eap6-index
+Requires:      jboss-openshift-metrics-module
 Requires:      bc
 %if 0%{?rhel}
 Requires:      maven3
@@ -93,6 +94,18 @@ cp -p %{cartridgedir}/versions/shared/modules/mysql_module.xml /etc/alternatives
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Tue Apr 29 2014 Adam Miller <admiller@redhat.com> 2.17.3-1
+- JBoss metrics module (andy.goldstein@gmail.com)
+
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 2.17.2-1
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller <admiller@redhat.com>
+- mass bumpspec to fix tags (admiller@redhat.com)
+
+* Fri Apr 25 2014 Adam Miller - 2.17.0-2
+- bumpspec to mass fix tags
+
 * Wed Apr 16 2014 Troy Dawson <tdawson@redhat.com> 2.16.3-1
 - Bumping cartridge versions for sprint 43 (bparees@redhat.com)
 
