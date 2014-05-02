@@ -208,7 +208,7 @@ pt:
   cart_maintained_community_title: 'Criado por um membro de comunidade e não mantido pela equipe Getup Cloud'
   cart_maintained_community: 'Criado pela comunidade'
   cart_maintained_warning: 'Quando você cria um quickstart ou um cartridge de comunidade, você está copiando código de outro repositório. Você é o responsável por aplicar correções de segurança e atualizações.'
-  cart_maintained_warning_2: '/ Não recebe atualizações de seguranças automaticamente'
+  cart_maintained_warning_2: '/ Não recebe atualizações de segurança automaticamente'
   larger_gear: 'Se você precisa de mais recursos, selecione um gear maior aqui.'
   app_req_web_cart: 'Todas as aplicações necessitam pelo menos de um cartridge web'
   Create_a_New_Application: 'Crie uma Nova Aplicação'
