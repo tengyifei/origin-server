@@ -13,7 +13,7 @@
 Summary:       Cloud Development Node
 Name:          rubygem-%{gem_name}
 Version: 1.18.0.1
-Release:       1%{?dist}
+Release:       2%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://www.openshift.com
@@ -266,6 +266,10 @@ fi
 %attr(0755,-,-) /etc/cron.daily/openshift-origin-stale-lockfiles
 
 %changelog
+* Mon May 12 2014 Builder <getup@getupcloud.com> 1.18.0.1-2
+- bump version (spinolacastro@gmail.com)
+- Prune from child gear app-deployments dir (andy.goldstein@gmail.com)
+
 * Fri Dec 06 2013 Krishna Raman <kraman@gmail.com> 1.18.0.1-1
 - Bumping versions for OpenShift Origin Release 3 (kraman@gmail.com)
 - Merge pull request #4280 from pmorie/dev/fix-tests
