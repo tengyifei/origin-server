@@ -50,8 +50,8 @@ module Console::UserManagerHelper
     user_manager_post _url('account_password_reset_key') + token + "/", :password1 => password, :password2 => password
   end
 
-  def user_manager_subscription
-  	user_manager_post session[:authentication].login + _url('subscription'), :returnurl => confirm_validate_url, :cancelurl => cancel_validate_url
+  def user_manager_subscription_create
+  	user_manager_post session[:authentication].login + _url('subscription_create'), :returnurl => confirm_validate_url, :cancelurl => cancel_validate_url
   end
 
   def user_manager_subscription_confirm

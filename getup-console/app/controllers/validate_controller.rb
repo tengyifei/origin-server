@@ -2,7 +2,7 @@ class ValidateController < ConsoleController
   include Console::UserManagerHelper
 
   def create
-    result = user_manager_subscription
+    result = user_manager_subscription_create
 
     if result.code === 302
       redirect_to result.header["location"]
