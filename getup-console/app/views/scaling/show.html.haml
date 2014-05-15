@@ -1,7 +1,7 @@
-- breadcrumb_for_application @application, 'Scale your Application'
-- content_for :page_title, 'Scale your Application'
+- breadcrumb_for_application @application, I18n.t('Scale your Application')
+- content_for :page_title, I18n.t('Scale your Application')
 
-%h1 Scale your Application
+%h1= I18n.t('Scale your Application')
 
 %section#scaling-gear-groups
   - @cartridges.each do |cartridge|
@@ -9,7 +9,7 @@
       %h2
         = cartridge.display_name
         - if cartridge.scales?
-          %span.pull-right Using #{pluralize(cartridge.current_scale, 'gears')}
+          %span.pull-right= I18n.t('Using') + " #{pluralize(cartridge.current_scale, 'gears')}"
 
       - if cartridge.scales?
         = semantic_form_for cartridge,
@@ -20,27 +20,24 @@
           = f.semantic_errors :except => [:scales_to, :scales_from]
 
           - if cartridge.tags.include?(:web_framework)
-            %p
-              OpenShift is configured to scale this cartridge with 
-              #{link_to 'the web proxy HAProxy', scaling_help_url }. OpenShift 
-              monitors the incoming web traffic to your application and 
-              automatically adds or removes copies of your cartridge
-              (each running on their own gears) to serve requests as needed.
+            %p!= I18n.t(:scale_caption_1, default: 'OpenShift is configured to scale this cartridge with %{haproxy}. OpenShift monitors the incoming web traffic to your application and automatically adds or removes copies of your cartridge (each running on their own gears) to serve requests as needed.',
+              haproxy: link_to(I18n.t('the web proxy HAProxy'), scaling_help_url))
 
-          %p Control the number of gears OpenShift will use for your cartridge:
+          %p= I18n.t('Control the number of gears OpenShift will use for your cartridge:')
 
           = f.inputs :inline => true, :without_errors => true do
             .input-prepend
-              %span.add-on Minimum
-              = f.input :scales_from, scale_from_options(cartridge, @user.max_gears).merge({:input_html => {:style => 'width: auto', :title => 'Minimum gears'}})
-            and 
+              %span.add-on= I18n.t('Minimum')
+              = f.input :scales_from, scale_from_options(cartridge, @user.max_gears).merge({:input_html => {:style => 'width: auto', :title => I18n.t('Minimum gears')}})
+            = I18n.t('and ')
             .input-prepend
-              %span.add-on Maximum
-              = f.input :scales_to, scale_to_options(cartridge, @user.max_gears).merge({:input_html => {:style => 'width: auto', :title => 'Maximum gears'}})
+              %span.add-on= I18n.t('Maximum')
+              = f.input :scales_to, scale_to_options(cartridge, @user.max_gears).merge({:input_html => {:style => 'width: auto', :title => I18n.t('Maximum gears')}})
 
+            = I18n.t('using')
             #{cartridge.gear_profile} gears
 
-            = f.commit_button :label => 'Save', :button_html => {:class => 'btn btn-small'}
+            = f.commit_button :label => I18n.t('Save'), :button_html => {:class => 'btn btn-small'}
             = f.loading
 
             -# Scaling errors are currently reported to base, but if they get reported here, this will work
@@ -52,25 +49,20 @@
 
           %hr
 
-          %p
-            Each scaled gear is created the same way - the normal 
-            post, pre, and deploy hooks are executed.  Each cartridge will have its
-            own copy of runtime data, so be sure to use a database if you need to share
-            data across your web cartridges.
+          %p= I18n.t(:scale_caption_2, default: 'Each scaled gear is created the same way - the normal post, pre, and deploy hooks are executed.  Each cartridge will have its own copy of runtime data, so be sure to use a database if you need to share data across your web cartridges.')
 
-          %p
-            For status information about traffic to your application, see the HAProxy status page:
+          %p= I18n.t('For status information about traffic to your application, see the HAProxy status page:')
 
           %p.application-url.larger
             = link_to @application.scale_status_url, @application.scale_status_url, :target => '_blank'
 
       - elsif cartridge.tags.include? :scales
-        %p This cartridge assists other cartridges in scaling, but does not itself scale.
+        %p= I18n.t('This cartridge assists other cartridges in scaling, but does not itself scale') + '.'
       - else
-        %p This cartridge does not scale.
+        %p= I18n.t('This cartridge does not scale') + '.'
   %p
-    For more information about scaling your application see
-    #{link_to 'our scaling guide in the Developer Center', scaling_help_url}.
+    = I18n.t('For more information about scaling your application see')
+    #{link_to I18n.t('our scaling guide'), scaling_help_url}.
 
 - content_for :javascripts do
   :javascript

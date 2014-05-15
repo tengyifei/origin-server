@@ -105,6 +105,9 @@ pt:
   Validate: 'Validar'
   Credit_Card: 'Cartão de Crédito'
   Create_App: 'Criar Aplicação'
+  'Scaling': 'Escalando'
+  'Not Scalable': 'Não Escalável'
+  'Disable Scaling': 'Desabilitar Escalabilidade'
 
 ## Signin
   Dashboard_Auth: "BEM-VINDO AO DASHBOARD"
@@ -574,6 +577,26 @@ pt:
   help_caption_4_4: 'Assista aos vídeos em nosso %{youtube}.'
 
 ## Scale
+  'Scale your Application': 'Escale sua Aplicação'
+  'the web proxy HAProxy':
+    'o proxy web HAProxy'
+  scale_caption_1:
+    'OpenShift está configurado para escalar esta cartucho com %{haproxy}. OpenShift monitora o tráfego web de entrada em sua aplicação e automaticamente adiciona ou remove copias de seu cartucho (cada um rodando em seu próprio gear) para servir as requisições de acordo com a necesidade.'
+  'Control the number of gears OpenShift will use for your cartridge:':
+    'Controle o número de gears que o OpenShift vai usar para seu cartucho:'
+  scale_caption_2: 'Cada gear escalado é criado idêntico - os hooks post, pre e deploy são executados. Cada cartucho terá sua própria cópia dos dados de runtime, portanto use uma base de dados se você precisar compartilhar dados entre seus cartuchos web.'
+  'For status information about traffic to your application, see the HAProxy status page:':
+    'Para informações de status sobre o tráfego web de sua aplicação, veja a página de status do HAProxy:'
+  'This cartridge assists other cartridges in scaling, but does not itself scale':
+    'Este cartucho ajuda outros cartuchos a escalar, mas ele próprio não escala'
+  'This cartridge does not scale': 'Este cartucho não escala'
+  'For more information about scaling your application see': 'Para mais informações sobre escalar sua aplicação veja'
+  'our scaling guide': 'nosso guia de escalabilidade'
+  scale_new_caption_1: 'Esta aplicação não é escalável. Aplicações devem ser criadas como escaláveis passando a opção de linha de comando <code>--scale</code>:'
+  scale_delete_caption_1: 'Sua aplicação está configurada para escalar o cartucho web. Atualmente não é possível desabilitar a escalabilidade. Você deve criar uma nova aplicação e migrar seu código se desejar remover o cartucho HAProxy que provê a escalabilidade.'
+  'and ': 'e '
+  'Minimum gears': 'Mínimo de gears'
+  'Maximum gears': 'Máximo de gears'
   scale_caption_min: 'Seu cartridge web está rodando com a quantidade mínima de gears e irá aumentar (scale up) se necessário'
   scale_caption_max: 'Seu cartridge web está rodando com a quantidade máxima de gears e não pode aumentar (scale up)'
   scale_caption_mul: 'Seu cartridge web está rodando múltiplas cópias para atender ao tráfego web extra'
