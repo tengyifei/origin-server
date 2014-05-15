@@ -13,11 +13,6 @@ module Console::UserManagerHelper
     ui
   end
 
-  def user_manager_validate_account(params)
-    cc = params.slice(:authenticity_token, :cc_type, :cc_number, :cc_exp_month, :cc_exp_year, :cc_name, :cc_cvc)
-    user_manager_post session[:authentication].login + _url('validate'), cc
-  end
-
   def user_manager_account_userinfo
     begin
       result = user_manager_get session[:authentication].login + _url('account_userinfo')
@@ -55,8 +50,8 @@ module Console::UserManagerHelper
     user_manager_post _url('account_password_reset_key') + token + "/", :password1 => password, :password2 => password
   end
 
-  def user_manager_subscription(max_gears)
-  	user_manager_post session[:authentication].login + _url('subscription'), :max_gears => max_gears
+  def user_manager_subscription
+  	user_manager_post session[:authentication].login + _url('subscription'), :returnurl => confirm_validate_url, :cancelurl => cancel_validate_url
   end
 
   def user_manager_subscription_confirm

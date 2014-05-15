@@ -106,14 +106,12 @@ class ApplicationsController < ConsoleController
   end
 
   def gear_count_message
-    #DUP: applications_controller.rb
+    #DUP: application_types_controller.rb
     flash.clear
     if @plan[:payment][:valid]
-      #flash.now[:warning] = I18n.t(:increase_max_gears_limit, max_gears: @capabilities.max_gears)
-      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{gears_path}'>" + I18n.t(:increase_gears_limit) + '</a>.').html_safe
+      flash.now[:warning] = I18n.t(:increase_max_gears_limit, max_gears: @capabilities.max_gears)
     else
-      #flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{validate_path}'>" + I18n.t(:validate_your_account_2) + '</a>.').html_safe
-      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{gears_path}'>" + I18n.t(:get_more_gears) + '</a>.').html_safe
+      flash.now[:warning] = (I18n.t(:validate_your_account_1) + " <a href='#{account_path}'>" + I18n.t(:validate_your_account_2) + '</a>.').html_safe
     end
   end
 

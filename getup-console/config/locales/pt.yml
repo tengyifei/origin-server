@@ -9,7 +9,7 @@ pt:
       '151': 'Você deve criar uma aplicação Jenkins (para ser o servidor de build) antes de adicionar o cartridge Jenkins a uma aplicação.'
       '153': 'Você está usando mais gear do que o novo plano permite. Por favor, reduza o numero de gears utilizados ou remova aplicações.'
       '128': 'Este domínio contém aplicações. Você precisa remover todas as aplicações antes de renomear o domínio.'
-      '104': 'Sua conta não possui gears disponíveis.'
+      '104': 'Sua conta não possui gears disponíveis. Por favor, entre em contato para aumentar seu limite.'
 
   unknown: 'Ocorreu um erro de sistema. Se o problema persistir, por favor entre em contato com o suporte.'
   Name: 'Nome'
@@ -105,6 +105,15 @@ pt:
   Validate: 'Validar'
   Credit_Card: 'Cartão de Crédito'
   Create_App: 'Criar Aplicação'
+  Subscription: 'Assinatura'
+  Billing: 'Cobrança'
+  Contact: 'Contato'
+  Invoices: 'Faturas'
+  Addressess: 'Endereços'
+  'using': 'usando'
+  'Using': 'Usando'
+  'Minimum': 'Mínimo'
+  'Maximum': 'Máximo'
   'Scaling': 'Escalando'
   'Not Scalable': 'Não Escalável'
   'Disable Scaling': 'Desabilitar Escalabilidade'
@@ -411,14 +420,12 @@ pt:
 
 ## My Account
   add_gears: 'Autorizar gears'
-  Billing: 'Cobrança'
-  billing_title: 'Cobrança'
+  billing_title: 'Faturas'
   billing_history_caption: 'Acesse seu histórico de faturas'
-  billing_history_button: 'Faturas...'
+  billing_history_button: 'Faturas'
   addr_info_caption: 'Altere seus dados de contato e cobrança.'
-  contact_info_btn: 'Dados de contato...'
-  billing_info_btn: 'Dados de cobrança...'
   gears_count: 'Você possui %{gears_free} gears disponíveis de %{max_gears} autorizado(s).'
+  validate_account: 'Valide sua conta'
   validate_your_account_1: 'Não existem mais gears disponíveis.'
   validate_your_account_2: 'Por favor, valide sua conta.'
   increase_gears_limit: 'Aumente seu limite de gears.'
@@ -464,12 +471,12 @@ pt:
   gears_authorize: 'Autorizar Gears'
 
 ## Validate
+  update_account: 'Você pode alterar a conta PayPal no botão abaixo:'
   add_credit_card: 'Insira seu Cartão de Crédito'
   change_credit_card: 'Alterar o Cartão de Crédito'
   validate_title: 'Validar conta'
-  validate_caption_1: 'Preencha os dados de seu cartão de crédito.'
-  validate_caption_invalid: 'Esta conta não possui um cartão de crédito.'
-  validate_caption_valid: 'Esta conta está usando o seguinte cartão de crédito:'
+  validate_caption_invalid: 'Valide sua conta para obter acesso a mais recursos:'
+  validate_caption_valid: 'Os pagamentos serão realizados com:'
   validate_not_supported: 'Ou seu JavaScipt está desabilitado ou você está usando um navegador muito antigo. Por favor, atualize o navegador ou habilite o JavaScipt.'
   Card_Type: "Cartão"
   Card_Number: "Número"
@@ -480,6 +487,9 @@ pt:
   Card_Validation_Code: "Código de Verificação"
   validate_success: "Sua conta foi validada com sucesso. Obrigado."
   validate_verify: 'Por favor, revise os dados de seu cartão de crédito e tente novamente.'
+  PayPal_CreateDate: 'Data'
+  PayPal_Account: 'Conta PayPal'
+  PayPal_BillAgree: 'ID'
 
 ## Settings
   namespace_caption_1: 'Seu namespace é exclusivo da sua conta e identifica o suffixo da URL pública de suas aplicações'
