@@ -266,6 +266,14 @@ fi
 %attr(0755,-,-) /etc/cron.daily/openshift-origin-stale-lockfiles
 
 %changelog
+* Wed May 14 2014 Builder <getup@getupcloud.com> 1.18.0.1-3
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3
+  (spinolacastro@gmail.com)
+- bump version (spinolacastro@gmail.com)
+- Fix bug 1061400: POST /broker/analytics Status Code 500 on release 3:
+  (spinolacastro@gmail.com)
+
 * Mon May 12 2014 Builder <getup@getupcloud.com> 1.18.0.1-2
 - bump version (spinolacastro@gmail.com)
 - Prune from child gear app-deployments dir (andy.goldstein@gmail.com)
