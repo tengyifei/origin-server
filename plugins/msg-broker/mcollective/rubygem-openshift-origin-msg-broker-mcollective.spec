@@ -11,7 +11,7 @@
 Summary:       OpenShift plugin for mcollective service
 Name:          rubygem-%{gem_name}
 Version: 1.18.0.1
-Release:       2%{?dist}
+Release:       3%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
 URL:           http://www.openshift.com
@@ -85,6 +85,13 @@ sed -i -e "s|\(/etc/mcollective/client.cfg\)|%{scl_root}/\1|" %{buildroot}/etc/o
 %attr(0644,-,-) %ghost %{?scl:%scl_root}/etc/mcollective/client.cfg
 
 %changelog
+* Thu May 15 2014 Builder <getup@getupcloud.com> 1.18.0.1-3
+- Merge branch 'getup-openshift-origin-release-3' of github.com:getupcloud
+  /origin-server into getup-openshift-origin-release-3
+  (spinolacastro@gmail.com)
+- bump version (spinolacastro@gmail.com)
+- fix move scaled cartridges (spinolacastro@gmail.com)
+
 * Wed May 14 2014 Builder <getup@getupcloud.com> 1.18.0.1-2
 - bump version (spinolacastro@gmail.com)
 - fix oo-move (spinolacastro@gmail.com)
