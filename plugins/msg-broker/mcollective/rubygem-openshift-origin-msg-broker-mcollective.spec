@@ -85,6 +85,11 @@ sed -i -e "s|\(/etc/mcollective/client.cfg\)|%{scl_root}/\1|" %{buildroot}/etc/o
 %attr(0644,-,-) %ghost %{?scl:%scl_root}/etc/mcollective/client.cfg
 
 %changelog
+* Wed May 14 2014 Builder <getup@getupcloud.com> 1.18.0.1-2
+- bump version (spinolacastro@gmail.com)
+- fix oo-move (spinolacastro@gmail.com)
+- blacklist implementation (spinolacastro@gmail.com)
+
 * Fri Dec 06 2013 Krishna Raman <kraman@gmail.com> 1.18.0.1-1
 - Bumping versions for OpenShift Origin Release 3 (kraman@gmail.com)
 - Fix for bug 1035120 (abhgupta@redhat.com)
