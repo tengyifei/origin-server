@@ -135,6 +135,7 @@ module OpenShift
       # * This is really a function of the broker
       #
       def self.blacklisted_in_impl?(name)
+        return false if Rails.configuration.openshift[:blacklist].nil?
         Rails.configuration.openshift[:blacklist].include?(name)
       end
 
