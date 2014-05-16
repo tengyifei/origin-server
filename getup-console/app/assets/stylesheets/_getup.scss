@@ -110,7 +110,12 @@ body, h1, h2, h3, h4, h5, h6 { font-family: 'roboto light'; }
 	padding: 0;
 	text-indent: -5000em;
 }
-
+.account-alert {
+	background-color: #700;
+	/* color: yellow; */
+	border-radius: 5px;
+	padding: 10px;
+}
 /* Responsive */
 
 @media (max-width: 767px) {
