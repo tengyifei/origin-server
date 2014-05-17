@@ -445,6 +445,7 @@ pt:
   Due_Date: 'Vencimento'
   Status: 'Estado'
   Amount: 'Valor'
+  'Amount': 'Valor'
 
 ## Contact Information
   contact_info_title: 'Dados de contato'
@@ -471,13 +472,12 @@ pt:
   gears_authorize: 'Autorizar Gears'
 
 ## Validate
-  update_account: 'Você pode alterar a conta PayPal no botão abaixo:'
   add_credit_card: 'Insira seu Cartão de Crédito'
   change_credit_card: 'Alterar o Cartão de Crédito'
   validate_title: 'Validar conta'
   validate_caption_invalid: 'Valide sua conta para obter acesso a mais recursos:'
-  validate_caption_valid: 'Os pagamentos serão realizados com:'
-  validate_not_supported: 'Ou seu JavaScipt está desabilitado ou você está usando um navegador muito antigo. Por favor, atualize o navegador ou habilite o JavaScipt.'
+  'Payment method': 'Forma de pagamento'
+  validate_not_supported: 'Ou seu JavaScript está desabilitado ou você está usando um navegador muito antigo. Por favor, atualize o navegador ou habilite o JavaScipt.'
   Card_Type: "Cartão"
   Card_Number: "Número"
   Expires_on: "Expira em"
@@ -487,9 +487,15 @@ pt:
   Card_Validation_Code: "Código de Verificação"
   validate_success: "Sua conta foi validada com sucesso. Obrigado."
   validate_verify: 'Por favor, revise os dados de seu cartão de crédito e tente novamente.'
-  PayPal_CreateDate: 'Data'
-  PayPal_Account: 'Conta PayPal'
-  PayPal_BillAgree: 'ID'
+  'ID': 'ID'
+  'Date': 'Data'
+  'PayPal Account': 'Conta PayPal'
+  'PA-Key': 'PA-Key'
+  account:
+    footer:
+      paypal:  'Atenção: Esta modalidade de pagamento será descontinuada em breve. Atualize agora sua conta clicando no botão abaixo.'
+      boleto: 'Você pode optar por pagar utilizando sua conta PayPal:'
+      paypal_reftrans: 'Você pode atualizar a conta PayPal no botão abaixo:'
 
 ## Settings
   namespace_caption_1: 'Seu namespace é exclusivo da sua conta e identifica o suffixo da URL pública de suas aplicações'
