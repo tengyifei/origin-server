@@ -493,7 +493,7 @@ pt:
   'PA-Key': 'PA-Key'
   account:
     footer:
-      paypal:  'Atenção: Esta modalidade de pagamento será descontinuada em breve. Atualize agora sua conta clicando no botão abaixo.'
+      paypal:  'Atenção: sua modalidade de pagamento será descontinuada. Pedimos que faça nova validação clicando abaixo. Obrigado!'
       boleto: 'Você pode optar por pagar utilizando sua conta PayPal:'
       paypal_reftrans: 'Você pode atualizar a conta PayPal no botão abaixo:'
 
