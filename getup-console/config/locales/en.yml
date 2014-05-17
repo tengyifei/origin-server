@@ -496,7 +496,7 @@ en:
   PayPal_Account: 'PayPal Account'
   account:
     footer:
-      paypal: 'Attention: This payment method will be discuntinued soon. Please, update your account now by clicking the button below.'
+      paypal: 'Attention: Your payment method will be discuntinued soon. Please, update your account now by clicking the button below. Thank you!'
       boleto: 'You can choose to pay using your PayPal account.'
       paypal_reftrans: 'You can update your PayPal account using the button below:'
 
