@@ -1,7 +1,7 @@
-- breadcrumb_for_application @application, I18n.t('Scaling')
-- content_for :page_title, I18n.t('Scaling')
+- breadcrumb_for_application @application, I18n.t(:Scaling)
+- content_for :page_title, I18n.t(:Scaling)
 
-%h1= I18n.t('Not_Scalable')
+%h1= I18n.t(:Not_Scalable)
 = flashes
 
 %section
@@ -11,5 +11,5 @@
     rhc app create --scaling -a &lt;your application&gt; ...
 
   %p
-    = I18n.t('For_more_information')
-    #{link_to I18n.t('our_scaling_guide'), scaling_help_url}.
+    = I18n.t(:For_more_information)
+    #{link_to I18n.t(:our_scaling_guide), scaling_help_url}.
