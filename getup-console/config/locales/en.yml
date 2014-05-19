@@ -262,7 +262,7 @@ en:
   git_commit_mesg: "git commit -m 'My changes'"
   adding_a_cart: 'Adding a cartridge'
   add_cap: "Cartridges are the components of an OpenShift application, and include databases, build systems,
-      and management capabilities. <strong>%{cart}</strong> such as %{mysql} or %{mongo} to an application
+      and management capabilities. <strong>%{cart}</strong> such as %{mysql} or %{mongodb} to an application
       provides the desired capability without forcing you to administrate or update that feature."
   add_cart_now: "Add a cartridge to your application now"
   manage_app: 'Managing your application'
