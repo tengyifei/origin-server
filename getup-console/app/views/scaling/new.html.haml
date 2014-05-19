@@ -1,15 +1,15 @@
 - breadcrumb_for_application @application, I18n.t('Scaling')
 - content_for :page_title, I18n.t('Scaling')
 
-%h1= I18n.t('Not Scalable')
+%h1= I18n.t('Not_Scalable')
 = flashes
 
 %section
-  %p!= I18n.t(:scale_new_caption_1, default: 'This application is not currently scalable. For the time being applications must be set to scale when they are created. To make a new application scalable you will need to pass the command line option <code>--scale</code>:')
+  %p!= I18n.t(:scale_new_caption_1)
 
   %pre.cli 
     rhc app create --scaling -a &lt;your application&gt; ...
 
   %p
-    = I18n.t('For more information about scaling your application see')
-    #{link_to I18n.t('our scaling guide'), scaling_help_url}.
+    = I18n.t('For_more_information')
+    #{link_to I18n.t('our_scaling_guide'), scaling_help_url}.

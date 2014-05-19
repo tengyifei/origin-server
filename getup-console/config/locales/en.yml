@@ -111,6 +111,14 @@ en:
   Contact: 'Contact'
   Invoices: 'Invoices'
   Addressess: 'Addressess'
+  using: 'using '
+  Using: 'Using'
+  Minimum: 'Minimum'
+  Maximum: 'Maximum'
+  Scaling: 'Scaling'
+  Not_Scalable: 'Not Scalable'
+  Disable_Scaling: 'Disable Scaling'
+
 
 ## Signin
   Dashboard_Auth: "Welcome to Dashboard"
@@ -176,16 +184,16 @@ en:
   More_help: 'More_help »'
   help_install_rhc: 'Installing OpenShift client tools on Mac OSX, Linux, and Windows'
   help_sync_repo: 'Sync your OpenShift repo with an existing Git repo'
-  'OpenShift User Guide': 'OpenShift User Guide'
-  'Installing OpenShift client tools on Mac OSX, Linux, and Windows': 'Installing OpenShift client tools on Mac OSX, Linux, and Windows'
-  'Sync your OpenShift repo with an existing Git repo': 'Sync your OpenShift repo with an existing Git repo'
+  OpenShift_User_Guide: 'OpenShift User Guide'
+  Installing_OpenShift_client: 'Installing OpenShift client tools on Mac OSX, Linux, and Windows'
+  Sync_your_OpenShift_repo: 'Sync your OpenShift repo with an existing Git repo'
   Popular_Faqs: 'Popular FAQs'
   faq_own_domain: 'How to use my own domain?'
   faq_install_win: 'How do I install the rhc client tools on Windows?'
   faq_pub_site: 'How to publish my site files? What tools should I use?'
-  'How to use my own domain?': 'How to use my own domain?'
-  'How do I install the rhc client tools on Windows?': 'How do I install the rhc client tools on Windows?'
-  'How to publish my site files? What tools should I use?': 'How to publish my site files? What tools should I use?'
+  How_to_use_my_own_domain: 'How to use my own domain?'
+  How_do_I_install_the_rhc_client_tools_on_Windows: 'How do I install the rhc client tools on Windows?'
+  How_to_publish_my_site_files: 'How to publish my site files? What tools should I use?'
   More_faqs: 'More FAQs »'
   gear_group_count_title: "OpenShift runs each cartridge inside one or more gears on a server and is allocated a fixed portion of CPU time and memory use."
   public_url: "Public URL"
@@ -492,8 +500,10 @@ en:
   validate_account: 'Validate your account'
   validate_success: "Your account is validated. Thanks."
   validate_verify: 'Please, review your credit card information and try again.'
-  PayPal_CreateDate: 'Date'
+  ID: 'ID'
+  Date: 'Date'
   PayPal_Account: 'PayPal Account'
+  PA_Key: 'PA-Key'
   account:
     footer:
       paypal: 'Attention: Your payment method will be discuntinued soon. Please, update your account now by clicking the button below. Thank you!'
@@ -596,6 +606,21 @@ en:
   help_caption_4_4: 'Watch some videos in our %{youtube}.'
 
 ## Scale
+  Scale_your_Application: 'Scale your Application'
+  the_web_proxy_HAProxy: 'the web proxy HAProxy'
+  scale_caption_1: 'OpenShift is configured to scale this cartridge with %{haproxy}. OpenShift monitors the incoming web traffic to your application and automatically adds or removes copies of your cartridge (each running on their own gears) to serve requests as needed.'
+  Control_the_number_of_gears: 'Control the number of gears OpenShift will use for your cartridge'
+  scale_caption_2: 'Each scaled gear is created the same way - the normal post, pre, and deploy hooks are executed.  Each cartridge will have its own copy of runtime data, so be sure to use a database if you need to share data across your web cartridges.'
+  For_status_information: 'For status information about traffic to your application, see the HAProxy status page:'
+  This_cartridge_assists_other_cartridges: 'This cartridge assists other cartridges in scaling, but does not itself scale.'
+  This_cartridge_does_not_scale: 'This cartridge does not scale.'
+  For_more_information: 'For more information about scaling your application see'
+  our_scaling_guide: 'our scaling guide'
+  scale_new_caption_1: 'This application is not currently scalable. For the time being applications must be set to scale when they are created. To make a new application scalable you will need to pass the command line option <code>--scale</code>:'
+  scale_delete_caption_1: 'Your application is currently set to scale the web cartridge. At this time applications that scale cannot have scaling disabled. You must create a new application and migrate your source code if you wish to remove the high availability proxy cartridge that provides scaling.'
+  and_: 'and '
+  Minimum_gears: 'Mínimo de gears'
+  Maximum_gears: 'Máximo de gears'
   scale_caption_min: 'Your web cartridge is running on the minimum amount of gears and will scale up if needed'
   scale_caption_max: 'Your web cartridge is running on the maximum amount of gears and cannot scale up any further'
   scale_caption_mul: 'Your web cartridge is running multiple copies to handle increased web traffic'
