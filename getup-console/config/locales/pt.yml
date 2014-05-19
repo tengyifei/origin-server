@@ -110,13 +110,13 @@ pt:
   Contact: 'Contato'
   Invoices: 'Faturas'
   Addressess: 'Endereços'
-  'using': 'usando'
-  'Using': 'Usando'
-  'Minimum': 'Mínimo'
-  'Maximum': 'Máximo'
-  'Scaling': 'Escalando'
-  'Not Scalable': 'Não Escalável'
-  'Disable Scaling': 'Desabilitar Escalabilidade'
+  using: 'usando'
+  Using: 'Usando'
+  Minimum: 'Mínimo'
+  Maximum: 'Máximo'
+  Scaling: 'Escalando'
+  Not_Scalable: 'Não Escalável'
+  Disable_Scaling: 'Desabilitar Escalabilidade'
 
 ## Signin
   Dashboard_Auth: "BEM-VINDO AO DASHBOARD"
@@ -182,16 +182,16 @@ pt:
   OpenShift_User_Guide: 'Guia do usuário OpenShift'
   help_install_rhc: 'Instalando OpenShift client tools no Mac OSX, Linux, e Windows'
   help_sync_repo: 'Sincronize seu repo OpenShift com um repo Git existente'
-  'OpenShift User Guide': 'Guia do usuário OpenShift'
-  'Installing OpenShift client tools on Mac OSX, Linux, and Windows': 'Instalando OpenShift client tools no Mac OSX, Linux, e Windows'
-  'Sync your OpenShift repo with an existing Git repo': 'Sincronize seu repo OpenShift com um repo Git existente'
+  OpenShift_User_Guide: 'Guia do usuário OpenShift'
+  Installing_OpenShift_client: 'Instalando OpenShift client tools no Mac OSX, Linux, e Windows'
+  Sync_your_OpenShift_repo: 'Sincronize seu repo OpenShift com um repo Git existente'
   Popular_Faqs: 'Perguntas frequentes'
   faq_own_domain: 'Como usar meu próprio domínio?'
   faq_install_win: 'Como instalo o rhc client tools no Windows?'
   faq_pub_site: 'Como publico os arquivos do meu site? Quais ferramentas devo usar?'
-  'How to use my own domain?': 'Como usar meu próprio domínio?'
-  'How do I install the rhc client tools on Windows?': 'Como instalo o rhc client tools no Windows?'
-  'How to publish my site files? What tools should I use?': 'Como publico os arquivos do meu site? Quais ferramentas devo usar?'
+  How_to_use_my_own_domain: 'Como usar meu próprio domínio?'
+  How_do_I_install_the_rhc_client_tools_on_Windows: 'Como instalo o rhc client tools no Windows?'
+  How_to_publish_my_site_files: 'Como publico os arquivos do meu site? Quais ferramentas devo usar?'
   More_faqs: 'Mais perguntas »'
   gear_group_count_title: 'OpenShift executa cada cartridge dentro de um ou mais gears em um servidor, alocando uma porção fixa de CPU e memória.'
   public_url: "URL Pública"
@@ -445,7 +445,6 @@ pt:
   Due_Date: 'Vencimento'
   Status: 'Estado'
   Amount: 'Valor'
-  'Amount': 'Valor'
 
 ## Contact Information
   contact_info_title: 'Dados de contato'
@@ -476,7 +475,7 @@ pt:
   change_credit_card: 'Alterar o Cartão de Crédito'
   validate_title: 'Validar conta'
   validate_caption_invalid: 'Valide sua conta para obter acesso a mais recursos:'
-  'Payment method': 'Forma de pagamento'
+  Payment_method: 'Forma de pagamento'
   validate_not_supported: 'Ou seu JavaScript está desabilitado ou você está usando um navegador muito antigo. Por favor, atualize o navegador ou habilite o JavaScipt.'
   Card_Type: "Cartão"
   Card_Number: "Número"
@@ -487,10 +486,10 @@ pt:
   Card_Validation_Code: "Código de Verificação"
   validate_success: "Sua conta foi validada com sucesso. Obrigado."
   validate_verify: 'Por favor, revise os dados de seu cartão de crédito e tente novamente.'
-  'ID': 'ID'
-  'Date': 'Data'
-  'PayPal Account': 'Conta PayPal'
-  'PA-Key': 'PA-Key'
+  ID: 'ID'
+  Date: 'Data'
+  PayPal_Account: 'Conta PayPal'
+  PA_Key: 'PA-Key'
   account:
     footer:
       paypal:  'Atenção: sua modalidade de pagamento será descontinuada. Pedimos que faça nova validação clicando abaixo. Obrigado!'
@@ -593,26 +592,21 @@ pt:
   help_caption_4_4: 'Assista aos vídeos em nosso %{youtube}.'
 
 ## Scale
-  'Scale your Application': 'Escale sua Aplicação'
-  'the web proxy HAProxy':
-    'o proxy web HAProxy'
-  scale_caption_1:
-    'OpenShift está configurado para escalar esta cartucho com %{haproxy}. OpenShift monitora o tráfego web de entrada em sua aplicação e automaticamente adiciona ou remove copias de seu cartucho (cada um rodando em seu próprio gear) para servir as requisições de acordo com a necesidade.'
-  'Control the number of gears OpenShift will use for your cartridge:':
-    'Controle o número de gears que o OpenShift vai usar para seu cartucho:'
+  Scale_your_Application: 'Escale sua Aplicação'
+  the_web_proxy_HAProxy: 'o proxy web HAProxy'
+  scale_caption_1: 'OpenShift está configurado para escalar esta cartucho com %{haproxy}. OpenShift monitora o tráfego web de entrada em sua aplicação e automaticamente adiciona ou remove copias de seu cartucho (cada um rodando em seu próprio gear) para servir as requisições de acordo com a necesidade.'
+  Control_the_number_of_gears: 'Controle o número de gears que o OpenShift vai usar para seu cartucho:'
   scale_caption_2: 'Cada gear escalado é criado idêntico - os hooks post, pre e deploy são executados. Cada cartucho terá sua própria cópia dos dados de runtime, portanto use uma base de dados se você precisar compartilhar dados entre seus cartuchos web.'
-  'For status information about traffic to your application, see the HAProxy status page:':
-    'Para informações de status sobre o tráfego web de sua aplicação, veja a página de status do HAProxy:'
-  'This cartridge assists other cartridges in scaling, but does not itself scale':
-    'Este cartucho ajuda outros cartuchos a escalar, mas ele próprio não escala'
-  'This cartridge does not scale': 'Este cartucho não escala'
-  'For more information about scaling your application see': 'Para mais informações sobre escalar sua aplicação veja'
-  'our scaling guide': 'nosso guia de escalabilidade'
+  For_status_information: 'Para informações de status sobre o tráfego web de sua aplicação, veja a página de status do HAProxy:'
+  This_cartridge_assists_other_cartridges: 'Este cartucho ajuda outros cartuchos a escalar, mas ele próprio não escala.'
+  This_cartridge_does_not_scale: 'Este cartucho não escala.'
+  For_more_information: 'Para mais informações sobre escalar sua aplicação veja'
+  our_scaling_guide: 'nosso guia de escalabilidade'
   scale_new_caption_1: 'Esta aplicação não é escalável. Aplicações devem ser criadas como escaláveis passando a opção de linha de comando <code>--scale</code>:'
   scale_delete_caption_1: 'Sua aplicação está configurada para escalar o cartucho web. Atualmente não é possível desabilitar a escalabilidade. Você deve criar uma nova aplicação e migrar seu código se desejar remover o cartucho HAProxy que provê a escalabilidade.'
-  'and ': 'e '
-  'Minimum gears': 'Mínimo de gears'
-  'Maximum gears': 'Máximo de gears'
+  and_: 'e '
+  Minimum_gears: 'Mínimo de gears'
+  Maximum_gears: 'Máximo de gears'
   scale_caption_min: 'Seu cartridge web está rodando com a quantidade mínima de gears e irá aumentar (scale up) se necessário'
   scale_caption_max: 'Seu cartridge web está rodando com a quantidade máxima de gears e não pode aumentar (scale up)'
   scale_caption_mul: 'Seu cartridge web está rodando múltiplas cópias para atender ao tráfego web extra'
