@@ -6,14 +6,14 @@
 - if payment[:valid]
 
   - if payment[:type] == 'paypal_reftrans'
-    %h4= I18n.t('Payment method') + ': PayPal (Express Checkout)'
+    %h4= I18n.t(:Payment_method) + ': PayPal (Express Checkout)'
     %br
     %table.table
       %thead
         %tr
-          %th{:scope => 'col'}= I18n.t('PayPal Account')
-          %th{:scope => 'col'}= I18n.t('Date')
-          %th{:scope => 'col'}= I18n.t('ID')
+          %th{:scope => 'col'}= I18n.t(:PayPal_Account)
+          %th{:scope => 'col'}= I18n.t(:Date)
+          %th{:scope => 'col'}= I18n.t(:ID)
       %tbody
         %tr
           %td{:scope => 'row'}= payment[:email]
@@ -21,15 +21,15 @@
           %td{:scope => 'row'}= payment[:billing_agreement_id]
 
   - elsif payment[:type] == 'paypal'
-    %h4= I18n.t('Payment method') + ': PayPal (PreApproval Key)'
+    %h4= I18n.t(:Payment_method) + ': PayPal (PreApproval Key)'
     %br
     %table.table
       %thead
         %tr
-          %th{:scope => 'col'}= I18n.t('PayPal Account')
-          %th{:scope => 'col'}= I18n.t('Amount')
-          %th{:scope => 'col'}= I18n.t('Date')
-          %th{:scope => 'col'}= I18n.t('PA-Key')
+          %th{:scope => 'col'}= I18n.t(:PayPal_Account)
+          %th{:scope => 'col'}= I18n.t(:Amount)
+          %th{:scope => 'col'}= I18n.t(:Date)
+          %th{:scope => 'col'}= I18n.t(:PA_Key)
       %tbody
         %tr
           %td{:scope => 'row'}= payment[:email]
@@ -38,7 +38,7 @@
           %td{:scope => 'row'}= payment[:key]
 
   - elsif payment[:type] == 'boleto'
-    %h4= I18n.t('Payment method') + ': Boleto Bancário'
+    %h4= I18n.t(:Payment_method) + ': Boleto Bancário'
 
   %br
   - if payment[:type] == 'paypal'
