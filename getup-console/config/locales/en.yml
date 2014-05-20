@@ -487,6 +487,7 @@ en:
   validate_title: 'Validate account'
   validate_caption_1: 'Fill in your credit card information.'
   validate_caption_invalid: 'Validate your account to access more resources:'
+  Payment_method: 'Payment method'
   validate_caption_valid: 'Payments will be due using:'
   validate_not_supported: 'Either your JavaScript is disabled or you are using an old browser. Please upgrade your browser or activate your JavaScript.'
   Card_Type: "Card Type"
