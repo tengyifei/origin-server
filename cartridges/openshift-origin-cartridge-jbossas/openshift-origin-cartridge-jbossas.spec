@@ -4,7 +4,7 @@
 
 Summary:       Provides JBossAS7 support
 Name:          openshift-origin-cartridge-jbossas
-Version: 1.24.3
+Version: 1.25.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -16,8 +16,8 @@ Requires:      lsof
 Requires:      java-1.7.0-openjdk
 Requires:      java-1.7.0-openjdk-devel
 Requires:      jboss-as7-modules >= %{jbossver}
-Requires:      jboss-openshift-metrics-module
 Requires:      bc
+Requires:      jboss-openshift-metrics-module
 %if 0%{?rhel}
 Requires:      jboss-as7 >= %{jbossver}
 Requires:      maven3
@@ -78,6 +78,10 @@ mkdir -p /etc/alternatives/jbossas-7/modules/org/postgresql/jdbc/main
 ln -fs /usr/share/java/postgresql-jdbc3.jar /etc/alternatives/jbossas-7/modules/org/postgresql/jdbc/main
 cp -p %{cartridgedir}/versions/7/modules/postgresql_module.xml /etc/alternatives/jbossas-7/modules/org/postgresql/jdbc/main/module.xml
 
+# link in the metrics module
+mkdir -p /etc/alternatives/jbossas-7/modules/com/openshift
+ln -fs /usr/share/openshift/jboss/modules/com/openshift/metrics /etc/alternatives/jbossas-7/modules/com/openshift/metrics
+
 %postun
 # Cleanup alternatives if uninstall only
 # This is run after %post so we do not want to remove if an upgrade
@@ -106,6 +110,18 @@ fi
 
 
 %changelog
+* Fri May 16 2014 Adam Miller <admiller@redhat.com> 1.25.1-1
+- bump_minor_versions for sprint 45 (admiller@redhat.com)
+
+* Wed May 07 2014 Adam Miller <admiller@redhat.com> 1.24.6-1
+- Bump cartridge versions for STG cut (vvitek@redhat.com)
+
+* Tue May 06 2014 Troy Dawson <tdawson@redhat.com> 1.24.5-1
+- Update JBoss cart specs for new metrics location (agoldste@redhat.com)
+
+* Wed Apr 30 2014 Adam Miller <admiller@redhat.com> 1.24.4-1
+- Fix JBoss installation issue (metrics) (andy.goldstein@gmail.com)
+
 * Tue Apr 29 2014 Adam Miller <admiller@redhat.com> 1.24.3-1
 - JBoss metrics module (andy.goldstein@gmail.com)
 

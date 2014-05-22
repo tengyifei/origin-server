@@ -10,7 +10,7 @@
 
 Summary:       OpenShift plugin for mcollective service
 Name:          rubygem-%{gem_name}
-Version: 1.24.2
+Version: 1.25.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -85,6 +85,23 @@ sed -i -e "s|\(/etc/mcollective/client.cfg\)|%{scl_root}/\1|" %{buildroot}/etc/o
 %attr(0644,-,-) %ghost %{?scl:%scl_root}/etc/mcollective/client.cfg
 
 %changelog
+* Wed May 21 2014 Adam Miller <admiller@redhat.com> 1.25.2-1
+- Fix typos in rsync commands (daniel.carabas@uhurusoftware.com)
+
+* Fri May 16 2014 Adam Miller <admiller@redhat.com> 1.25.1-1
+- Bug 1095351: Selected/Requested district uuid now correctly compared
+  (abhgupta@redhat.com)
+- bump_minor_versions for sprint 45 (admiller@redhat.com)
+
+* Wed May 07 2014 Adam Miller <admiller@redhat.com> 1.24.4-1
+- Bug 1095351: Ensuring that gear moves respect the destination district
+  argument  - This bug was a regression caused by a typo in a recent change
+  (abhgupta@redhat.com)
+
+* Mon May 05 2014 Adam Miller <admiller@redhat.com> 1.24.3-1
+- Add support for multiple platforms to districts
+  (daniel.carabas@uhurusoftware.com)
+
 * Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 1.24.2-1
 - mass bumpspec to fix tags (admiller@redhat.com)
 

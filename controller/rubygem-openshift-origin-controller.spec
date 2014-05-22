@@ -9,7 +9,7 @@
 
 Summary:       Cloud Development Controller
 Name:          rubygem-%{gem_name}
-Version: 1.24.4
+Version: 1.25.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -85,6 +85,43 @@ mkdir -p %{buildroot}/etc/openshift/
 %{gem_dir}/doc/%{gem_name}-%{version}
 
 %changelog
+* Wed May 21 2014 Adam Miller <admiller@redhat.com> 1.25.2-1
+- Add Team management UI (jliggitt@redhat.com)
+
+* Fri May 16 2014 Adam Miller <admiller@redhat.com> 1.25.1-1
+- bump_minor_versions for sprint 45 (admiller@redhat.com)
+
+* Wed May 07 2014 Adam Miller <admiller@redhat.com> 1.24.9-1
+- Merge pull request #5396 from ironcladlou/scalable-unidling
+  (dmcphers+openshiftbot@redhat.com)
+- Fix idler cucumber tests (ironcladlou@gmail.com)
+- Bug 1095186 - corrected args passed to district (lnader@redhat.com)
+
+* Wed May 07 2014 Troy Dawson <tdawson@redhat.com> 1.24.8-1
+- Bug 1094541 - check for null values (lnader@redhat.com)
+- Fix formatting (dmcphers@redhat.com)
+- Bug 1094108 - show obsolete carts if ALLOW_OBSOLETE_CARTRIDGES=true
+  (lnader@redhat.com)
+
+* Tue May 06 2014 Troy Dawson <tdawson@redhat.com> 1.24.7-1
+- Merge pull request #5375 from ironcladlou/scalable-unidling
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1093804: Validating the node returned by the gear-placement plugin
+  (abhgupta@redhat.com)
+- Support unidling scalable apps (ironcladlou@gmail.com)
+
+* Mon May 05 2014 Adam Miller <admiller@redhat.com> 1.24.6-1
+- Add support for multiple platforms to districts
+  (daniel.carabas@uhurusoftware.com)
+- Bug 1091044 (lnader@redhat.com)
+
+* Wed Apr 30 2014 Adam Miller <admiller@redhat.com> 1.24.5-1
+- Annual Online SKU Support (lnader@redhat.com)
+- Making the domain_op complete? method more robust (abhgupta@redhat.com)
+- Merge pull request #5343 from lnader/master
+  (dmcphers+openshiftbot@redhat.com)
+- Bugs 1084980 and 889947 (lnader@redhat.com)
+
 * Tue Apr 29 2014 Adam Miller <admiller@redhat.com> 1.24.4-1
 - Adding test coverage for remote-user auth (bleanhar@redhat.com)
 

@@ -434,19 +434,41 @@ module OpenShift
       # @return [String] output from starting gear
       def unidle_gear(options={})
         PathUtils.flock(@gear_lock) do
-          output = ''
-          OpenShift::Runtime::Utils::Cgroups.new(@uuid).boost do
-            # When invoked as gear, state may be set to Started before unidle is called
-            frontend = FrontendHttpServer.new(self)
-            frontend.unidle if frontend.idle?
+          broker_addr = @config.get('BROKER_HOST')
+          gear_env    = ::OpenShift::Runtime::Utils::Environ::for_gear(@container_dir)
+          domain      = gear_env['OPENSHIFT_NAMESPACE']
+          app_name    = gear_env['OPENSHIFT_APP_NAME']
+          app_uuid    = gear_env['OPENSHIFT_APP_UUID']
+          url         = "https://#{broker_addr}/broker/rest/domain/#{domain}/application/#{app_name}/events"
 
-            if state.value == State::IDLE
-              state.value = State::STARTED
-              output = start_gear
+          params = broker_auth_params
+          unless params
+            return "Cannot unidle application using gear #{@uuid}. Head gear must be used to unidle applications."
+          end
+
+          params['event']         = 'start'
+          params[:application_id] = app_uuid
+
+          begin
+            logger.info("Unidling application #{app_uuid}")
+            request = RestClient::Request.new(:method => :post,
+                                              :url => url,
+                                              :timeout => 360,
+                                              :headers => { :accept => 'application/json;version=1.6', :user_agent => 'OpenShift' },
+                                              :payload => params)
+
+            response = request.execute { |response, request, result| response }
+            logger.info("Finished unidling #{app_uuid}")
+          rescue => e
+            logger.error("Failed to start application #{app_uuid} during unidle: #{e.message}")
+          else
+            if 300 <= response.code
+              logger.error("Failed to start application #{app_uuid} during unidle: #{response.body}")
             end
           end
-          return output
         end
+
+        return ''
       end
 
       ##

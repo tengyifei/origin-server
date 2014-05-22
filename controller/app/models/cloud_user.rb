@@ -31,6 +31,8 @@ class CloudUser
   field :parent_user_id, type: Moped::BSON::ObjectId
   field :plan_id, type: String
   field :plan_state, type: String
+  field :plan_expiration_date, type: Date, default: nil
+  field :plan_quantity, type: Integer, default: 1
   field :pending_plan_id, type: String
   field :pending_plan_uptime, type: Time
   field :plan_history, type: Array, default: []
@@ -233,7 +235,9 @@ class CloudUser
       "max_domains" => Rails.application.config.openshift[:default_max_domains],
       "max_gears" => Rails.application.config.openshift[:default_max_gears],
       "max_teams" => Rails.application.config.openshift[:default_max_teams],
-      "view_global_teams" => Rails.application.config.openshift[:default_view_global_teams]
+      "view_global_teams" => Rails.application.config.openshift[:default_view_global_teams],
+      "max_untracked_addtl_storage_per_gear" =>  Rails.application.config.openshift[:default_max_untracked_addtl_storage_per_gear],
+      "max_tracked_addtl_storage_per_gear" =>  Rails.application.config.openshift[:default_max_tracked_addtl_storage_per_gear],
     }
   end
 
@@ -420,7 +424,7 @@ class CloudUser
   end
 
   def max_untracked_additional_storage
-    capabilities['max_untracked_addtl_storage_per_gear'] || 0
+    capabilities['max_untracked_addtl_storage_per_gear'] || Rails.application.config.openshift[:default_max_untracked_addtl_storage_per_gear]
   end
 
   def max_untracked_additional_storage=(m)
@@ -428,7 +432,7 @@ class CloudUser
   end
 
   def max_tracked_additional_storage
-    capabilities['max_tracked_addtl_storage_per_gear'] || 0
+    capabilities['max_tracked_addtl_storage_per_gear'] || Rails.application.config.openshift[:default_max_tracked_addtl_storage_per_gear]
   end
 
   def max_tracked_additional_storage=(m)
@@ -462,6 +466,15 @@ class CloudUser
     # will need to reload from primary to ensure that mongoid doesn't validate based on its cache
     # and prevent us from deleting this user because of the :dependent :restrict clause
     self.reload.delete
+  end
+  
+  #updates user's plan_id
+  def update_plan(plan_id, plan_quantity=1)
+    Lock.run_in_user_lock(self) do
+      self.plan_id = plan_id
+      self.plan_quantity = plan_quantity
+      self.save!
+    end
   end
 
   # Runs all pending jobs and stops at the first failure.

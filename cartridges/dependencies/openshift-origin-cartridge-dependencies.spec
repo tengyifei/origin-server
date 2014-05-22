@@ -5,7 +5,7 @@
 
 Summary:       User dependencies for OpenShift Cartridges
 Name:          openshift-origin-cartridge-dependencies
-Version: 1.24.2
+Version: 1.25.1
 Release:       1%{?dist}
 License:       ASL 2.0
 URL:           http://www.openshift.com
@@ -92,6 +92,10 @@ Summary:   Optional user dependencies for DIY OpenShift Cartridges
 BuildArch: noarch
 Requires: %{name}-recommended-diy
 Requires:  lua-devel
+Requires:  cmake
+%if 0%{?fedora}%{?rhel} <= 6
+Requires:  cmake28
+%endif
 
 %description optional-diy
 This package pulls in other packages that a user
@@ -435,7 +439,6 @@ Requires:  rubygem-rugged
 Requires:  rubygem-nokogiri
 %endif
 Requires:  %{?scl_prefix}js-devel
-Requires:  %{?scl_prefix}libyaml-devel
 Requires:  %{?scl_prefix}ruby-tcltk
 Requires:  %{?scl_prefix}rubygem-actionmailer
 Requires:  %{?scl_prefix}rubygem-actionpack
@@ -512,6 +515,15 @@ an OpenShift cartrige.
 %files optional-ruby
 
 %changelog
+* Fri May 16 2014 Adam Miller <admiller@redhat.com> 1.25.1-1
+- bump_minor_versions for sprint 45 (admiller@redhat.com)
+
+* Wed May 07 2014 Adam Miller <admiller@redhat.com> 1.24.4-1
+- user system libyaml (tdawson@redhat.com)
+
+* Wed Apr 30 2014 Adam Miller <admiller@redhat.com> 1.24.3-1
+- add cmake/cmake28 to diy-optional dependencies (admiller@redhat.com)
+
 * Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 1.24.2-1
 - mass bumpspec to fix tags (admiller@redhat.com)
 

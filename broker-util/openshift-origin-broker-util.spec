@@ -7,7 +7,7 @@
 
 Summary:       Utility scripts for the OpenShift Origin broker
 Name:          openshift-origin-broker-util
-Version: 1.24.2
+Version: 1.25.1
 Release:       1%{?dist}
 Group:         Network/Daemons
 License:       ASL 2.0
@@ -108,6 +108,26 @@ cp -p man/*.8 %{buildroot}%{_mandir}/man8/
 %{_mandir}/man8/oo-admin-ctl-team.8.gz
 
 %changelog
+* Fri May 16 2014 Adam Miller <admiller@redhat.com> 1.25.1-1
+- corrected section number (lnader@redhat.com)
+- Bug 1094141 - update oo-admin-ctl-user man pages (lnader@redhat.com)
+- bump_minor_versions for sprint 45 (admiller@redhat.com)
+
+* Mon May 05 2014 Adam Miller <admiller@redhat.com> 1.24.4-1
+- Merge pull request #5325 from UhuruSoftware/master
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5368 from Miciah/specify-key-algorithm-in-nsupdate-
+  plugin-del_cmd-and-oo-diagnostics (dmcphers+openshiftbot@redhat.com)
+- Add support for multiple platforms to districts
+  (daniel.carabas@uhurusoftware.com)
+- Bug 1088247 (lnader@redhat.com)
+- Add support for more secure key algorithms (calfonso@redhat.com)
+
+* Wed Apr 30 2014 Adam Miller <admiller@redhat.com> 1.24.3-1
+- Moved srec deletetion to billing plugin (lnader@redhat.com)
+- added -clearplanexpirationdate (lnader@redhat.com)
+- Annual Online SKU Support (lnader@redhat.com)
+
 * Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 1.24.2-1
 - mass bumpspec to fix tags (admiller@redhat.com)
 

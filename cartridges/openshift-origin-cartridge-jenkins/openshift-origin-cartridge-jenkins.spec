@@ -2,7 +2,7 @@
 
 Summary:       Provides jenkins-1.x support
 Name:          openshift-origin-cartridge-jenkins
-Version: 1.21.2
+Version: 1.22.1
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -32,7 +32,9 @@ Provides Jenkins cartridge to OpenShift. (Cartridge Format V2)
 %__cp -r * %{buildroot}%{cartridgedir}
 
 %post
-service jenkins stop
+if service jenkins status > /dev/null 2>&1; then
+  service jenkins stop
+fi
 chkconfig jenkins off
 
 %files
@@ -47,6 +49,15 @@ chkconfig jenkins off
 %doc %{cartridgedir}/LICENSE
 
 %changelog
+* Fri May 16 2014 Adam Miller <admiller@redhat.com> 1.22.1-1
+- bump_minor_versions for sprint 45 (admiller@redhat.com)
+
+* Wed May 07 2014 Adam Miller <admiller@redhat.com> 1.21.4-1
+- Bump cartridge versions for STG cut (vvitek@redhat.com)
+
+* Mon May 05 2014 Adam Miller <admiller@redhat.com> 1.21.3-1
+- bz1092161 - conditionally stop jenkins service (admiller@redhat.com)
+
 * Fri Apr 25 2014 Adam Miller <admiller@redhat.com> 1.21.2-1
 - mass bumpspec to fix tags (admiller@redhat.com)
 

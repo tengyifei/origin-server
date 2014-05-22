@@ -17,7 +17,7 @@
 
 Summary:       Cloud Development Node
 Name:          rubygem-%{gem_name}
-Version: 1.24.4
+Version: 1.25.2
 Release:       1%{?dist}
 Group:         Development/Languages
 License:       ASL 2.0
@@ -283,6 +283,44 @@ fi
 %attr(0755,-,-) /etc/cron.daily/openshift-origin-stale-lockfiles
 
 %changelog
+* Wed May 21 2014 Adam Miller <admiller@redhat.com> 1.25.2-1
+- Merge pull request #5434 from jwhonce/bug/1099772
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5433 from jwhonce/bug/1099835
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1099772 - Add message for unidle on secondary gear (jhonce@redhat.com)
+- Bug 1099835 - Add missing require (jhonce@redhat.com)
+- Disable OOM kills for gear cgroups (agrimm@redhat.com)
+
+* Fri May 16 2014 Adam Miller <admiller@redhat.com> 1.25.1-1
+- Bug 1088623 - Removed unused .uservars directory references
+  (jhonce@redhat.com)
+- Use the local1 facility for Syslog trace logs (ironcladlou@gmail.com)
+- Bug 1096591 - Escape filenames for downloadable cartridges
+  (jhonce@redhat.com)
+- Prevent unwanted syslog message interpolation (ironcladlou@gmail.com)
+- bump_minor_versions for sprint 45 (admiller@redhat.com)
+
+* Wed May 07 2014 Troy Dawson <tdawson@redhat.com> 1.24.7-1
+- Bug 1094541 - check for null values (lnader@redhat.com)
+- Merge pull request #5383 from jwhonce/bug/1091433
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1091433 - Add setting to detune GearStatePlugin (jhonce@redhat.com)
+
+* Tue May 06 2014 Troy Dawson <tdawson@redhat.com> 1.24.6-1
+- Merge pull request #5380 from jwhonce/bug/1093197
+  (dmcphers+openshiftbot@redhat.com)
+- Merge pull request #5379 from mrunalp/bug/1052302
+  (dmcphers+openshiftbot@redhat.com)
+- Bug 1083197 - remove NULL's from environment variables (jhonce@redhat.com)
+- Bug 1052302: Add windowMemory setting for git repos. (mrunalp@gmail.com)
+- Merge pull request #5375 from ironcladlou/scalable-unidling
+  (dmcphers+openshiftbot@redhat.com)
+- Support unidling scalable apps (ironcladlou@gmail.com)
+
+* Fri May 02 2014 Adam Miller <admiller@redhat.com> 1.24.5-1
+- rhcsh: Fix quota check if quotas disabled (miciah.masters@gmail.com)
+
 * Tue Apr 29 2014 Adam Miller <admiller@redhat.com> 1.24.4-1
 - Bug 1092077 - Adding comment for the default PLATFORM_LOG_CLASS.
   (bleanhar@redhat.com)
