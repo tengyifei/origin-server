@@ -76,7 +76,21 @@
   <slaveAgentPort>-1</slaveAgentPort>
   <label></label>
   <nodeProperties/>
-  <globalNodeProperties/>
+  <globalNodeProperties>
+    <hudson.slaves.EnvironmentVariablesNodeProperty>
+      <envVars serialization="custom">
+        <unserializable-parents/>
+        <tree-map>
+          <default>
+            <comparator class="hudson.util.CaseInsensitiveComparator"/>
+          </default>
+          <int>1</int>
+          <string>GIT_SSH</string>
+          <string>/usr/libexec/openshift/cartridges/jenkins/bin/git_ssh_wrapper.sh</string>
+        </tree-map>
+      </envVars>
+    </hudson.slaves.EnvironmentVariablesNodeProperty>
+  </globalNodeProperties>
   <disabledAdministrativeMonitors/>
   <noUsageStatistics>true</noUsageStatistics>
 </hudson>
