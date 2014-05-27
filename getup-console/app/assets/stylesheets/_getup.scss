@@ -88,8 +88,34 @@ body, h1, h2, h3, h4, h5, h6 { font-family: 'roboto light'; }
 .table-striped tbody tr:nth-child(odd) td, .table-striped tbody tr:nth-child(odd) th { background: #333; }
 .table-striped tbody tr td, .table-striped tbody tr th { border-color: #444; }
 
-.btn.paypal { background: url(https://www.paypalobjects.com/en_US/i/btn/x-click-but20.gif) no-repeat 0 0; border: 0; height: 31px; padding: 0; text-indent: -5000em; width: 62px; }
-
+.paypal-container {
+	background-color: white;
+	display: inline-block;
+	padding: 10px;
+}
+.btn.paypal-logo {
+	background: url(https://www.paypalobjects.com/webstatic/en_US/logo/pp_cc_mark_74x46.png) no-repeat 0 0;
+	width: 74px;
+	height: 47px;
+	border: 0;
+	padding: 0;
+	margin-right: 10px;
+	text-indent: -5000em;
+}
+.btn.paypal-subscribe {
+	background: url(https://www.paypalobjects.com/webstatic/en_US/btn/btn_subscribe_cc_147x47.png) no-repeat 0 0;
+	width: 147px;
+	height: 47px;
+	border: 0;
+	padding: 0;
+	text-indent: -5000em;
+}
+.account-alert {
+	background-color: #700;
+	/* color: yellow; */
+	border-radius: 5px;
+	padding: 10px;
+}
 /* Responsive */
 
 @media (max-width: 767px) {

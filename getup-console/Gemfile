@@ -18,5 +18,4 @@ group :assets do
   gem 'jquery-rails',  '~> 2.0.2'
   gem 'uglifier',      '>= 1.2.6'
   gem 'therubyracer',  '>= 0.10'
-  gem 'skeuocard-rails', "~> 1.0.3"
 end

@@ -9,7 +9,7 @@ pt:
       '151': 'Você deve criar uma aplicação Jenkins (para ser o servidor de build) antes de adicionar o cartridge Jenkins a uma aplicação.'
       '153': 'Você está usando mais gear do que o novo plano permite. Por favor, reduza o numero de gears utilizados ou remova aplicações.'
       '128': 'Este domínio contém aplicações. Você precisa remover todas as aplicações antes de renomear o domínio.'
-      '104': 'Sua conta não possui gears disponíveis.'
+      '104': 'Sua conta não possui gears disponíveis. Por favor, entre em contato para aumentar seu limite.'
 
   unknown: 'Ocorreu um erro de sistema. Se o problema persistir, por favor entre em contato com o suporte.'
   Name: 'Nome'
@@ -105,6 +105,18 @@ pt:
   Validate: 'Validar'
   Credit_Card: 'Cartão de Crédito'
   Create_App: 'Criar Aplicação'
+  Subscription: 'Assinatura'
+  Billing: 'Cobrança'
+  Contact: 'Contato'
+  Invoices: 'Faturas'
+  Addressess: 'Endereços'
+  using: 'usando'
+  Using: 'Usando'
+  Minimum: 'Mínimo'
+  Maximum: 'Máximo'
+  Scaling: 'Escalando'
+  Not_Scalable: 'Não Escalável'
+  Disable_Scaling: 'Desabilitar Escalabilidade'
 
 ## Signin
   Dashboard_Auth: "BEM-VINDO AO DASHBOARD"
@@ -170,16 +182,16 @@ pt:
   OpenShift_User_Guide: 'Guia do usuário OpenShift'
   help_install_rhc: 'Instalando OpenShift client tools no Mac OSX, Linux, e Windows'
   help_sync_repo: 'Sincronize seu repo OpenShift com um repo Git existente'
-  'OpenShift User Guide': 'Guia do usuário OpenShift'
-  'Installing OpenShift client tools on Mac OSX, Linux, and Windows': 'Instalando OpenShift client tools no Mac OSX, Linux, e Windows'
-  'Sync your OpenShift repo with an existing Git repo': 'Sincronize seu repo OpenShift com um repo Git existente'
+  OpenShift_User_Guide: 'Guia do usuário OpenShift'
+  Installing_OpenShift_client: 'Instalando OpenShift client tools no Mac OSX, Linux, e Windows'
+  Sync_your_OpenShift_repo: 'Sincronize seu repo OpenShift com um repo Git existente'
   Popular_Faqs: 'Perguntas frequentes'
   faq_own_domain: 'Como usar meu próprio domínio?'
   faq_install_win: 'Como instalo o rhc client tools no Windows?'
   faq_pub_site: 'Como publico os arquivos do meu site? Quais ferramentas devo usar?'
-  'How to use my own domain?': 'Como usar meu próprio domínio?'
-  'How do I install the rhc client tools on Windows?': 'Como instalo o rhc client tools no Windows?'
-  'How to publish my site files? What tools should I use?': 'Como publico os arquivos do meu site? Quais ferramentas devo usar?'
+  How_to_use_my_own_domain: 'Como usar meu próprio domínio?'
+  How_do_I_install_the_rhc_client_tools_on_Windows: 'Como instalo o rhc client tools no Windows?'
+  How_to_publish_my_site_files: 'Como publico os arquivos do meu site? Quais ferramentas devo usar?'
   More_faqs: 'Mais perguntas »'
   gear_group_count_title: 'OpenShift executa cada cartridge dentro de um ou mais gears em um servidor, alocando uma porção fixa de CPU e memória.'
   public_url: "URL Pública"
@@ -208,7 +220,7 @@ pt:
   cart_maintained_community_title: 'Criado por um membro de comunidade e não mantido pela equipe Getup Cloud'
   cart_maintained_community: 'Criado pela comunidade'
   cart_maintained_warning: 'Quando você cria um quickstart ou um cartridge de comunidade, você está copiando código de outro repositório. Você é o responsável por aplicar correções de segurança e atualizações.'
-  cart_maintained_warning_2: '/ Não recebe atualizações de seguranças automaticamente'
+  cart_maintained_warning_2: '/ Não recebe atualizações de segurança automaticamente'
   larger_gear: 'Se você precisa de mais recursos, selecione um gear maior aqui.'
   app_req_web_cart: 'Todas as aplicações necessitam pelo menos de um cartridge web'
   Create_a_New_Application: 'Crie uma Nova Aplicação'
@@ -408,14 +420,12 @@ pt:
 
 ## My Account
   add_gears: 'Autorizar gears'
-  Billing: 'Cobrança'
-  billing_title: 'Cobrança'
+  billing_title: 'Faturas'
   billing_history_caption: 'Acesse seu histórico de faturas'
-  billing_history_button: 'Faturas...'
+  billing_history_button: 'Faturas'
   addr_info_caption: 'Altere seus dados de contato e cobrança.'
-  contact_info_btn: 'Dados de contato...'
-  billing_info_btn: 'Dados de cobrança...'
   gears_count: 'Você possui %{gears_free} gears disponíveis de %{max_gears} autorizado(s).'
+  validate_account: 'Valide sua conta'
   validate_your_account_1: 'Não existem mais gears disponíveis.'
   validate_your_account_2: 'Por favor, valide sua conta.'
   increase_gears_limit: 'Aumente seu limite de gears.'
@@ -464,10 +474,9 @@ pt:
   add_credit_card: 'Insira seu Cartão de Crédito'
   change_credit_card: 'Alterar o Cartão de Crédito'
   validate_title: 'Validar conta'
-  validate_caption_1: 'Preencha os dados de seu cartão de crédito.'
-  validate_caption_invalid: 'Esta conta não possui um cartão de crédito.'
-  validate_caption_valid: 'Esta conta está usando o seguinte cartão de crédito:'
-  validate_not_supported: 'Ou seu JavaScipt está desabilitado ou você está usando um navegador muito antigo. Por favor, atualize o navegador ou habilite o JavaScipt.'
+  validate_caption_invalid: 'Valide sua conta para obter acesso a mais recursos:'
+  Payment_method: 'Forma de pagamento'
+  validate_not_supported: 'Ou seu JavaScript está desabilitado ou você está usando um navegador muito antigo. Por favor, atualize o navegador ou habilite o JavaScipt.'
   Card_Type: "Cartão"
   Card_Number: "Número"
   Expires_on: "Expira em"
@@ -477,6 +486,15 @@ pt:
   Card_Validation_Code: "Código de Verificação"
   validate_success: "Sua conta foi validada com sucesso. Obrigado."
   validate_verify: 'Por favor, revise os dados de seu cartão de crédito e tente novamente.'
+  ID: 'ID'
+  Date: 'Data'
+  PayPal_Account: 'Conta PayPal'
+  PA_Key: 'PA-Key'
+  account:
+    footer:
+      paypal:  'Atenção: sua modalidade de pagamento será descontinuada. Pedimos que faça nova validação clicando abaixo. Obrigado!'
+      boleto: 'Você pode optar por pagar utilizando sua conta PayPal:'
+      paypal_reftrans: 'Você pode atualizar a conta PayPal no botão abaixo:'
 
 ## Settings
   namespace_caption_1: 'Seu namespace é exclusivo da sua conta e identifica o suffixo da URL pública de suas aplicações'
@@ -574,6 +592,21 @@ pt:
   help_caption_4_4: 'Assista aos vídeos em nosso %{youtube}.'
 
 ## Scale
+  Scale_your_Application: 'Escale sua Aplicação'
+  the_web_proxy_HAProxy: 'o proxy web HAProxy'
+  scale_caption_1: 'OpenShift está configurado para escalar esta cartucho com %{haproxy}. OpenShift monitora o tráfego web de entrada em sua aplicação e automaticamente adiciona ou remove copias de seu cartucho (cada um rodando em seu próprio gear) para servir as requisições de acordo com a necesidade.'
+  Control_the_number_of_gears: 'Controle o número de gears que o OpenShift vai usar para seu cartucho:'
+  scale_caption_2: 'Cada gear escalado é criado idêntico - os hooks post, pre e deploy são executados. Cada cartucho terá sua própria cópia dos dados de runtime, portanto use uma base de dados se você precisar compartilhar dados entre seus cartuchos web.'
+  For_status_information: 'Para informações de status sobre o tráfego web de sua aplicação, veja a página de status do HAProxy:'
+  This_cartridge_assists_other_cartridges: 'Este cartucho ajuda outros cartuchos a escalar, mas ele próprio não escala.'
+  This_cartridge_does_not_scale: 'Este cartucho não escala.'
+  For_more_information: 'Para mais informações sobre escalar sua aplicação veja'
+  our_scaling_guide: 'nosso guia de escalabilidade'
+  scale_new_caption_1: 'Esta aplicação não é escalável. Aplicações devem ser criadas como escaláveis passando a opção de linha de comando <code>--scale</code>:'
+  scale_delete_caption_1: 'Sua aplicação está configurada para escalar o cartucho web. Atualmente não é possível desabilitar a escalabilidade. Você deve criar uma nova aplicação e migrar seu código se desejar remover o cartucho HAProxy que provê a escalabilidade.'
+  and_: 'e '
+  Minimum_gears: 'Mínimo de gears'
+  Maximum_gears: 'Máximo de gears'
   scale_caption_min: 'Seu cartridge web está rodando com a quantidade mínima de gears e irá aumentar (scale up) se necessário'
   scale_caption_max: 'Seu cartridge web está rodando com a quantidade máxima de gears e não pode aumentar (scale up)'
   scale_caption_mul: 'Seu cartridge web está rodando múltiplas cópias para atender ao tráfego web extra'
